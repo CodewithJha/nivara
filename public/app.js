@@ -1,8 +1,9 @@
 // Plain JS, no build. Every number rendered here comes from an API response backed by Mongo.
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const inr = n => '₹' + Number(n ?? 0).toLocaleString('en-IN');
-const plural = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+const inr = n => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+const whole = n => Math.round(Number(n) || 0);
+const plural = (n, one, many = one + 's') => `${whole(n)} ${whole(n) === 1 ? one : many}`;
 const cap = s => String(s ?? '').replace(/^./, c => c.toUpperCase());
 const firstName = s => String(s ?? '').split(' ')[0];
 const orderName = id => 'Order ' + (parseInt(String(id).replace(/\D/g, ''), 10) || id);
@@ -17,29 +18,33 @@ const FLAG = { overdue: 'heavy', 'due today': 'mid', 'due tomorrow': 'mid', 'no 
 const WEIGHT = { heavy: 'do now', mid: 'this week', light: 'when you can' };
 const st = (level, word) => `<span class="st ${level}">${esc(word)}</span>`;
 const risk = r => st(LEVEL[r], { high: 'Runs out first', medium: 'This week', low: 'Fine' }[r] ?? r);
-const methodNote = m => m === 'tabpfn' ? st('light', 'TabPFN forecast') : st('mid', `${m} forecast (TabPFN unavailable)`);
+/** Answer text → short paragraphs plus a list for "• " lines. */
+function answerHtml(text) {
+  let html = '', list = [];
+  const flush = () => { if (list.length) html += `<ul class="pts">${list.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`; list = []; };
+  for (const l of String(text ?? '').split('\n').map(x => x.trim()).filter(Boolean)) {
+    if (/^[•*-]\s/.test(l)) list.push(l.replace(/^[•*-]\s+/, ''));
+    else { flush(); html += `<p>${esc(l)}</p>`; }
+  }
+  flush();
+  return html;
+}
 
 const table = (cols, rows, empty = 'Nothing here yet.') => rows.length
   ? `<table><thead><tr>${cols.map(c => `<th scope="col" class="${c[2] ?? ''}">${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c => `<td class="${c[2] ?? ''}" data-label="${esc(c[0])}"><div>${c[1](r)}</div></td>`).join('')}</tr>`).join('')}</tbody></table>`
   : `<p class="empty">${empty}</p>`;
 
 // ---------- errors and pending buttons ----------
-// One error component for every failed request: plain words from the error kind, a Retry, raw detail folded away.
-const OOPS = {
-  timeout: 'It took too long to answer.',
-  network: "Nivara couldn't be reached. Check your connection.",
-  server: 'Something went wrong on the server.',
-  request: "Nivara couldn't use that request.",
-};
+// One error component for every failed request: plain words (api.js OOPS / the server's friendly message) and a Retry.
+// Nothing technical is shown: no status codes, no raw messages.
 const retries = new Map();
 let retrySeq = 0;
+const friendly = e => !navigator.onLine ? OOPS.offline : e instanceof ApiError ? e.friendly : OOPS.server;
 function errorBox(e, what, retry) {
   const id = ++retrySeq;
   if (retry) retries.set(id, retry);
-  const detail = [e?.status && `HTTP ${e.status}`, e?.detail ?? e?.message].filter(Boolean).join(' · ');
-  return `<div class="err" role="alert" data-err="${id}"><p>Couldn't ${esc(what)}. ${OOPS[e?.kind] ?? OOPS.server}</p>
-    <div class="acts">${retry ? `<button class="btn" onclick="retryNow(${id})">Retry</button>` : ''}<a href="#health">Check Health</a></div>
-    ${detail ? `<details class="note"><summary>Details</summary><pre>${esc(detail)}</pre></details>` : ''}</div>`;
+  return `<div class="err" role="alert" data-err="${id}"><p>Couldn't ${esc(what)}. ${esc(friendly(e))}</p>
+    ${retry ? `<div class="acts"><button class="btn" onclick="retryNow(${id})">Retry</button></div>` : ''}</div>`;
 }
 function retryNow(id) {
   const fn = retries.get(id);
@@ -79,8 +84,8 @@ const orderRow = (o, today) => row({
   fig: `<b>${inr(o.total)}</b>`, act: o.status === 'pending' ? deliverBtn(o) : '',
 });
 function restockWhy(r) {
-  const left = r.available <= 0 ? `${r.available} left after pending orders` : `${r.available} left of ${r.stock}`;
-  const lasts = r.daysOfCover == null ? '' : `, about ${plural(r.daysOfCover, 'day')} of stock`;
+  const left = r.available <= 0 ? 'None left after pending orders' : `${r.available} left of ${r.stock}`;
+  const lasts = r.daysOfCover == null || r.available <= 0 ? '' : `, about ${plural(Math.max(1, r.daysOfCover), 'day')} of stock`;
   return `${left}${lasts}. ${r.risk === 'high' ? `New stock takes ${plural(r.leadTimeDays, 'day')}.` : 'Runs out this week.'}`;
 }
 let health = null, flash = '';
@@ -89,6 +94,7 @@ const views = {
   async dashboard() {
     const d = await api('/dashboard');
     const p = d.pending.orders, hp = d.highPriority, th = d.supplierThreshold, f = d.forecast;
+    const listed = (xs, n = 3) => xs.length > n ? `${xs.slice(0, n).join(', ')} and ${plural(xs.length - n, 'more')}` : xs.join(', ');
     const worth = d.opportunities.filter(o => o.significant), small = d.opportunities.filter(o => !o.significant);
     const restockJob = r => ({ level: LEVEL[r.risk], to: 'p-' + r.sku, title: `Restock ${r.name}${r.risk === 'medium' ? ' this week' : ''}`,
       facts: `${restockWhy(r)}${r.reorderQty ? ` Order ${r.reorderQty}.` : ''}`,
@@ -102,7 +108,7 @@ const views = {
       ...p.filter(o => o.flag && o.flag !== 'overdue').map(orderJob),
       ...hp.filter(r => r.risk === 'medium').map(restockJob),
       ...worth.map(o => ({ level: 'light', to: 's-' + o.sku, title: `Pay less for ${o.name}`,
-        facts: `${o.best.supplier} sells it at ${inr(o.best.unitCost)}. You pay ${inr(o.currentCost)} at ${o.currentSupplier}. That's ${inr(o.savingPerUnit)} less a unit (${o.savingPercent}%).`,
+        facts: `${o.best.supplier} sells it at ${inr(o.best.unitCost)}. You pay ${inr(o.currentCost)} at ${o.currentSupplier}. That's ${inr(o.savingPerUnit)} less a unit, ${o.savingPercent}% cheaper.`,
         acts: '<a class="btn primary" href="#suppliers">Compare suppliers</a>' })),
     ];
     const top = jobs[0], tapPlates = matchMedia('(min-width: 900px)').matches; // phone plates are too thin to tap; the rows carry the jump
@@ -120,7 +126,7 @@ const views = {
         }).join('')}</div>
         <span class="clip" aria-hidden="true"></span><span class="sleeve" aria-hidden="true"></span><span class="cap" aria-hidden="true"></span>
         ${more > 0 ? `<span class="extra" title="${plural(jobs.length, 'job')} on ${plates.length} plates">+${more}</span>` : ''}</div>
-      ${d.demo ? '<p class="demo">Sample shop data (seeded, marked demo). Your real products and orders in MongoDB replace it.</p>' : ''}
+      ${d.demo ? '<p class="demo">Sample shop data. Your own products and orders will replace it.</p>' : ''}
     </section>
     ${top ? `<section class="first bleed ${top.level}" aria-labelledby="job">
       <p class="kick">${cap(WEIGHT[top.level])} <span>· ${jobs.length === 1 ? 'your one job today' : `first of ${jobs.length} jobs today`}</span></p>
@@ -133,30 +139,30 @@ const views = {
         ${p.length ? `<ul class="rows">${p.map(o => orderRow(o, d.date)).join('')}</ul>` : '<p class="empty">No orders waiting. Paste new ones from WhatsApp or Instagram on <a href="#orders">Orders</a>.</p>'}</section>
       <section class="sec" id="restock"><h2>Restock <span class="n">${hp.length}</span></h2>
         ${hp.length ? `<ul class="rows">${hp.map(r => row({ id: 'p-' + r.sku, level: LEVEL[r.risk], name: esc(r.name),
-          why: `${esc(restockWhy(r))} ${r.demand7} expected to sell in 7 days.`, fig: r.reorderQty ? `<b>${r.reorderQty}</b><span>to order</span>` : '' })).join('')}</ul>` : '<p class="empty">Nothing runs out this week.</p>'}
-        <p class="note">${methodNote(f.method)} ${f.date !== d.date ? `Forecast from ${esc(day(f.date))}. Refresh it on <a href="#forecast">Forecast</a>.` : `${esc(f.model ?? '')} · ${esc(day(f.date))}`}</p></section>
+          why: `${esc(restockWhy(r))} About ${plural(r.demand7, 'sale')} expected in the next 7 days.`, fig: r.reorderQty ? `<b>${r.reorderQty}</b><span>to order</span>` : '' })).join('')}</ul>` : '<p class="empty">Nothing runs out this week.</p>'}
+        ${f.date && f.date !== d.date ? `<p class="note">This list is from ${esc(day(f.date))}. <a href="#forecast">Work it out again</a> for today.</p>` : ''}</section>
       <section class="sec" id="save"><h2>Pay less <span class="n">${worth.length}</span></h2>
         <p class="lede">From the quotes you stored. A quote counts when it saves at least ${inr(th.rupees)} and ${th.percent}% a unit.</p>
         ${worth.length ? `<ul class="rows">${worth.map(o => row({ id: 's-' + o.sku, level: 'light', name: esc(o.name),
           why: `${esc(o.best.supplier)} at ${inr(o.best.unitCost)}. You pay ${inr(o.currentCost)} at ${esc(o.currentSupplier)}.`,
           fig: `<b>${inr(o.savingPerUnit)}</b><span>less a unit · ${o.savingPercent}%</span>` })).join('')}</ul>` : '<p class="empty">Your suppliers are already the cheapest you have quotes for.</p>'}
-        ${small.length ? `<p class="note">Too small to count: ${esc(small.map(o => `${o.name} (${inr(o.savingPerUnit)}, ${o.savingPercent}%)`).join('; '))}.</p>` : ''}
+        ${small.length ? `<p class="note">Too small to switch for: ${esc(listed(small.map(o => o.name)))}.</p>` : ''}
         ${d.opportunities.some(o => o.skippedBlocked.length) ? `<p class="note">Left out because you blocked them: ${esc([...new Set(d.opportunities.flatMap(o => o.skippedBlocked))].join(', '))}.</p>` : ''}
-        ${d.livePrices.length ? `<h3 class="h2 sec">Online prices</h3>${table([['Product', r => esc(r.name), 'lead'], ['Cheapest listing', r => r.cheapest ? `${inr(r.cheapest.price)} · <a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.sourceDomain)}</a>` : '<span class="quiet">No usable listings</span>', 'num'], ['Checked', r => esc(when(r.checkedAt)), 'num']], d.livePrices)}
-          <p class="note">Google Shopping via SerpApi, refreshed by the morning workflow. These are retail listings: check the pack size before comparing with your cost.</p>`
-        : `<p class="note">${d.serpConfigured ? 'Online prices: nothing fetched yet. Make a fresh brief to fetch them.' : 'Online prices are off (no SerpApi key). Showing stored quotes only.'}</p>`}</section>
+        ${d.livePrices.length ? `<h3 class="h2 sec">Online prices</h3>${table([['Product', r => esc(r.name), 'lead'], ['Cheapest online', r => r.cheapest ? `${inr(r.cheapest.price)}${r.link ? ` · <a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.cheapest.source)}</a>` : ` · ${esc(r.cheapest.source)}`}` : '<span class="quiet">No prices found</span>', 'num']], d.livePrices)}
+          <p class="note">Updated each morning. These are shop prices, so check the pack size before comparing with your cost.</p>`
+        : `<p class="note">${d.onlinePrices ? 'No online prices yet. Make a fresh brief to check them.' : 'Online prices are not set up. Showing your stored quotes.'}</p>`}</section>
     </div>
     <aside>
       ${askBox(['What should I restock?', 'Show my pending orders.', 'What sold the most?', 'What should I focus on today?'])}
       <section class="sec brief"><h2>${d.brief?.date === d.date ? 'Morning brief' : 'Latest brief'}</h2>
-        ${d.brief ? `<p class="note">${esc(when(d.brief.createdAt))} · ${d.brief.by === 'template+gemma' ? 'facts from the database, first line summarised by Gemma' : d.brief.by === 'gemma' ? 'written by Gemma (older brief)' : 'facts from the database (no Gemma summary)'}</p><pre class="sec-gap">${esc(d.brief.text)}</pre>` : '<p class="empty">No brief yet. One is made every morning at 8, or make one now.</p>'}
+        ${d.brief ? `<p class="note">${esc(when(d.brief.createdAt))}</p><div class="a sec-gap">${answerHtml(d.brief.text)}</div>` : '<p class="empty">No brief yet. One is made every morning at 8, or make one now.</p>'}
         <div class="acts"><button class="btn" onclick="runWf('dailyBriefWorkflow', this)">Make a fresh brief</button></div><div id="wfout" aria-live="polite"></div></section>
     </aside></div>`;
   },
 
   async assistant() {
     setTimeout(() => $('#q')?.focus());
-    return head('Ask', 'Ask about stock, orders, suppliers or today. Answers come from your database; every answer links to its trace on Activity.') +
+    return head('Ask', 'Ask about stock, orders, suppliers or your day. Answers come from your own shop data.') +
       `<div class="day"><div>${askBox([], false)}</div>
       <aside><section class="sec"><h2>Try asking</h2>${tries(["Give me today's business brief", 'What should I restock?', 'Which products are likely to run out?', 'Why are you recommending this?', 'What did I sell the most this week?', 'Find cheaper suppliers for this product', 'What orders are still pending?', "Remember that I don't buy from Supplier C"])}</section></aside></div>`;
   },
@@ -164,9 +170,9 @@ const views = {
   async orders() {
     const [{ orders }, d] = await Promise.all([api('/orders'), api('/dashboard')]);
     const pending = d.pending.orders, done = orders.filter(o => o.status !== 'pending');
-    return head('Orders', `${plural(pending.length, 'order')} to deliver.${orders.some(o => o.demo) ? ' Sample orders (seeded, marked demo).' : ''}`) +
+    return head('Orders', `${plural(pending.length, 'order')} to deliver.${orders.some(o => o.demo) ? ' Includes sample orders.' : ''}`) +
     `<section class="sec"><h2>New order from a chat</h2>
-      <p class="lede">Paste the WhatsApp or Instagram message. Gemma reads it, the code checks every product and customer against your records, and nothing is saved until you confirm.</p>
+      <p class="lede">Paste the WhatsApp or Instagram message. Nivara reads it and checks each product and customer against your records. Nothing is saved until you confirm.</p>
       <label class="lbl" for="otext">Message</label>
       <textarea id="otext" rows="3">Rahul wants 3 chocolate bars and one shaker, deliver tomorrow</textarea>
       <div class="acts gap"><button class="btn primary" onclick="extract(this)">Read the message</button></div>
@@ -182,27 +188,25 @@ const views = {
     const sup = Object.fromEntries(suppliers.map(s => [s._id, s.name]));
     return head('Stock', `What is on the shelf: ${plural(products.length, 'product')}. What to reorder is on <a href="#forecast">Forecast</a>.`) +
       Object.entries(Object.groupBy(products, p => p.category)).map(([cat, ps]) => `<section class="sec"><h2>${esc(cap(cat))} <span class="n">${ps.length}</span></h2>
-      ${table([['Product', p => `${esc(p.name)}<span class="sub">${esc(p._id)}</span>`, 'lead'], ['In stock', p => p.stock, 'num big'], ['Sells at', p => inr(p.price), 'num'], ['Costs you', p => inr(p.cost), 'num'], ['Supplier', p => esc(sup[p.supplierId] ?? p.supplierId)], ['Delivery takes', p => plural(p.leadTimeDays, 'day'), 'num']], ps)}</section>`).join('');
+      ${table([['Product', p => esc(p.name), 'lead'], ['In stock', p => p.stock, 'num big'], ['Sells at', p => inr(p.price), 'num'], ['Costs you', p => inr(p.cost), 'num'], ['Supplier', p => esc(sup[p.supplierId] ?? p.supplierId)], ['Delivery takes', p => plural(p.leadTimeDays, 'day'), 'num']], ps)}</section>`).join('');
   },
 
   async forecast() {
     const f = await api('/forecast');
     const COVER_DAYS = 21, frac = n => Math.min(n / COVER_DAYS, 1);
     return head('Forecast', 'What sells in the next 7 days, and how long your stock lasts against how long a new delivery takes.') +
-    `<section><p>${methodNote(f.method)} <span class="quiet">${esc(f.model ?? '')} · learned from ${f.historyDays} days of sales · worked out ${esc(when(f.createdAt))}${f.precomputed ? ` from a TabPFN run made ${esc(when(f.precomputed.at))} (${f.precomputed.skus} of ${f.precomputed.of} products)` : ''}</span></p>
-      ${f.demandNote ? `<p class="warn">${esc(f.demandNote)}</p>` : ''}
-      ${f.fallbackReason ? `<p class="warn">Why the fallback: ${esc(f.fallbackReason)}</p>` : ''}
+    `<section><p class="quiet">Based on your last ${plural(f.historyDays ?? 60, 'day')} of sales.</p>
       <div class="acts gap"><button class="btn" onclick="refreshForecast(this)">Work it out again</button></div></section>
     <section class="sec">${table([
       ['Product', r => esc(r.name), 'lead'],
       ['Left', r => `${r.available}<span class="sub">${r.stock} in stock, ${r.reserved} held</span>`, 'num big'],
-      ['Sold last 7 days', r => r.last7Sold, 'num wide'],
-      ['Next 7 days', r => r.demand7, 'num'],
-      ['Lasts', r => `${r.daysOfCover == null ? 'Not running out' : plural(r.daysOfCover, 'day')} <span class="quiet">· delivery ${plural(r.leadTimeDays, 'day')}</span>
+      ['Sold last 7 days', r => whole(r.last7Sold), 'num wide'],
+      ['Next 7 days', r => whole(r.demand7), 'num'],
+      ['Lasts', r => `${r.daysOfCover == null ? 'Not running out' : plural(Math.max(r.available > 0 ? 1 : 0, r.daysOfCover), 'day')} <span class="quiet">· delivery ${plural(r.leadTimeDays, 'day')}</span>
         <div class="cover ${LEVEL[r.risk]}" style="--cover:${r.daysOfCover == null ? 1 : frac(r.daysOfCover)};--lead:${frac(r.leadTimeDays)}" role="img" aria-label="${r.daysOfCover == null ? 'Not running out' : plural(r.daysOfCover, 'day')} of stock, delivery takes ${plural(r.leadTimeDays, 'day')}"></div>`],
       ['Risk', r => risk(r.risk)],
-      ['Order', r => r.reorderQty || '—', 'num big']], f.items)}
-    <p class="note">Bar: days of stock, up to 3 weeks. Notch: days a new delivery takes. Red means it runs out before a reorder could arrive; amber means it runs out within 7 days. Order covers the delivery time + 7 days + 3 safety days, minus what is left after pending orders; 0 when the product is fine.</p></section>`;
+      ['Order', r => r.reorderQty || '—', 'num big']], f.items, 'No products yet.')}
+    <p class="note">The bar shows days of stock, up to 3 weeks; the notch shows how long a delivery takes. Red runs out before a reorder could arrive. Amber runs out within 7 days. Order covers the delivery time, a week of sales and 3 spare days.</p></section>`;
   },
 
   async suppliers() {
@@ -212,10 +216,10 @@ const views = {
       <div class="field"><input id="sq" aria-label="Product to search" placeholder="Product, e.g. whey protein 1kg" value="Chocolate Protein Bar" onkeydown="if(event.key==='Enter')supSearch($('#sbtn'))"><button class="btn primary" id="sbtn" onclick="supSearch(this)">Search prices</button></div>
       <div id="sres" aria-live="polite"></div></section>
     <section class="sec"><h2>Cheaper quotes <span class="n">${s.opportunities.filter(o => o.significant).length}</span></h2>
-      <p class="lede">Stored quotes against what you pay now. Faded rows save too little to count.</p>
+      <p class="lede">Stored quotes against what you pay now. Faded rows save too little to switch for.</p>
       ${s.opportunities.length ? `<ul class="rows">${s.opportunities.map(o => row({ level: o.significant ? 'light' : '', dim: !o.significant, name: esc(o.name),
         why: `${esc(o.best.supplier)} at ${inr(o.best.unitCost)}. You pay ${inr(o.currentCost)} at ${esc(o.currentSupplier)}.${o.skippedBlocked.length ? `<br>Left out, blocked: ${esc(o.skippedBlocked.join(', '))}` : ''}`,
-        fig: `<b>${inr(o.savingPerUnit)}</b><span>less a unit · ${o.savingPercent}%${o.significant ? '' : ' · not counted'}</span>` })).join('')}</ul>` : '<p class="empty">No cheaper quotes stored.</p>'}</section>
+        fig: `<b>${inr(o.savingPerUnit)}</b><span>less a unit · ${o.savingPercent}%</span>` })).join('')}</ul>` : '<p class="empty">No cheaper quotes stored.</p>'}</section>
     <section class="sec"><h2>What Nivara remembers</h2><div id="mem"><p class="loading">Loading…</p></div>
       <label class="lbl gap" for="mtext">Tell it something to remember</label>
       <div class="field"><input id="mtext" placeholder="e.g. I never buy from Supplier C" onkeydown="if(event.key==='Enter')saveMem($('#mbtn'))"><button class="btn" id="mbtn" onclick="saveMem(this)">Remember</button></div></section>`;
@@ -223,29 +227,32 @@ const views = {
 
   async workflows() {
     const w = await api('/workflows');
-    return head('Workflows', w.temporal ? `${st('light', 'Temporal connected')} <a href="${esc(w.uiUrl)}" target="_blank" rel="noopener">Open the Temporal UI</a>` : st('mid', 'Temporal unavailable: workflows run in-process')) +
-    `<section>${w.schedule ? `<p>Next morning brief: <b>${esc(when(w.schedule.next))}</b></p>` : ''}</section>
-    <section class="sec"><h2>Run now</h2><ul class="rows">${Object.entries(WF).map(([n, label]) => row({ level: null, name: label, why: `<span class="small">${n}</span>`, act: `<button class="btn" onclick="runWf('${n}', this)">Run</button>` })).join('')}</ul>
+    return head('Workflows', `Jobs Nivara runs for you. ${w.schedule ? `Next morning brief: <b>${esc(when(w.schedule.next))}</b>.` : 'The morning brief runs every day at 8.'}`) +
+    `<section class="sec"><h2>Run now</h2><ul class="rows">${Object.entries(WF).map(([n, label]) => row({ level: null, name: label, why: esc(WF_WHY[n]), act: `<button class="btn" onclick="runWf('${n}', this)">Run</button>` })).join('')}</ul>
       <div id="wfout" aria-live="polite"></div></section>
-    ${w.runs.length ? `<section class="sec"><h2>Recent runs</h2>${table([['Workflow', r => esc(WF[r.type] ?? r.type), 'lead'], ['ID', r => `<span class="small">${esc(r.id)}</span>`], ['Status', r => st(r.status === 'COMPLETED' ? 'light' : r.status === 'RUNNING' ? 'mid' : 'heavy', cap(r.status.toLowerCase()))], ['Started', r => esc(when(r.start)), 'num']], w.runs)}</section>` : ''}
-    <section class="sec"><h2>Recent briefs</h2>${table([['When', r => esc(when(r.createdAt)), 'lead'], ['By', r => esc(r.by)], ['Brief', r => `<pre class="small">${esc(r.text)}</pre>`]], w.briefs)}</section>`;
+    ${w.runs.length ? `<section class="sec"><h2>Recent runs</h2>${table([['Job', r => esc(r.label), 'lead'], ['Status', r => st(r.status === 'done' ? 'light' : r.status === 'running' ? 'mid' : 'heavy', RUN_WORD[r.status] ?? 'Running')], ['Started', r => esc(when(r.start)), 'num']], w.runs)}</section>` : ''}
+    <section class="sec"><h2>Recent briefs</h2>${w.briefs.length ? w.briefs.map(b => `<article class="run"><p class="note">${esc(when(b.createdAt))}</p><div class="a">${answerHtml(b.text)}</div></article>`).join('') : '<p class="empty">No briefs yet. Run the morning brief above.</p>'}</section>`;
   },
 
   async activity() {
-    const { traces } = await api('/traces');
-    return head('Activity', `Every answer, order reading and workflow step is traced: model calls, tool calls, time taken, errors. ${health?.integrations?.sentry?.status === 'live' ? 'Also sent to Sentry.' : 'Sentry is not set up, so traces stay here.'}`) +
-    `<section>${table([['When', r => esc(when(r.at)), 'lead'], ['What', r => esc(r.kind)], ['Input', r => esc(String(r.input ?? '').slice(0, 80))], ['Took', r => `${r.ms} ms`, 'num'], ['Result', r => r.error ? st('heavy', String(r.error).slice(0, 80)) : st('light', 'OK')], ['', r => `<button class="link" onclick="showTrace('${esc(r._id)}')">Spans</button>`]], traces, 'No traces yet. Ask a question or read an order message and it shows up here.')}</section><div id="trace"></div>`;
+    const { activity } = await api('/traces');
+    return head('Activity', 'Behind the scenes: what Nivara did recently, the steps it took and how long they took.') +
+    `<section>${activity.length ? `<ul class="rows">${activity.map(a => row({ level: a.ok ? 'light' : 'mid', name: esc(a.what),
+      why: `${a.question ? `“${esc(a.question)}”<br>` : ''}${esc(when(a.at))}${a.steps.length ? `<details class="small"><summary>${plural(a.steps.length, 'step')}</summary><ul class="pts">${a.steps.map(s => `<li>${esc(s.label)} · ${secs(s.ms)}${s.ok ? '' : ' · did not finish'}</li>`).join('')}</ul></details>` : ''}`,
+      fig: `<b>${secs(a.ms)}</b><span>${a.ok ? 'done' : 'did not finish'}</span>` })).join('')}</ul>` : '<p class="empty">Nothing yet. Ask a question or read an order message and it shows up here.</p>'}</section>`;
   },
 
   async health() {
     health = await api('/health');
-    return head('Health', 'What is connected. When something is down, Nivara falls back and keeps working with less.') +
-      `<section><ul class="rows">${Object.entries(health.integrations).map(([k, v]) => row({ level: v.status === 'live' ? 'light' : 'mid', name: esc(HEALTH[k] ?? k), why: esc(v.detail),
-        fig: `<b class="${v.status === 'live' ? 'green' : 'amber'}">${v.status === 'live' ? 'Live' : 'Fallback'}</b>` })).join('')}</ul></section>`;
+    return head('Health', 'Behind the scenes: the services that power Nivara. When one rests, Nivara keeps working with less.') +
+      `<section><ul class="rows">${Object.values(health.integrations).map(v => row({ level: v.status === 'live' ? 'light' : 'mid', name: esc(v.name), why: esc(v.note),
+        fig: `<b class="${v.status === 'live' ? 'green' : 'amber'}">${v.status === 'live' ? 'Live' : 'Standby'}</b>` })).join('')}</ul></section>`;
   },
 };
+const secs = ms => ms < 1000 ? 'under 1 s' : `${Math.round(ms / 100) / 10} s`;
+const RUN_WORD = { done: 'Done', running: 'Running', failed: 'Did not finish', stopped: 'Stopped' };
+const WF_WHY = { dailyBriefWorkflow: 'Forecast, stock check, online prices and a fresh brief.', lowStockWorkflow: 'Lists what runs out soon.', forecastWorkflow: 'Works out next week’s sales again.', supplierRefreshWorkflow: 'Checks shop prices online.' };
 const WF = { dailyBriefWorkflow: 'Morning brief', lowStockWorkflow: 'Low-stock check', forecastWorkflow: 'Forecast', supplierRefreshWorkflow: 'Online prices' };
-const HEALTH = { mongodb: 'MongoDB Atlas', gemma: 'Gemma', mastra: 'Mastra tools', tabpfn: 'TabPFN forecast', tiger: 'Tiger Data', serpapi: 'SerpApi prices', backboard: 'Backboard memory', elevenlabs: 'ElevenLabs voice', temporal: 'Temporal', sentry: 'Sentry' };
 const TITLES = { dashboard: 'Today', assistant: 'Ask', orders: 'Orders', inventory: 'Stock', forecast: 'Forecast', suppliers: 'Suppliers', workflows: 'Workflows', activity: 'Activity', health: 'Health' };
 
 function go(id) {
@@ -264,16 +271,13 @@ const askBox = (list, titled = true) => `<section class="sec ask" id="ask" tabin
   ${tries(list)}
   <p class="small quiet voice" id="voicemode"></p>
   <div class="log" id="chat" aria-live="polite">${drawTurns()}</div></section>`;
-const MODE = { template: 'written from database facts', 'template+gemma': 'database facts, summary by Gemma' };
+const canSpeak = () => elevenOn() || 'speechSynthesis' in window;
 function renderTurn(t) {
   const r = t.r;
   if (t.error) return `<article class="turn"><p class="q">${esc(t.q)}</p>${errorBox(t.error, 'answer that', () => answer(t))}</article>`;
-  if (!r) return `<article class="turn" aria-busy="true"><p class="q">${esc(t.q)}</p><p class="thinking" role="status"><span class="st">Thinking</span> Checking your orders, stock and suppliers. This can take a few seconds.</p></article>`;
-  const mode = r.answerMode === 'gemma' ? `written by ${r.model}` : MODE[r.answerMode] ?? r.answerMode;
-  return `<article class="turn"><p class="q">${esc(t.q)}</p><pre class="a">${esc(r.answer)}</pre>
-    <p class="meta">${[mode && `<span>${esc(cap(mode))}</span>`, r.traceId && traceLink(r.traceId), `<button class="link" onclick="speak(${turns.indexOf(t)})">Read aloud</button>`].filter(Boolean).join('')}</p>
-    <details><summary>How this was answered</summary><p>Tool ${esc(r.tool)} · route ${esc(r.route)}</p>${r.notes?.length ? `<p>${r.notes.map(esc).join('<br>')}</p>` : ''}
-      ${r.data ? `<pre>${esc(JSON.stringify(r.data, null, 1).slice(0, 4000))}</pre>` : ''}</details></article>`;
+  if (!r) return `<article class="turn" aria-busy="true"><p class="q">${esc(t.q)}</p><p class="thinking" role="status"><span class="st">Thinking</span> Checking your orders, stock and suppliers.</p></article>`;
+  return `<article class="turn"><p class="q">${esc(t.q)}</p><div class="a">${answerHtml(r.answer)}</div>
+    ${canSpeak() ? `<p class="meta"><button class="link" onclick="speak(${turns.indexOf(t)})">Read aloud</button></p>` : ''}</article>`;
 }
 function drawTurns() { return turns.slice().reverse().map(renderTurn).join(''); }
 const drawLog = () => { if ($('#chat')) $('#chat').innerHTML = drawTurns(); };
@@ -301,10 +305,16 @@ async function answer(t) {
 }
 const elevenOn = () => health?.integrations?.elevenlabs?.status === 'live';
 const voiceNotice = msg => { if ($('#voicemode')) $('#voicemode').textContent = msg; };
-const browserSpeak = text => speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { lang: 'en-IN' }));
-/** ElevenLabs when it is live; any failure (request, autoplay) falls back to the browser voice without a message. */
+const VOICE = {
+  off: "Voice isn't available in this browser. Type your question instead.",
+  denied: 'The microphone is off for this site. Type your question instead.',
+  missed: "Didn't catch that. Tap Speak to try again, or type it.",
+};
+const browserSpeak = text => { try { speechSynthesis.cancel(); speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { lang: 'en-IN' })); } catch {} };
+/** ElevenLabs when it is live; any failure (request, autoplay) quietly uses the browser voice instead. */
 async function speak(i) {
-  const text = turns[i].r.answer;
+  const text = turns[i]?.r?.answer;
+  if (!text) return;
   if (!elevenOn()) return browserSpeak(text);
   try { await new Audio(URL.createObjectURL(await api('/voice/tts', { method: 'POST', body: { text }, as: 'blob', retry: true }))).play(); }
   catch { browserSpeak(text); }
@@ -312,52 +322,52 @@ async function speak(i) {
 let rec;
 async function listen(btn) {
   const label = btn.dataset.label ??= btn.textContent;
+  voiceNotice('');
   if (elevenOn() && window.MediaRecorder && navigator.mediaDevices) {
     if (rec?.state === 'recording') return rec.stop();
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const chunks = [];
-      rec = new MediaRecorder(stream);
-      rec.ondataavailable = e => chunks.push(e.data);
-      rec.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop()); btn.textContent = label;
-        const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' }); // Safari records audio/mp4, Chrome audio/webm
-        const j = await api('/voice/stt', { method: 'POST', body: blob, retry: true }).catch(() => ({}));
-        if (j.text) return send(j.text);
-        voiceNotice("Didn't catch that. Say it again: listening with browser speech.");
-        browserListen(btn, label);
-      };
-      rec.start(); btn.textContent = 'Stop';
-      return;
-    } catch { voiceNotice('Recording is not available here, so browser speech is listening.'); }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError') return voiceNotice(VOICE.denied); return browserListen(btn, label); }
+    const chunks = [];
+    rec = new MediaRecorder(stream);
+    rec.ondataavailable = e => chunks.push(e.data);
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); btn.textContent = label;
+      const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' }); // Safari records audio/mp4, Chrome audio/webm
+      const j = await api('/voice/stt', { method: 'POST', body: blob, retry: true }).catch(() => ({}));
+      if (j.text?.trim()) return send(j.text);
+      voiceNotice(VOICE.missed);
+    };
+    rec.start(); btn.textContent = 'Stop';
+    return;
   }
   browserListen(btn, label);
 }
 function browserListen(btn, label) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return voiceNotice('Voice needs an ElevenLabs key, or a browser with speech recognition (Chrome, Edge, Safari).');
+  if (!SR) return voiceNotice(VOICE.off);
   const sr = new SR(); sr.lang = 'en-IN';
   sr.onresult = e => send(e.results[0][0].transcript);
+  sr.onerror = e => voiceNotice(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? VOICE.denied : VOICE.missed);
   sr.onend = () => (btn.textContent = label);
-  btn.textContent = 'Listening…'; sr.start();
+  try { btn.textContent = 'Listening…'; sr.start(); } catch { btn.textContent = label; voiceNotice(VOICE.off); }
 }
 
 // ---------- orders ----------
 let draft;
 async function extract(btn) {
-  $('#draft').innerHTML = '<p class="loading" role="status">Gemma is reading the message…</p>';
+  $('#draft').innerHTML = '<p class="loading" role="status">Reading the message…</p>';
   try {
     const r = await busy(btn, 'Reading…', () => api('/orders/extract', { method: 'POST', body: { text: $('#otext').value }, retry: true }));
     draft = r.draft;
     const unmatched = draft.items.some(i => !i.product);
     $('#draft').innerHTML = `<div class="sec"><h2>Check this order</h2>
-      <p class="lede"><b>${esc(draft.customer.name)}</b> ${draft.customer.isNew ? st('mid', 'New customer') : `<span class="small">${esc(draft.customer.id)}</span>`}
+      <p class="lede"><b>${esc(draft.customer.name)}</b> ${draft.customer.isNew ? st('mid', 'New customer') : ''}
         · Delivery <b>${draft.deliveryDate ? esc(day(draft.deliveryDate)) : 'not given'}</b>${draft.deliveryText ? ` <span class="small">from “${esc(draft.deliveryText)}”</span>` : ''}</p>
-      ${table([['Asked for', i => esc(i.requested), 'lead'], ['Matched product', i => i.product ? `${esc(i.product.name)}<span class="sub">${esc(i.product.sku)}</span>` : st('heavy', 'No match')], ['Qty', i => i.quantity, 'num big'], ['Price', i => i.product ? inr(i.product.price) : '—', 'num'], ['In stock', i => i.product?.stock ?? '—', 'num']], draft.items)}
+      ${table([['Asked for', i => esc(i.requested), 'lead'], ['Matched product', i => i.product ? esc(i.product.name) : st('heavy', 'No match')], ['Qty', i => i.quantity, 'num big'], ['Price', i => i.product ? inr(i.product.price) : '—', 'num'], ['In stock', i => i.product?.stock ?? '—', 'num']], draft.items)}
       <p class="total">Total <b>${inr(draft.total)}</b></p>
       ${draft.problems.length ? `<p class="warn">${draft.problems.map(esc).join('<br>')}</p>` : ''}
-      <div class="acts gap"><button class="btn primary" onclick="confirmOrder(this)" ${unmatched ? 'disabled title="Fix the unmatched items first"' : ''}>Confirm and save</button>${unmatched ? '<span class="small red">Fix the unmatched items in the message first.</span>' : ''}</div>
-      <details class="note"><summary>What Gemma read (validated)</summary><pre>${esc(JSON.stringify(r.extraction, null, 1))}</pre></details></div>`;
+      <div class="acts gap"><button class="btn primary" onclick="confirmOrder(this)" ${unmatched ? 'disabled title="Fix the unmatched items first"' : ''}>Confirm and save</button>${unmatched ? '<span class="small red">Fix the unmatched items in the message first.</span>' : ''}</div></div>`;
   } catch (e) { $('#draft').innerHTML = errorBox(e, 'read the message', () => extract(btn)); }
 }
 async function confirmOrder(btn) {
@@ -380,19 +390,18 @@ async function supSearch(btn) {
   $('#sres').innerHTML = '<p class="loading" role="status">Searching…</p>';
   try {
     const r = await busy(btn, 'Searching…', () => api('/suppliers/search?q=' + encodeURIComponent($('#sq').value)));
-    $('#sres').innerHTML = `<p class="lede gap">${r.product ? `Matched <b>${esc(r.product.name)}</b>. You pay ${inr(r.product.cost)} and sell at ${inr(r.product.price)}.` : 'Not in your catalogue, so it was searched as typed.'}</p>
-      ${r.web.available ? `${r.web.hiddenBlocked ? `<p class="note">${plural(r.web.hiddenBlocked, 'result')} hidden: blocked supplier.</p>` : ''}${table([['Listing', o => `<a href="${esc(o.link)}" target="_blank" rel="noopener">${esc(o.title)}</a>`], ['Seller', o => `${esc(o.source)}<span class="sub">${esc(o.sourceDomain)}</span>`], ['Price', o => inr(o.price), 'num big']], r.web.offers.slice().sort((a, b) => a.price - b.price))}<p class="note">Live Google Shopping results via SerpApi. Retail listings: check the pack size before comparing with your unit cost.</p>` : `<p class="warn">${esc(r.web.reason)}</p>`}
-      ${r.dbOpportunity ? `<p class="lede gap">Stored quote: <b>${esc(r.dbOpportunity.best.supplier)}</b> at ${inr(r.dbOpportunity.best.unitCost)} a unit, ${inr(r.dbOpportunity.savingPerUnit)} less (${r.dbOpportunity.savingPercent}%${r.dbOpportunity.significant ? '' : ', too small to count'}).</p>` : ''}
-      ${r.memory ? `<p class="note">Blocked-supplier memory: ${esc(r.memory.source)}</p>` : ''}`;
+    const o = r.dbOpportunity;
+    $('#sres').innerHTML = `<p class="lede gap">${r.product ? `Matched <b>${esc(r.product.name)}</b>. You pay ${inr(r.product.cost)} and sell at ${inr(r.product.price)}.` : 'Not in your products, so it was searched as typed.'}</p>
+      ${r.web.available ? `${r.web.hiddenBlocked ? `<p class="note">${plural(r.web.hiddenBlocked, 'result')} hidden: blocked supplier.</p>` : ''}${table([['Listing', o => o.link ? `<a href="${esc(o.link)}" target="_blank" rel="noopener">${esc(o.title)}</a>` : esc(o.title)], ['Seller', o => esc(o.source)], ['Price', o => inr(o.price), 'num big']], r.web.offers.slice().sort((a, b) => a.price - b.price), 'No online prices found for this product.')}<p class="note">Shop prices online. Check the pack size before comparing with your cost.</p>` : `<p class="note">${esc(r.web.message)}</p>`}
+      ${o ? `<p class="lede gap">Best stored quote: <b>${esc(o.best.supplier)}</b> at ${inr(o.best.unitCost)} a unit, ${inr(o.savingPerUnit)} less${o.significant ? '' : '. Too small to switch for'}.</p>` : ''}`;
   } catch (e) { $('#sres').innerHTML = errorBox(e, 'search prices', () => supSearch(btn)); }
 }
 async function loadMem() {
   let m;
   try { m = await api('/memory'); }
   catch (e) { if ($('#mem')) $('#mem').innerHTML = errorBox(e, 'load what Nivara remembers', loadMem); return; }
-  if ($('#mem')) $('#mem').innerHTML = (m.preferences.length ? `<ul class="rows">${m.preferences.map(p => row({ level: null, name: `“${esc(p.text)}”`,
-    why: `${p.kind === 'block_supplier' ? `Blocks ${esc(p.supplier)}` : cap(esc(p.kind))} · stored in ${p.mirror === 'backboard' ? 'Mongo and Backboard' : 'Mongo only'}` })).join('')}</ul>` : '<p class="empty">Nothing remembered yet.</p>') +
-    `<p class="note">Backboard: ${m.backboard.live ? `live, ${plural(m.backboard.memories.length, 'memory', 'memories')}` : esc(m.backboard.error || 'not set up (no BACKBOARD_API_KEY)')}</p>`;
+  if ($('#mem')) $('#mem').innerHTML = m.preferences.length ? `<ul class="rows">${m.preferences.map(p => row({ level: null, name: `“${esc(p.text)}”`,
+    why: p.kind === 'block_supplier' && p.supplier ? `Won't suggest ${esc(p.supplier)}` : 'Saved note' })).join('')}</ul>` : '<p class="empty">Nothing remembered yet.</p>';
 }
 async function saveMem(btn) {
   try { await busy(btn, 'Saving…', () => api('/memory', { method: 'POST', body: { text: $('#mtext').value } })); flash = 'Remembered.'; route(); }
@@ -401,54 +410,39 @@ async function saveMem(btn) {
 
 // ---------- workflows / traces ----------
 const STEP = {
-  forecast: { title: 'Forecast', view: s => `<p>${methodNote(s.method)} ${s.highRisk ? `${plural(s.highRisk, 'product')} run out before new stock can arrive.` : 'Nothing runs out before new stock can arrive.'}</p>` },
-  lowStockCheck: { title: 'Low stock', view: s => s.lowStock.length
-    ? `<ul class="rows">${s.lowStock.map(i => row({ level: LEVEL[i.risk], name: esc(i.name), why: RISK_WHY[i.risk] ?? '', fig: i.reorderQty ? `<b>${i.reorderQty}</b><span>to order</span>` : '' })).join('')}</ul>`
+  forecast: { title: 'Forecast', view: s => `<p>${s.runsOutFirst ? `${plural(s.runsOutFirst, 'product')} run out before new stock can arrive.` : 'Nothing runs out before new stock can arrive.'}</p>` },
+  lowStockCheck: { title: 'Low stock', view: s => s.items.length
+    ? `<ul class="rows">${s.items.map(i => row({ level: LEVEL[i.risk], name: esc(i.name), why: RISK_WHY[i.risk] ?? '', fig: i.reorderQty ? `<b>${i.reorderQty}</b><span>to order</span>` : '' })).join('')}</ul>`
     : '<p class="empty">Nothing runs out this week.</p>' },
-  supplierRefresh: { title: 'Online prices', view: s => s.error ? '<p class="note">Skipped this time: the price search kept failing. Stored quotes still apply.</p>'
-    : s.source === 'stored' ? '<p class="note">Online prices are off (no SerpApi key). Stored quotes still apply.</p>'
-    : `<ul class="rows">${s.refreshed.map(p => row({ level: null, name: esc(p.product), why: p.error ? 'No price this time' : p.cheapest ? `${esc(p.cheapest.source)} · ${plural(p.offers, 'listing')}` : 'No usable listings',
+  supplierRefresh: { title: 'Online prices', view: s => s.status === 'skipped' ? '<p class="note">Skipped this time. Your stored quotes still apply.</p>'
+    : s.status === 'off' ? '<p class="note">Online prices are not set up. Your stored quotes still apply.</p>'
+    : `<ul class="rows">${s.items.map(p => row({ level: null, name: esc(p.product), why: p.missed ? 'No price this time' : p.cheapest ? `${esc(p.cheapest.source)} · ${plural(p.listings, 'listing')}` : 'No prices found',
       fig: p.cheapest ? `<b>${inr(p.cheapest.price)}</b><span>cheapest</span>` : '' })).join('')}</ul>` },
-  dailyBrief: { title: 'Brief', view: s => `<pre>${esc(s.text)}</pre>` },
+  dailyBrief: { title: 'Brief', view: s => `<div class="a">${answerHtml(s.text)}</div>` },
 };
 const RISK_WHY = { high: 'Runs out before new stock can arrive', medium: 'Runs out this week' };
-const traceLink = id => `<a href="#activity/${esc(id)}">Trace ${esc(id.slice(0, 8))}</a>`;
 function runResult(name, r) {
-  const steps = Object.keys(STEP).filter(k => r.result?.[k]).map(k => [k, r.result[k]]);
-  const trace = r.traceId ?? steps.map(([, s]) => s.traceId).find(Boolean);
+  const steps = Object.keys(STEP).filter(k => r.steps?.[k]).map(k => [k, r.steps[k]]);
   return `<article class="run" aria-labelledby="run-h">
-    <h3 id="run-h">${esc(WF[name] ?? name)}</h3>
-    <p class="meta"><span>${r.result ? st('light', 'Done') : st('mid', 'Still running')}</span><span>${st('', r.mode === 'temporal' ? 'Temporal' : 'Direct')}</span>${trace ? traceLink(trace) : ''}</p>
-    ${r.mode === 'direct' ? '<p class="note">Ran directly (Temporal worker offline on this host).</p>' : ''}
-    ${r.result ? '' : '<p class="note">The worker has not finished yet. It keeps going; check Recent runs or the Temporal UI.</p>'}
-    ${steps.map(([k, s]) => `<section class="step"><h4>${STEP[k].title}</h4>${STEP[k].view(s)}</section>`).join('')}
-    ${r.retries?.length ? `<p class="note">Needed ${plural(r.retries.length, 'retry', 'retries')} to finish.</p>` : ''}
-    <details class="note"><summary>Details</summary><pre>${esc(JSON.stringify(r, null, 1))}</pre></details></article>`;
+    <h3 id="run-h">${esc(WF[name] ?? r.label ?? 'Job')}</h3>
+    <p class="meta"><span>${r.done ? st('light', 'Done') : st('mid', 'Still running')}</span></p>
+    ${r.done ? '' : `<p class="note">${esc(r.message || 'Still running. Check back in a minute.')}</p>`}
+    ${steps.map(([k, s]) => `<section class="step"><h4>${STEP[k].title}</h4>${STEP[k].view(s)}</section>`).join('')}</article>`;
 }
 async function runWf(name, btn) {
   const out = $('#wfout');
-  out.innerHTML = `<p class="note" role="status">Running ${esc(WF[name] ?? name)}…</p>`;
+  out.innerHTML = `<p class="note" role="status">Running ${esc((WF[name] ?? 'the job').toLowerCase())}…</p>`;
   try {
     const r = await busy(btn, 'Running…', () => api(`/workflows/${name}/run`, { method: 'POST', timeoutMs: API.longTimeoutMs }));
-    if (location.hash === '#dashboard' || !location.hash) { flash = `${WF[name]} done.`; return route(); }
+    if (location.hash === '#dashboard' || !location.hash) { flash = `${WF[name] ?? 'Job'} done.`; return route(); }
     out.innerHTML = runResult(name, r);
-  } catch (e) { out.innerHTML = errorBox(e, `run ${(WF[name] ?? name).toLowerCase()}`, () => runWf(name, btn)); }
-}
-async function showTrace(id) {
-  try {
-    const t = await api('/traces/' + encodeURIComponent(id));
-    const t0 = t.spans[0]?.start ?? 0;
-    $('#trace').innerHTML = `<section class="sec"><h2>${esc(t.kind)} <span class="n">${t.ms} ms · ${esc(id.slice(0, 8))}</span></h2>
-      ${table([['+ms', s => s.start - t0, 'num'], ['Span', s => `<b>${esc(s.op)}</b> ${esc(s.name)}`], ['Took', s => `${s.ms} ms`, 'num'], ['Attributes', s => `<details><summary class="small">${plural(Object.keys(s.attrs).length, 'attribute')}</summary><pre class="small">${esc(JSON.stringify(s.attrs, null, 1))}</pre></details>`], ['Error', s => s.error ? st('heavy', s.error) : '']], t.spans)}
-      <p class="lede gap"><b>Final output:</b> ${esc(t.output)}</p></section>`;
-    go('trace');
-  } catch (e) { $('#trace').innerHTML = errorBox(e, 'load the trace', () => showTrace(id)); }
+  } catch (e) { out.innerHTML = errorBox(e, `run the ${(WF[name] ?? 'job').toLowerCase()}`, () => runWf(name, btn)); }
 }
 
 // ---------- router ----------
 let first = true;
 async function route() {
-  const [view, param] = location.hash.slice(1).split('/'); // #activity/<traceId> opens that trace
+  const [view] = location.hash.slice(1).split('/');
   const name = TITLES[view] ? view : 'dashboard';
   document.querySelectorAll('.nav a, #more a').forEach(a => a.hash === '#' + name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   $(`#more a[href="#${name}"]`) ? $('.more').setAttribute('aria-current', 'page') : $('.more').removeAttribute('aria-current');
@@ -460,11 +454,10 @@ async function route() {
   try {
     $('#view').innerHTML = (note ? `<p class="flash" role="status">${st('light', 'Done')} ${esc(note)}</p>` : '') + await views[name]();
     if (name === 'suppliers') loadMem();
-    if (name === 'activity' && param) showTrace(decodeURIComponent(param));
-    voiceNotice(elevenOn() ? 'Voice: ElevenLabs' : 'Voice: browser speech');
   } catch (e) { $('#view').innerHTML = `<div class="sec">${errorBox(e, `load ${TITLES[name]}`, route)}</div>`; }
   if (!first) { scrollTo(0, 0); const h = $('#view h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
   first = false;
 }
 addEventListener('hashchange', route);
+addEventListener('online', () => { if (document.querySelector('[data-err]')) route(); }); // back online: reload the page that failed
 api('/health').then(h => (health = h)).catch(() => {}).finally(route);
