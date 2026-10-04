@@ -39,7 +39,7 @@ forecast/forecast.py      TabPFN regressor (py3.11 venv), JSON stdin → JSON st
 |----------------|------------------------------|----------------------------------------|
 | LLM            | Gemma via Ollama             | keyword router + template text         |
 | Tool calling   | Mastra agent native tools    | Gemma JSON router → keyword router     |
-| Forecast       | TabPFN (`method: tabpfn`)    | `fallback-moving-average`              |
+| Forecast       | TabPFN here, or a published TabPFN run (`forecastRuns`, `precomputed`) | `fallback-moving-average` |
 | Supplier search| SerpApi via Temporal refresh → `supplierPrices` cache | "Stored quote" from DB only |
 | Memory         | Mongo rules + Backboard save/search | Mongo only, labelled            |
 | Voice          | ElevenLabs Scribe + TTS (key verified) | browser Web Speech API, notice on failure |

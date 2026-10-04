@@ -10,7 +10,7 @@ Status legend: **verified live** = exercised end-to-end on the dev machine ·
 | **MongoDB** | Source of truth: products, customers, orders, sales, suppliers, preferences, briefs, traces | **verified live** (local MongoDB 9 in Docker). Atlas = same driver, just `MONGODB_URI`; Atlas itself untested | — (required) |
 | **Temporal** | Daily brief, low-stock, forecast, supplier-refresh workflows; daily schedule; retries | **verified live** (Temporal CLI 1.9 dev server) | activities run in-process with a retry loop, labelled `direct-fallback` (verified) |
 | **Mastra** | `Agent` + `createTool` definitions for all 8 tools | Gemma handles reasoning and structured tool intent, while a validated JSON router provides deterministic tool invocation; Mastra defines the agent and tools. Mastra's native tool-calling route is used only for models that advertise `tools` in Ollama (`gemma3:4b` does not; verified earlier with a `qwen3:8b` stand-in) | keyword router (verified) |
-| **TabPFN** | 7-day demand regression per product | **verified live** (TabPFN v2 weights, local CPU, ~18 s / 14 products) | `fallback-moving-average`, labelled in API + UI (verified) |
+| **TabPFN** | 7-day demand regression per product | **verified live** (TabPFN v2 weights, local CPU, ~18 s / 14 products; 212 real products in 317 s on an M5 CPU, published to Atlas for Render via `npm run forecast:publish`) | `fallback-moving-average`, labelled in API + UI (verified) |
 | **Sentry** | gen_ai agent spans (invoke_agent / chat / execute_tool), error capture, content redacted by default | code complete, DSN-gated. **Real API not tested — needs `SENTRY_DSN`.** Span tree, attributes, redaction and error capture verified offline with the real SDK + a capturing transport (`test/sentry.test.ts`) | local span store + Activity page (verified) |
 | **SerpApi** | Google Shopping prices for at-risk products, fetched by the Temporal `supplierRefresh` activity, cached in `supplierPrices`, shown on the dashboard as "Live search" | code complete, key-gated. **Real API not tested — needs `SERPAPI_API_KEY`.** Mock-fetch tests: store, HTTP error, malformed results, no key, blocked supplier | stored DB quotes, labelled "Stored quote" (verified) |
 | **Backboard** | Business memory: owner's words saved to Backboard, searched back for supplier decisions | code complete, key-gated, endpoints checked against docs.backboard.io. **Real API not tested — needs `BACKBOARD_API_KEY`.** Mock-fetch tests: save, list, search → changes a supplier decision, outage fallback | Mongo-only, labelled (verified) |
@@ -62,6 +62,16 @@ time index, 7-day and 28-day moving means; target = units sold. Rolled forward 7
 Output validated in Node (finite, non-negative numbers) before use. TabPFN ≥ 2.5 weights are licence-gated
 (`TABPFN_TOKEN` from Prior Labs); without a token the script uses the ungated TabPFN v2 weights, and the
 version actually used is shown in the UI ("TabPFN v2").
+
+**Hosts without Python (Render).** `npm run forecast:publish` runs the same TabPFN script on a machine that has
+`forecast/.venv` (e.g. a laptop) against whatever `MONGODB_URI` points at, in chunks of 50 products per fit
+(`--chunk=N`; CPU cost grows faster than linearly with context rows), optionally only the top-N products by demand
+(`--top=N`). The per-product 7-day predictions are stored in the `forecastRuns` collection with the model, package
+version, history window and timestamp. When the server can't run TabPFN itself, `forecastDemand` uses the newest
+run younger than `FORECAST_RUN_MAX_AGE_HOURS` (default 168 = one forecast horizon): `method: tabpfn` plus
+`precomputed: { runId, at, skus, of }`; products the run doesn't cover use the moving average and carry
+`forecastMethod: moving-average`. Stock, reserved units and risk are still computed live from Mongo. `/api/health`
+shows `tabpfn: live` with `mode: precomputed`, `model` and `at`. A stale or missing run → labelled moving average.
 
 ### Sentry
 - `src/instrument.ts` calls `Sentry.init` (only if `SENTRY_DSN`) and is preloaded with `node --import` by

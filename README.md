@@ -66,6 +66,7 @@ npm start                         # http://localhost:3000
 # optional, separate terminals:
 npm run forecast:setup            # TabPFN in forecast/.venv (python 3.11, pulls torch); v2 weights download on
                                   # first run; set TABPFN_TOKEN (Prior Labs licence) to use the newest weights
+npm run forecast:publish          # run TabPFN here, store predictions in Mongo (forecastRuns) for a Python-less host
 npm run temporal:dev              # Temporal dev server + UI on :8233
 SUPPLIER_FAIL_FIRST_N=2 npm run worker   # worker + daily schedule; supplier activity fails twice to show retries
 
@@ -122,6 +123,7 @@ its labelled fallbacks (keyword router + templated answers, in-process workflows
 | `MIN_SUPPLIER_SAVING_RUPEES` / `MIN_SUPPLIER_SAVING_PERCENT` | attention threshold (default ₹10 and 5%) | defaults |
 | `TEMPORAL_ADDRESS` (+`TEMPORAL_API_KEY` for Cloud) | Temporal | workflows run in-process, labelled `direct-fallback` |
 | `FORECAST_MODE=fallback` | skip TabPFN | — |
+| `FORECAST_RUN_MAX_AGE_HOURS` | how long a published TabPFN run (`npm run forecast:publish`) is used on hosts without Python (default 168) | moving average |
 
 Full list in [.env.example](.env.example). `GET /api/health` reports each integration as `live` or `fallback`.
 
@@ -154,7 +156,9 @@ Actually run end-to-end:
 - **Gemma 3 4B via Ollama**: all 8 assistant questions routed correctly by the Gemma JSON router
   (10–30 s each on CPU/Metal); order extraction for English and Hinglish messages
   ("neha ko 2 pb bar aur ek creatine bhejna hai friday tak" → Neha Sharma, 2× PB bar, 1× creatine, Friday's date).
-- **TabPFN v2** (local, CPU): 14 products forecast in ~18 s through the API, labelled `method: tabpfn`.
+- **TabPFN v2** (local, CPU): 14 products forecast in ~18 s through the API, labelled `method: tabpfn`. Real catalogue:
+  212 products in 317 s (4 chunks of 50 + 12, Apple M5 CPU, tabpfn 9.1.0) published to Atlas with `npm run forecast:publish`;
+  the Render deploy serves it as `method: tabpfn`, `precomputed`.
 - **Temporal** (CLI dev server): daily-brief workflow with Gemma + TabPFN; supplier activity failed attempts 1–2
   (simulated) and succeeded on attempt 3; schedule `daily-brief` registered (next run 08:00 IST).
 - **Mastra native tool calling**: verified only with `qwen3:8b` as a stand-in (Gemma 3 lacks the tools capability
@@ -186,7 +190,8 @@ Google Trends→proxy weekly demand into Atlas (ops) + Tiger (analytics). Owner 
   stock figures and leaked field names, so the standard questions are now answered by templates.
 - Supplier web prices are retail listings; pack sizes aren't normalised against wholesale unit cost.
 - Product matching is token overlap, fine for ~15 SKUs, not for hundreds.
-- TabPFN on CPU takes tens of seconds per forecast; results are cached per day.
+- TabPFN on CPU takes tens of seconds per forecast; results are cached per day. Render has no Python, so the live
+  site uses a TabPFN run published from a laptop (`npm run forecast:publish`) until it is older than 7 days.
 - Single-tenant, no auth: run it locally or behind a private URL.
 
 ## Future work
