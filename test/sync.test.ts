@@ -56,5 +56,5 @@ test('shopPulse fetches Atlas + Tiger in parallel', async () => {
   assert.equal(out.atlas.store, 'atlas');
   assert.equal(out.tiger.store, 'tiger');
   assert.ok(out.atlas.catalogSkus >= 1);
-  assert.match(out.tiger.note, /proxy/i);
+  assert.equal(out.tiger.topDemand7.every((r: any) => !('note' in r)), true);
 });

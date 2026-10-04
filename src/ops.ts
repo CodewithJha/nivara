@@ -1,8 +1,9 @@
 // Business operations. Deterministic. These are the agent's tools AND the Temporal activities.
 import { col, daysAgo, today, type Preference } from './db.ts';
-import { MIN_SUPPLIER_SAVING_PERCENT, MIN_SUPPLIER_SAVING_RUPEES, RUN_MAX_AGE_HOURS, bestQuote, blockTarget, freshRun, inr, looksClean, matchProduct, mergeRunPred, methodLabel, movingAverage7, orderFlag, shortDate, stockPlan } from './logic.ts';
+import { MIN_SUPPLIER_SAVING_PERCENT, MIN_SUPPLIER_SAVING_RUPEES, RUN_MAX_AGE_HOURS, bestQuote, blockTarget, freshRun, looksClean, matchProduct, mergeRunPred, movingAverage7, orderFlag, shortDate, stockPlan } from './logic.ts';
 import { backboardLive, backboardList, backboardSave, backboardSearch, gemma, log, serpLive, serpShopping, span, tabpfnForecast } from './integrations.ts';
 import { tigerDemand } from './tiger.ts';
+import { cleanCopy, displayName, inr, plural, whole } from './copy.ts';
 
 const HISTORY_DAYS = 60;
 const BRIEF_MAX_TOKENS = Number(process.env.BRIEF_MAX_TOKENS) || 160; // the summary is kept only if ≤ 400 chars
@@ -153,6 +154,7 @@ export async function getMemory() {
   const local = await col.preferences.find().sort({ createdAt: -1 }).toArray();
   let backboard: { live: boolean; memories?: string[]; error?: string } = { live: false };
   if (backboardLive()) try { backboard = { live: true, memories: await backboardList() }; } catch (e: any) { backboard = { live: false, error: e.message }; }
+  if (backboard.error) log.warn({ err: backboard.error }, 'Backboard list failed; showing saved rules only');
   return { source: 'mongo (source of truth)', preferences: local, backboard };
 }
 
@@ -206,7 +208,7 @@ export async function searchSupplierPrices(query: string) {
   const product = matchProduct(query, products);
   const q = product?.name ?? query;
   const mem = await blockedSuppliers(true);
-  const web = await serpShopping(q).catch((e: any) => ({ available: false, reason: `Live supplier search failed: ${e.message}`, offers: [], query: q }));
+  const web = await serpShopping(q).catch((e: any) => { log.warn({ err: e.message }, 'online price search failed'); return { available: false, reason: 'Online prices are not available right now.', offers: [], query: q }; });
   const offers = web.offers.filter(o => !isBlocked(o.source, mem.blocked));
   const dbQuotes = product ? (await supplierOpportunities(mem.blocked)).find(o => o.sku === product._id) ?? null : null;
   return { product: product && { sku: product._id, name: product.name, cost: product.cost, price: product.price, currentSupplier: (await col.suppliers.findOne({ _id: product.supplierId }))?.name }, query: q, web: { ...web, offers, hiddenBlocked: web.offers.length - offers.length }, cheapestWeb: offers.slice().sort((a, b) => a.price - b.price)[0] ?? null, dbOpportunity: dbQuotes, threshold: supplierThreshold, memory: { source: mem.memorySource, recalled: mem.recalled } };
@@ -256,20 +258,20 @@ export async function briefFacts() {
     pendingOrders: pending.orders.length,
     overdueOrders: pending.orders.filter(o => o.overdue).map(o => ({ id: o._id, customer: o.customerName, due: o.deliveryDate })),
     dueToday: pending.orders.filter(o => o.dueToday).map(o => ({ id: o._id, customer: o.customerName })),
-    savings: opp.filter(o => o.significant).slice(0, 3).map(o => `${o.name}: switch to ${o.best.supplier} at ${inr(o.best.unitCost)} instead of ${inr(o.currentCost)} (${o.currentSupplier}), saving ${inr(o.savingPerUnit)} per unit (${o.savingPercent}%)`),
+    savings: opp.filter(o => o.significant).slice(0, 2).map(o => `${o.name} from ${displayName(o.best.supplier)} at ${inr(o.best.unitCost)}, ${inr(o.savingPerUnit)} less a unit`),
     topSeller7d: sales.top[0] ?? null,
   };
 }
 
 export function templateBrief(f: Awaited<ReturnType<typeof briefFacts>>) {
-  const l = [`Business brief for ${shortDate(f.date)} (${methodLabel(f.forecastMethod)})`];
-  if (f.overdueOrders.length) l.push(`• Overdue: ${f.overdueOrders.map(o => `${o.customer}'s order (was due ${o.due ? shortDate(o.due) : 'unknown'})`).join('; ')} — deliver or update the customer today.`);
+  const l = [`Your brief for ${shortDate(f.date)}.`];
+  if (f.overdueOrders.length) l.push(`• Late: ${f.overdueOrders.map(o => `${o.customer}'s order, due ${o.due ? shortDate(o.due) : 'earlier'}`).join('; ')}. Deliver or message the customer today.`);
   if (f.dueToday.length) l.push(`• Deliver today: ${f.dueToday.map(o => `${o.customer}'s order`).join('; ')}.`);
-  if (f.restockNow.length) l.push(`• Restock now: ${f.restockNow.map(r => `${r.name} (order ${r.reorderQty})`).join(', ')} — these run out before a new delivery can arrive.`);
-  if (f.watch.length) l.push(`• Watch: ${f.watch.map(w => w.name).join(', ')} — likely to run out within a week.`);
-  l.push(`• ${f.pendingOrders} pending order${f.pendingOrders === 1 ? '' : 's'} in total.`);
-  if (f.savings.length) l.push(`• Save money: ${f.savings.join('; ')}.`);
-  if (f.topSeller7d) l.push(`• Top seller this week: ${f.topSeller7d.name} (${f.topSeller7d.qty} sold).`);
+  if (f.restockNow.length) l.push(`• Restock now: ${f.restockNow.slice(0, 4).map(r => `${r.name}, order ${whole(r.reorderQty)}`).join('; ')}${f.restockNow.length > 4 ? ` and ${plural(f.restockNow.length - 4, 'more')}` : ''}.`);
+  if (f.watch.length) l.push(`• Runs out this week: ${f.watch.slice(0, 4).map(w => w.name).join(', ')}${f.watch.length > 4 ? ` and ${plural(f.watch.length - 4, 'more')}` : ''}.`);
+  l.push(`• ${plural(f.pendingOrders, 'pending order')} in total.`);
+  if (f.savings.length) l.push(`• Pay less: ${(f.savings as string[]).map(cleanCopy).join('; ')}.`);
+  if (f.topSeller7d) l.push(`• Best seller this week: ${f.topSeller7d.name}, ${Math.max(1, whole(f.topSeller7d.qty))} sold.`);
   return l.join('\n');
 }
 

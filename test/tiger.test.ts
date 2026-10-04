@@ -24,16 +24,20 @@ test('catalog template lists hits without inventing SKUs beyond tool output', ()
     filters: { maxPrice: 1500, noSugar: false },
     hits: [{ sku: 'R03', name: 'Protein Bar', category: 'bars', price: 95, sugarPer100g: 2, demand7: 12 }],
   });
-  assert.match(a, /Protein Bar \(R03\) — ₹95/);
-  assert.match(a, /sugar 2g\/100g/);
+  assert.match(a, /^1 product matches under ₹1,500\.\n• Protein Bar · ₹95 · 2 g sugar per 100 g · about 12 sold a week$/);
+  assert.doesNotMatch(a, /R03|fts|tiger|\(/i);
+  // hits over the price cap are never listed; tiny demand is not shown as "0.3 sold"
+  const b = templateAnswer('search_catalog', { query: 'whey under 3000', mode: 'hybrid-fts+pgvector', filters: { q: 'whey', maxPrice: 3000 },
+    hits: [{ sku: 'R1', name: 'Biozyme Whey', price: 4899, demand7: 0.3 }, { sku: 'R2', name: 'Whey', price: 2599, demand7: 0.3 }] });
+  assert.equal(b, '1 product matches under ₹3,000.\n• Whey · ₹2,599 · about 1 sold a week');
 });
 
-test('shop_pulse template mentions Atlas and Tiger proxy note', () => {
+test('shop_pulse template: plain overview by product name, no store names or proxy notes', () => {
   const a = templateAnswer('shop_pulse', {
     atlas: { pendingOrders: 2, overdue: 1, catalogSkus: 10, preferences: 1 },
-    tiger: { skusWithDemand: 8, topDemand7: [{ sku: 'R01', demand7: 12 }], note: 'Demand: search-interest proxy, not real sales' },
+    tiger: { skusWithDemand: 8, topDemand7: [{ sku: 'R01', name: 'Whey', demand7: 12.4 }] },
   });
-  assert.match(a, /Atlas/);
-  assert.match(a, /Tiger/);
-  assert.match(a, /proxy/);
+  assert.match(a, /^You have 2 pending orders, 1 overdue\./);
+  assert.match(a, /Selling fastest: Whey, about 12 a week/);
+  assert.doesNotMatch(a, /Atlas|Tiger|proxy|R01|SKU/);
 });

@@ -6,7 +6,9 @@ import { Agent } from '@mastra/core/agent';
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { col, today } from './db.ts';
-import { Extraction, buildDraft, inr, looksClean, matchProduct, methodLabel, shortDate, units } from './logic.ts';
+import { Extraction, buildDraft, looksClean, matchProduct, shortDate } from './logic.ts';
+import { cleanCopy, displayName, inr, plural, units, whole } from './copy.ts';
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import * as Sentry from '@sentry/node';
 import { MODEL, OLLAMA, annotate, gemma, gemmaCapabilities, llmDownNote, llmModel, llmProvider, log, parseJson, span, traced } from './integrations.ts';
 import * as ops from './ops.ts';
@@ -27,9 +29,10 @@ async function atlasOpsContext() {
 /** Tiger analytics (7d/28d demand) — separate Sentry tool span. */
 async function tigerAnalyticsContext() {
   return span('gen_ai.execute_tool', 'execute_tool tiger_analytics', { 'gen_ai.tool.name': 'tiger_analytics' }, async set => {
-    const dem = await tigerDemand();
-    const rows = Object.entries(dem).map(([sku, v]) => ({ sku, ...v })).sort((a, b) => b.demand7 - a.demand7).slice(0, 8);
-    const out = { store: 'tiger', skusWithDemand: Object.keys(dem).length, topDemand7: rows, note: 'Demand: search-interest proxy, not real sales' };
+    const [dem, products] = await Promise.all([tigerDemand(), col.products.find({}, { projection: { name: 1 } }).toArray()]);
+    const names = Object.fromEntries(products.map(p => [p._id, p.name]));
+    const rows = Object.entries(dem).map(([sku, v]) => ({ sku, name: names[sku], ...v })).sort((a, b) => b.demand7 - a.demand7).slice(0, 8);
+    const out = { store: 'tiger', skusWithDemand: Object.keys(dem).length, topDemand7: rows };
     set('gen_ai.tool.output', out);
     return out;
   });
@@ -127,22 +130,24 @@ async function focusProduct(message: string, history: Msg[], fallbackToRisk: boo
 // Gemma writes the answer only for open-ended questions, from these same readable facts, never from raw JSON.
 
 const ANSWER_SYS = `You are Nivara, operations copilot for a small Indian online fitness-supplements shop.
-Answer the owner's question in 2-5 short plain-text lines using ONLY the FACTS (already checked against the database).
+Answer the owner's question using ONLY the FACTS (already checked against the database): one to three short plain sentences, then at most four short lines starting with "• " if a list helps.
+Use whole numbers and ₹ amounts as written in the FACTS. No brackets, no markdown, no technical words.
 Never add numbers, products, suppliers, customers or dates that are not in the FACTS. If the facts do not answer the question, say so plainly.`;
 
-const one = (n: number) => Math.round(n * 10) / 10;
-const stockText = (p: any) => p.available <= 0 ? `nothing available to sell (${p.stock} in stock, ${p.reserved} reserved for pending orders)` : `${units(p.available)} available to sell${p.reserved ? ` (${p.stock} in stock, ${p.reserved} reserved for pending orders)` : ''}`;
-const coverText = (p: any) => p.available <= 0 ? 'no stock left' : p.daysOfCover === null ? 'no recent sales' : `about ${one(p.daysOfCover)} days of stock`;
-const s = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+// Seller copy: a 1–3 sentence lead, then short "• " bullets. Whole units, ₹ with Indian grouping, no bracketed asides.
+const left = (p: any) => p.available <= 0 ? 'nothing left to sell' : `${whole(p.available)} left to sell`;
+const held = (p: any) => p.reserved ? `${p.stock} on the shelf, ${p.reserved} held for orders` : '';
+const lasts = (p: any) => p.available <= 0 ? 'no stock left' : p.daysOfCover === null ? 'no recent sales' : `about ${plural(Math.max(1, whole(p.daysOfCover)), 'day')} of stock`;
 
 function restockAnswer(out: any) {
   const high = out.items.filter((i: any) => i.risk === 'high'), med = out.items.filter((i: any) => i.risk === 'medium');
-  if (!high.length && !med.length) return 'Nothing needs restocking this week: every product has more than 7 days of stock.';
+  if (!high.length && !med.length) return 'Nothing needs restocking this week. Every product has more than 7 days of stock.';
   const l: string[] = [];
-  if (high.length) l.push(`Restock ${high.length === 1 ? 'this product' : `these ${high.length} products`} now. Each will run out before a new delivery can arrive:`,
-    ...high.map((p: any) => `• ${p.name}: order ${units(p.reorderQty)}. ${stockText(p)}; about ${units(p.demand7)} expected to sell in the next 7 days, so ${coverText(p)} vs a ${p.leadTimeDays}-day delivery time.`));
-  if (med.length) l.push(`${high.length ? '\n' : ''}Order soon (likely to run out within a week):`, ...med.map((p: any) => `• ${p.name}: order ${units(p.reorderQty)}. ${stockText(p)}, ${coverText(p)}.`));
-  l.push(`\nBased on the ${methodLabel(out.method)}.`);
+  l.push(high.length
+    ? `Restock ${high.length === 1 ? '1 product' : `${high.length} products`} now. ${high.length === 1 ? 'It runs' : 'They run'} out before a new delivery can arrive.${med.length ? ` ${plural(med.length, 'more product')} ${med.length === 1 ? 'runs' : 'run'} out this week.` : ''}`
+    : `${plural(med.length, 'product')} ${med.length === 1 ? 'runs' : 'run'} out this week. Order soon.`);
+  for (const p of [...high, ...med].slice(0, 8)) l.push(`• ${p.name}: order ${units(p.reorderQty)}. ${cap(left(p))}, ${lasts(p)}; delivery takes ${plural(p.leadTimeDays, 'day')}.`);
+  if (high.length + med.length > 8) l.push(`• And ${plural(high.length + med.length - 8, 'more product')}. See Forecast for the full list.`);
   return l.join('\n');
 }
 
@@ -151,50 +156,55 @@ function riskAnswer(out: any, focus?: string) {
   if (!p) {
     const risky = out.items.filter((i: any) => i.risk !== 'low');
     if (!risky.length) return 'No product is likely to run out this week.';
-    return [`${s(risky.length, 'product')} could run out soon:`, ...risky.map((r: any) => `• ${r.name} (${r.risk} risk): ${coverText(r)} vs a ${r.leadTimeDays}-day delivery time. Order ${units(r.reorderQty)}.`),
-      `\nAsk "Why is ${risky[0].name} at risk?" for the full reasoning. (${methodLabel(out.method)})`].join('\n');
+    return [`${plural(risky.length, 'product')} could run out soon. Ask "Why is ${risky[0].name} at risk?" for the reasons.`,
+      ...risky.slice(0, 8).map((r: any) => `• ${r.name}: ${lasts(r)}, delivery takes ${plural(r.leadTimeDays, 'day')}. Order ${units(r.reorderQty)}.`)].join('\n');
   }
-  const l = [`${p.name} is ${p.risk === 'low' ? 'not at risk right now' : `at ${p.risk} risk of running out`}.`,
-    `• Stock: ${stockText(p)}.`,
-    `• Expected demand: about ${units(p.demand7)} over the next 7 days (roughly ${one(p.demand7 / 7)} a day, ${methodLabel(out.method)})${p.last7Sold != null ? `; ${p.last7Sold} sold in the last 7 days` : ''}.`,
-    p.risk === 'high' ? `• That is ${coverText(p)}, but a new delivery takes ${p.leadTimeDays} days, so you would run out before it arrives.`
-      : p.risk === 'medium' ? `• That is ${coverText(p)}. A new delivery (${p.leadTimeDays} days) can still arrive in time, but stock runs out within a week.`
-        : `• That is ${coverText(p)}: more than a week, and longer than the ${p.leadTimeDays}-day delivery time.`];
-  if (p.reorderQty) l.push(`• Recommendation: order ${units(p.reorderQty)} now. That covers the ${p.leadTimeDays}-day delivery time plus 7 days of sales and 3 safety days.`);
+  const l = [p.risk === 'high' ? `${p.name} will run out before new stock can arrive.` : p.risk === 'medium' ? `${p.name} runs out within a week.` : `${p.name} is not at risk right now.`,
+    `• Stock: ${left(p)}${held(p) ? `; ${held(p)}` : ''}.`,
+    `• Expected to sell about ${units(p.demand7)} in the next 7 days${p.last7Sold != null ? `; ${whole(p.last7Sold)} sold last week` : ''}.`,
+    p.risk === 'high' ? `• That is ${lasts(p)}, but a delivery takes ${plural(p.leadTimeDays, 'day')}.`
+      : p.risk === 'medium' ? `• That is ${lasts(p)}. A delivery takes ${plural(p.leadTimeDays, 'day')}, so there is still time to reorder.`
+        : `• That is ${lasts(p)}, longer than the ${plural(p.leadTimeDays, 'day')} a delivery takes.`];
+  if (p.reorderQty) l.push(`• Order ${units(p.reorderQty)} now. That covers the delivery time, a week of sales and 3 spare days.`);
   return l.join('\n');
 }
 
-const when = (o: any) => o.overdue ? `overdue (was due ${shortDate(o.deliveryDate)})` : o.dueToday ? 'due today' : !o.deliveryDate ? 'no delivery date set' : o.flag === 'due tomorrow' ? 'due tomorrow' : `due ${shortDate(o.deliveryDate)}`;
+const when = (o: any) => o.overdue ? `overdue, was due ${shortDate(o.deliveryDate)}` : o.dueToday ? 'due today' : !o.deliveryDate ? 'no delivery date' : o.flag === 'due tomorrow' ? 'due tomorrow' : `due ${shortDate(o.deliveryDate)}`;
 function ordersAnswer(out: any) {
   if (!out.orders.length) return 'You have no pending orders.';
   const overdue = out.orders.filter((o: any) => o.overdue).length;
-  return [`You have ${s(out.orders.length, 'pending order')}${overdue ? ` (${overdue} overdue)` : ''}:`,
+  return [`You have ${plural(out.orders.length, 'pending order')}${overdue ? `, ${overdue} overdue` : ''}.`,
     ...out.orders.map((o: any) => `• ${o.customerName}: ${o.items.map((i: any) => `${i.quantity}× ${i.name}`).join(', ')} · ${inr(o.total)} · ${when(o)}`)].join('\n');
 }
 
+/** Sold counts are whole units; anything sold rounds up to at least 1. */
+const sold = (q: number) => q > 0 ? Math.max(1, whole(q)) : 0;
 function salesAnswer(out: any) {
-  if (!out.top.length) return `No sales recorded in the last ${out.days} days.`;
-  const [b, ...rest] = out.top;
-  return [`Your best-selling product over the last ${out.days} days was ${b.name}, with ${units(b.qty)} sold (${inr(b.revenue)}).`,
-    ...(rest.length ? ['Next best:', ...rest.slice(0, 4).map((t: any) => `• ${t.name}: ${units(t.qty)} (${inr(t.revenue)})`)] : [])].join('\n');
+  const top = out.top.filter((t: any) => t.name && sold(t.qty) > 0);
+  if (!top.length) return `No sales recorded in the last ${out.days} days.`;
+  const [b, ...rest] = top;
+  return [`Your best seller over the last ${out.days} days was ${b.name}: ${units(sold(b.qty))} sold, ${inr(b.revenue)}.`,
+    ...rest.slice(0, 4).map((t: any) => `• ${t.name}: ${units(sold(t.qty))}, ${inr(t.revenue)}`)].join('\n');
 }
 
 function catalogAnswer(out: any) {
-  if (!out.hits?.length) return `No catalogue matches for "${out.query}"${out.filters?.maxPrice ? ` under ₹${out.filters.maxPrice}` : ''}${out.filters?.noSugar ? ' with little/no sugar' : ''}.`;
-  return [`Catalogue matches (${out.mode}${out.source === 'mongo-fallback' ? ', Tiger fallback' : ''}):`,
-    ...out.hits.slice(0, 6).map((h: any) => `• ${h.name} (${h.sku}) — ${inr(h.price)}${h.sugarPer100g != null ? `, sugar ${h.sugarPer100g}g/100g` : ''}${h.demand7 != null ? `, ~${one(h.demand7)} sold / 7d` : ''}`)].join('\n');
+  const f = out.filters ?? {};
+  const limits = `${f.maxPrice ? ` under ${inr(f.maxPrice)}` : ''}${f.noSugar ? ' with little or no sugar' : ''}`;
+  const hits = (out.hits ?? []).filter((h: any) => !f.maxPrice || h.price <= f.maxPrice);
+  if (!hits.length) return `No products match "${f.q ?? out.query}"${limits}.`;
+  return [`${hits.length === 1 ? '1 product matches' : `${Math.min(hits.length, 6)} products match`}${limits}.`,
+    ...hits.slice(0, 6).map((h: any) => `• ${h.name} · ${inr(h.price)}${h.sugarPer100g != null ? ` · ${whole(h.sugarPer100g)} g sugar per 100 g` : ''}${sold(h.demand7) ? ` · about ${sold(h.demand7)} sold a week` : ''}`)].join('\n');
 }
 
 function supplierAnswer(out: any) {
-  const l = [out.product ? `${out.product.name}: you currently pay ${inr(out.product.cost)} per unit${out.product.currentSupplier ? ` (${out.product.currentSupplier})` : ''}.` : `I couldn't match "${out.query}" to a product in your catalogue.`];
+  const l = [out.product ? `You pay ${inr(out.product.cost)} a unit for ${out.product.name}${out.product.currentSupplier ? ` at ${displayName(out.product.currentSupplier)}` : ''}.` : `I couldn't find "${out.query}" in your products.`];
   const o = out.dbOpportunity;
-  if (o) l.push(`• Stored quote: ${o.best.supplier} at ${inr(o.best.unitCost)}, saving ${inr(o.savingPerUnit)} per unit (${o.savingPercent}%)${o.significant ? '.' : `. That is below your ${inr(out.threshold.rupees)} and ${out.threshold.percent}% threshold, so it is not flagged.`}`);
-  else if (out.product) l.push('• No cheaper stored quote from a supplier you buy from.');
-  if (o?.skippedBlocked.length) l.push(`• Skipped blocked supplier${o.skippedBlocked.length > 1 ? 's' : ''}: ${o.skippedBlocked.join(', ')}.`);
+  if (o) l.push(`• Best stored quote: ${displayName(o.best.supplier)} at ${inr(o.best.unitCost)}, ${inr(o.savingPerUnit)} less a unit.${o.significant ? '' : ` That is under your ${inr(out.threshold.rupees)} and ${out.threshold.percent}% rule, so it is not flagged.`}`);
+  else if (out.product) l.push('• No cheaper quote from the suppliers you use.');
+  if (o?.skippedBlocked.length) l.push(`• Left out because you blocked ${o.skippedBlocked.length > 1 ? 'them' : 'it'}: ${o.skippedBlocked.map(displayName).join(', ')}.`);
   const c = out.cheapestWeb;
-  l.push(!out.web.available ? `• ${out.web.reason}` : c ? `• Cheapest live listing: ${inr(c.price)} from ${c.source} (${c.sourceDomain}). Retail listing, so check the pack size before comparing.` : '• Live search found no usable listings.');
-  if (out.web.hiddenBlocked) l.push(`• Hid ${s(out.web.hiddenBlocked, 'live listing')} from blocked suppliers.`);
-  if (out.memory?.recalled?.length) l.push(`• From your saved memory: ${out.memory.recalled.slice(0, 2).join('; ')}`);
+  l.push(!out.web.available ? '• Online prices are not available right now, so this uses your stored quotes.' : c ? `• Cheapest online: ${inr(c.price)} at ${c.source}. Check the pack size before comparing.` : '• No usable online prices found.');
+  if (out.web.hiddenBlocked) l.push(`• Hid ${plural(out.web.hiddenBlocked, 'online listing')} from blocked suppliers.`);
   return l.join('\n');
 }
 
@@ -207,20 +217,20 @@ export function templateAnswer(tool: ToolName, out: any, focus?: string): string
     case 'search_catalog': return catalogAnswer(out);
     case 'shop_pulse': {
       const a = out.atlas ?? {}, t = out.tiger ?? {};
-      return [
-        `Ops (Atlas): ${a.pendingOrders ?? 0} pending orders (${a.overdue ?? 0} overdue), ${a.catalogSkus ?? 0} SKUs, ${a.preferences ?? 0} saved preferences.`,
-        `Demand (Tiger): ${t.skusWithDemand ?? 0} SKUs with 7d/28d aggregates.${t.topDemand7?.length ? ' Top: ' + t.topDemand7.slice(0, 3).map((x: any) => `${x.sku} (~${x.demand7}/7d)`).join(', ') + '.' : ''}`,
-        t.note ?? 'Demand: search-interest proxy, not real sales',
-      ].join('\n');
+      const top = (t.topDemand7 ?? []).filter((x: any) => x.name && sold(x.demand7)).slice(0, 3);
+      return [`You have ${plural(a.pendingOrders ?? 0, 'pending order')}${a.overdue ? `, ${a.overdue} overdue` : ''}.`,
+        `• Products: ${a.catalogSkus ?? 0}`,
+        `• Saved rules: ${a.preferences ?? 0}`,
+        ...(top.length ? [`• Selling fastest: ${top.map((x: any) => `${x.name}, about ${sold(x.demand7)} a week`).join('; ')}`] : [])].join('\n');
     }
     case 'search_supplier_prices': return supplierAnswer(out);
     case 'save_business_memory': {
       const p = out.saved;
-      return `Got it. I'll remember: "${p.text}".${p.kind === 'block_supplier' ? ` I won't suggest ${p.supplier} as a supplier.` : ''}${out.note ? ' ' + out.note : ''}\nSaved in your database${p.mirror === 'backboard' ? ' and in Backboard memory' : out.backboardError ? ' only (Backboard was unavailable)' : ''}.`;
+      return `Got it. I'll remember: "${p.text}".${p.kind === 'block_supplier' ? ` I won't suggest ${displayName(p.supplier)} as a supplier.` : ''}${out.note ? ' ' + out.note : ''}`;
     }
     case 'get_business_memory':
-      return (out.preferences.length ? ["Here's what I remember:", ...out.preferences.map((p: any) => `• ${p.text}`)].join('\n') : 'I have no saved preferences yet.') + (out.backboard?.live ? `\nBackboard memory holds ${s(out.backboard.memories.length, 'item')}.` : '');
-    case 'generate_daily_brief': return out.text;
+      return out.preferences.length ? ["Here's what I remember:", ...out.preferences.map((p: any) => `• ${p.text}`)].join('\n') : 'Nothing saved yet. Tell me a rule, like "I never buy from Supplier C".';
+    case 'generate_daily_brief': return cleanCopy(out.text);
   }
 }
 

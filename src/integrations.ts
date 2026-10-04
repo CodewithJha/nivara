@@ -185,7 +185,7 @@ export function normalizeOffers(results: unknown): { offers: Offer[]; rejected: 
 
 export const serpLive = () => !!env.SERPAPI_API_KEY;
 export async function serpShopping(q: string): Promise<{ available: boolean; reason?: string; offers: Offer[]; rejected?: number; query: string }> {
-  if (!env.SERPAPI_API_KEY) return { available: false, reason: 'Live supplier search is not configured (no SerpApi key), so this uses only the supplier quotes stored in your database.', offers: [], query: q };
+  if (!env.SERPAPI_API_KEY) return { available: false, reason: 'Online prices are not set up, so this uses your stored quotes.', offers: [], query: q };
   return span('tool.serpapi', 'serpapi google_shopping', { q }, async set => {
     const u = new URL('https://serpapi.com/search.json');
     Object.entries({ engine: 'google_shopping', q, gl: 'in', hl: 'en', location: 'India', api_key: env.SERPAPI_API_KEY! }).forEach(([k, v]) => u.searchParams.set(k, v));
