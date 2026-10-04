@@ -60,6 +60,21 @@ test('proxy demand = trends × share; every row source proxy', () => {
   assert.equal(recentDaily(daily, 3).length, 3 * cat.length); // 3 days × 2 skus
 });
 
+test('proxy demand scales to the shop weekly total and keeps the trends shape', () => {
+  const cat = mapCatalog(fixtureProducts);
+  const trends = [
+    { productType: 'whey' as const, week: '2026-09-14', value: 40 },
+    { productType: 'whey' as const, week: '2026-09-21', value: 80 },
+    { productType: 'creatine' as const, week: '2026-09-14', value: 50 },
+    { productType: 'creatine' as const, week: '2026-09-21', value: 100 },
+  ];
+  const weekly = weeklyDemand(cat, trends, 200);
+  const total = (w: string) => weekly.filter(r => r.week === w).reduce((a, r) => a + r.qty, 0);
+  assert.ok(Math.abs((total('2026-09-14') + total('2026-09-21')) / 2 - 200) < 0.1);
+  assert.ok(Math.abs(total('2026-09-21') / total('2026-09-14') - 2) < 0.01); // trends doubled → demand doubled
+  assert.ok(Math.abs(weeklyDemand(cat, trends, 50).reduce((a, r) => a + r.qty, 0) / 2 - 50) < 0.1);
+});
+
 test('productType classifier', () => {
   assert.equal(productType('Pre-Workout Fruit Punch'), 'preworkout');
   assert.equal(productType('Omega-3 Fish Oil'), 'omega');

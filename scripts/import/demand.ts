@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
- * Per-SKU weekly demand = trends index(type) × SKU share within type.
+ * Per-SKU weekly demand = trends index(type) × SKU share within type, scaled so the shop sells ~SHOP_WEEKLY_UNITS a week.
  * Expanded to daily for TabPFN/Mongo (qty/7 each day). Every row source:"proxy".
  */
 import { fileURLToPath } from 'node:url';
 import { writeJson } from './http.ts';
 import type { CatalogProduct } from './catalog.ts';
+import { SHOP_WEEKLY_UNITS } from './config.ts';
 import type { TrendPoint } from './trends.ts';
 
 const OUT = fileURLToPath(new URL('../../data/real/demand_proxy.json', import.meta.url));
@@ -26,25 +27,28 @@ const TYPE_BASE: Record<string, number> = {
   whey: 12, creatine: 6, multivitamin: 5, omega: 4, bcaa: 4, preworkout: 5, ayurvedic: 8, other: 3,
 };
 
+/** Trends shape × type baseline × SKU share, then one constant factor so the average week sums to `shopWeeklyUnits`. */
 export function weeklyDemand(
   catalog: CatalogProduct[],
   trends: TrendPoint[],
+  shopWeeklyUnits = SHOP_WEEKLY_UNITS,
 ): { week: string; sku: string; qty: number; productType: string }[] {
   const share = skuShare(catalog);
   const byTypeWeek = new Map<string, number>();
   for (const t of trends) byTypeWeek.set(`${t.productType}|${t.week}`, t.value);
   const weeks = [...new Set(trends.map(t => t.week))].sort();
-  const out: { week: string; sku: string; qty: number; productType: string }[] = [];
+  const raw: { week: string; sku: string; qty: number; productType: string }[] = [];
   for (const p of catalog) {
     const base = TYPE_BASE[p.productType] ?? 3;
     const sh = share.get(p._id) ?? 0;
     for (const week of weeks) {
-      const idx = byTypeWeek.get(`${p.productType}|${week}`) ?? 0;
-      const qty = Math.round(((idx / 100) * base * sh) * 100) / 100;
-      if (qty > 0) out.push({ week, sku: p._id, qty, productType: p.productType });
+      const qty = ((byTypeWeek.get(`${p.productType}|${week}`) ?? 0) / 100) * base * sh;
+      if (qty > 0) raw.push({ week, sku: p._id, qty, productType: p.productType });
     }
   }
-  return out;
+  const avgWeek = raw.reduce((a, r) => a + r.qty, 0) / (weeks.length || 1);
+  const scale = avgWeek > 0 ? shopWeeklyUnits / avgWeek : 0;
+  return raw.map(r => ({ ...r, qty: Math.round(r.qty * scale * 100) / 100 })).filter(r => r.qty > 0);
 }
 
 /** Expand each week to 7 daily rows (Mon→Sun), for HISTORY_DAYS-style forecasts. */
@@ -78,7 +82,8 @@ export function buildDemand(catalog: CatalogProduct[], trends: TrendPoint[], { k
   const doc = {
     source: 'proxy',
     label: 'Demand: search-interest proxy, not real sales',
-    method: 'trends_index(type) × equal_sku_share(type) × type_baseline',
+    method: 'trends_index(type) × equal_sku_share(type) × type_baseline, scaled to SHOP_WEEKLY_UNITS',
+    shopWeeklyUnits: SHOP_WEEKLY_UNITS,
     accessDate: '2026-10-04',
     weeklyCount: weekly.length,
     dailyCount: daily.length,

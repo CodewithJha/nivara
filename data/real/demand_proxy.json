@@ -1,130 +1,131 @@
 {
   "source": "proxy",
   "label": "Demand: search-interest proxy, not real sales",
-  "method": "trends_index(type) × equal_sku_share(type) × type_baseline",
+  "method": "trends_index(type) × equal_sku_share(type) × type_baseline, scaled to SHOP_WEEKLY_UNITS",
+  "shopWeeklyUnits": 200,
   "accessDate": "2026-10-04",
   "weeklyCount": 22048,
-  "dailyCount": 11289,
+  "dailyCount": 19080,
   "keepDays": 90,
   "sampleWeekly": [
     {
       "week": "2024-10-07",
       "sku": "R01",
-      "qty": 0.18,
+      "qty": 1.84,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-10-14",
       "sku": "R01",
-      "qty": 0.24,
+      "qty": 2.41,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-10-21",
       "sku": "R01",
-      "qty": 0.3,
+      "qty": 2.97,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-10-28",
       "sku": "R01",
-      "qty": 0.35,
+      "qty": 3.53,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-11-04",
       "sku": "R01",
-      "qty": 0.41,
+      "qty": 4.09,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-11-11",
       "sku": "R01",
-      "qty": 0.46,
+      "qty": 4.65,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-11-18",
       "sku": "R01",
-      "qty": 0.52,
+      "qty": 5.21,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-11-25",
       "sku": "R01",
-      "qty": 0.58,
+      "qty": 5.77,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-12-02",
       "sku": "R01",
-      "qty": 0.63,
+      "qty": 6.33,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-12-09",
       "sku": "R01",
-      "qty": 0.2,
+      "qty": 2,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-12-16",
       "sku": "R01",
-      "qty": 0.26,
+      "qty": 2.57,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-12-23",
       "sku": "R01",
-      "qty": 0.31,
+      "qty": 3.13,
       "productType": "ayurvedic"
     },
     {
       "week": "2024-12-30",
       "sku": "R01",
-      "qty": 0.37,
+      "qty": 3.69,
       "productType": "ayurvedic"
     },
     {
       "week": "2025-01-06",
       "sku": "R01",
-      "qty": 0.42,
+      "qty": 4.25,
       "productType": "ayurvedic"
     },
     {
       "week": "2025-01-13",
       "sku": "R01",
-      "qty": 0.48,
+      "qty": 4.81,
       "productType": "ayurvedic"
     },
     {
       "week": "2025-01-20",
       "sku": "R01",
-      "qty": 0.54,
+      "qty": 5.37,
       "productType": "ayurvedic"
     },
     {
       "week": "2025-01-27",
       "sku": "R01",
-      "qty": 0.59,
+      "qty": 5.93,
       "productType": "ayurvedic"
     },
     {
       "week": "2025-02-03",
       "sku": "R01",
-      "qty": 0.16,
+      "qty": 1.6,
       "productType": "ayurvedic"
     },
     {
       "week": "2025-02-10",
       "sku": "R01",
-      "qty": 0.22,
+      "qty": 2.16,
       "productType": "ayurvedic"
     },
     {
       "week": "2025-02-17",
       "sku": "R01",
-      "qty": 0.27,
+      "qty": 2.73,
       "productType": "ayurvedic"
     }
   ]
