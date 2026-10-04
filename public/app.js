@@ -151,7 +151,7 @@ const views = {
     const f = await api('/forecast');
     const COVER_DAYS = 21, frac = n => Math.min(n / COVER_DAYS, 1);
     return head('Forecast', 'What sells in the next 7 days, and how long your stock lasts against how long a new delivery takes.') +
-    `<section><p>${methodNote(f.method)} <span class="quiet">${esc(f.model ?? '')} · learned from ${f.historyDays} days of sales · worked out ${esc(when(f.createdAt))}</span></p>
+    `<section><p>${methodNote(f.method)} <span class="quiet">${esc(f.model ?? '')} · learned from ${f.historyDays} days of sales · worked out ${esc(when(f.createdAt))}${f.precomputed ? ` from a TabPFN run made ${esc(when(f.precomputed.at))} (${f.precomputed.skus} of ${f.precomputed.of} products)` : ''}</span></p>
       ${f.demandNote ? `<p class="warn">${esc(f.demandNote)}</p>` : ''}
       ${f.fallbackReason ? `<p class="warn">Why the fallback: ${esc(f.fallbackReason)}</p>` : ''}
       <div class="acts gap"><button class="btn" onclick="this.disabled=true;api('/forecast?force=1').then(route, e => this.insertAdjacentHTML('afterend', fail(e)))">Work it out again</button></div></section>
