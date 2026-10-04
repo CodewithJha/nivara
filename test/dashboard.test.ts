@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { attention, bestQuote, orderFlag } from '../src/logic.ts';
-import { keywordRoute } from '../src/agent.ts';
+import { asksForBrief, keywordRoute } from '../src/agent.ts';
 
 test('order flags: overdue, today, tomorrow, missing date; later = no action', () => {
   const t = '2026-10-04';
@@ -58,4 +58,7 @@ test('dashboard suggestion chips route to sensible tools without Gemma', () => {
   assert.equal(keywordRoute('Show my pending orders.').tool, 'get_pending_orders');
   assert.equal(keywordRoute('What sold the most?').tool, 'get_sales_summary');
   assert.equal(keywordRoute('What should I focus on today?').tool, 'generate_daily_brief');
+  assert.ok(asksForBrief("Give me today's business brief"));
+  assert.ok(!asksForBrief('What should I focus on today?')); // open-ended: Gemma still routes it
+  assert.ok(!asksForBrief('Brief me on pending orders')); // names another tool
 });
