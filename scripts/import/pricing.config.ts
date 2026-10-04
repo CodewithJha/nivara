@@ -74,7 +74,7 @@ export const TYPE_PROFILE: Record<ProductType, ProfileKey> = {
 export const BRAND_TIERS: { tier: 'premium' | 'mid' | 'value'; position: [number, number]; re: RegExp }[] = [
   { tier: 'premium', position: [0.7, 1], re: /optimum nutrition|\bon\b|gold standard|muscletech|dymatize|myprotein|bsn|syntha|\bans\b|isopure|the whole truth|plix|oziva/i },
   { tier: 'mid', position: [0.4, 0.75], re: /muscleblaze|\bmb\b|biozyme|atom|asitis|as it is|wellcore|nutrabay|avvatar|yoga ?bar|phab|ritebite|max protein|hk vitals|healthkart|tata|epigamia|nourish/i },
-  { tier: 'value', position: [0, 0.35], re: /patanjali|dabur|baidyanath|zandu|nakpro|bodypower|bioton|fuelone|apollo|carbamide|pintola/i },
+  { tier: 'value', position: [0, 0.35], re: /patanjali|nakpro|bodypower|bioton|fuelone|apollo|carbamide|pintola/i },
 ];
 export const UNKNOWN_BRAND_POSITION: [number, number] = [0.15, 0.85];
 
