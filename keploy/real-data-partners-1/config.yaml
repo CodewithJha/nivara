@@ -1,0 +1,10 @@
+preScript: ""
+postScript: ""
+appCommand: ""
+template: {}
+metadata:
+    description: health-catalog-dashboard-forecast-bad-inputs
+    name: real-data-partners
+mockRegistry:
+    mock: e20a31e067486dc60b78a4655ec1a16f609cb390a9c3baf16be8a8e41b71a095
+    app: nivara

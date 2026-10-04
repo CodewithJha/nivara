@@ -4,3 +4,5 @@ forecast/.venv/
 .temporal.db*
 .DS_Store
 __pycache__/
+keploy/*/mocks.yaml
+keploy/reports/

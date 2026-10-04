@@ -229,7 +229,8 @@ export async function searchCatalog(query: string, limit = 8) {
       let where = `search_tsv @@ plainto_tsquery('english', $1)`;
       if (filters.maxPrice != null) { params.push(filters.maxPrice); where += ` AND price <= $${params.length}`; }
       if (filters.category) { params.push(filters.category); where += ` AND category = $${params.length}`; }
-      if (filters.noSugar) where += ` AND COALESCE((tags->>'sugarPer100g')::float, 0) <= 1`;
+      // OFF "no sugar" ≈ sugar-free / very low; 5g/100g catches bars labelled low-sugar without empty results
+  if (filters.noSugar) where += ` AND (tags->>'sugarPer100g') IS NOT NULL AND (tags->>'sugarPer100g')::float <= 5`;
       let rows;
       if (vec) {
         params.push(`[${vec.join(',')}]`);
@@ -276,7 +277,7 @@ export async function searchCatalog(query: string, limit = 8) {
     const hits = all.filter(p => {
       if (filters.maxPrice != null && p.price > filters.maxPrice) return false;
       if (filters.category && p.category !== filters.category) return false;
-      if (filters.noSugar && Number((p as any).tags?.sugarPer100g) > 1) return false;
+      if (filters.noSugar && !(Number((p as any).tags?.sugarPer100g) <= 5)) return false;
       const blob = `${p.name} ${(p.aliases ?? []).join(' ')} ${p.category}`.toLowerCase();
       return tokens.every(t => blob.includes(t));
     }).slice(0, limit).map(p => ({
