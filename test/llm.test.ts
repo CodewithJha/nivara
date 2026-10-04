@@ -41,7 +41,7 @@ test('gemini selects the free-tier Gemma model and the generateContent REST call
   process.env.LLM_PROVIDER = 'gemini';
   process.env.GEMINI_API_KEY = 'test-key';
   const calls = install(() => Response.json({
-    candidates: [{ content: { parts: [{ text: 'hello' }, { text: ' there' }] } }],
+    candidates: [{ content: { parts: [{ text: 'thinking…', thought: true }, { text: 'hello' }, { text: ' there' }] } }],
     usageMetadata: { promptTokenCount: 4, candidatesTokenCount: 6 },
   }));
   assert.equal(llmProvider(), 'gemini');
@@ -58,6 +58,11 @@ test('gemini selects the free-tier Gemma model and the generateContent REST call
   assert.equal(body.systemInstruction.parts[0].text, 'sys');
   assert.deepEqual(body.contents.map((c: any) => c.role), ['user', 'model']);
   assert.equal(body.generationConfig.responseMimeType, 'application/json');
+  process.env.LLM_PROVIDER = ' Gemini ';
+  assert.equal(llmProvider(), 'gemini');
+  process.env.LLM_PROVIDER = 'openai';
+  assert.equal(llmProvider(), 'ollama');
+  process.env.LLM_PROVIDER = 'gemini';
   process.env.GEMINI_MODEL = 'gemma-4-26b-a4b-it';
   assert.equal(llmModel(), 'gemma-4-26b-a4b-it');
 });

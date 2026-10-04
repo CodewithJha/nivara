@@ -17,7 +17,7 @@ export const MODEL = env.GEMMA_MODEL ?? 'gemma3:4b';
 const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta';
 
 /** `ollama` (default) or `gemini`. Anything else stays on Ollama. Read at call time so env wins over import order. */
-export const llmProvider = (): 'ollama' | 'gemini' => env.LLM_PROVIDER === 'gemini' ? 'gemini' : 'ollama';
+export const llmProvider = (): 'ollama' | 'gemini' => env.LLM_PROVIDER?.trim().toLowerCase() === 'gemini' ? 'gemini' : 'ollama';
 export const llmModel = () => llmProvider() === 'gemini' ? (env.GEMINI_MODEL || 'gemma-4-31b-it') : (env.GEMMA_MODEL || 'gemma3:4b');
 /** Assistant note when the model can't be used. Same fallback the keyword router already shows. */
 export const llmDownNote = () => llmProvider() === 'gemini'
@@ -106,7 +106,7 @@ async function geminiChat(messages: ChatMsg[], opts: ChatOpts, model: string, se
   }).catch(e => { throw unavailable(e.message); });
   if (!r.ok) throw unavailable(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
   const j: any = await r.json();
-  const text = (j.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? '').join('');
+  const text = (j.candidates?.[0]?.content?.parts ?? []).filter((p: any) => !p.thought).map((p: any) => p.text ?? '').join(''); // skip thought summaries
   set('gen_ai.response.text', text);
   set('gen_ai.usage.input_tokens', j.usageMetadata?.promptTokenCount);
   set('gen_ai.usage.output_tokens', j.usageMetadata?.candidatesTokenCount);
