@@ -146,3 +146,32 @@ export async function serpShopping(q: string): Promise<{ available: boolean; rea
     return { available: true, offers, rejected, query: q };
   });
 }
+
+// ---------- Backboard long-term memory ----------
+
+const BB = 'https://app.backboard.io/api';
+async function bb(path: string, init: RequestInit = {}) {
+  const r = await fetch(BB + path, { ...init, headers: { 'X-API-Key': env.BACKBOARD_API_KEY!, 'content-type': 'application/json' }, signal: AbortSignal.timeout(15_000) });
+  if (!r.ok) throw new Error(`Backboard HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return r.json() as Promise<any>;
+}
+async function bbAssistant(): Promise<string> {
+  if (env.BACKBOARD_ASSISTANT_ID) return env.BACKBOARD_ASSISTANT_ID;
+  const saved = await col.meta.findOne({ _id: 'backboard_assistant' });
+  if (saved) return saved.value;
+  const a = await bb('/assistants', { method: 'POST', body: JSON.stringify({ name: 'Nivara business memory', system_prompt: 'Stores durable business preferences for a small supplements shop.' }) });
+  await col.meta.insertOne({ _id: 'backboard_assistant', value: a.assistant_id });
+  return a.assistant_id;
+}
+export const backboardLive = () => !!env.BACKBOARD_API_KEY;
+export async function backboardSave(content: string, metadata: object) {
+  return span('memory.backboard', 'backboard add memory', {}, async () => { const r = await bb(`/assistants/${await bbAssistant()}/memories`, { method: 'POST', body: JSON.stringify({ content, metadata }) }); return String(r.id ?? r.memory_id ?? 'ok'); });
+}
+const contents = (r: any): string[] => (r.memories ?? []).map((m: any) => m.content).filter((c: any) => typeof c === 'string');
+export async function backboardList(): Promise<string[]> {
+  return span('memory.backboard', 'backboard list memories', {}, async () => contents(await bb(`/assistants/${await bbAssistant()}/memories`)));
+}
+/** Semantic search over saved memories (POST /assistants/{id}/memories/search). */
+export async function backboardSearch(query: string, limit = 10): Promise<string[]> {
+  return span('memory.backboard', 'backboard search memories', { limit }, async () => contents(await bb(`/assistants/${await bbAssistant()}/memories/search`, { method: 'POST', body: JSON.stringify({ query, limit }) })));
+}
