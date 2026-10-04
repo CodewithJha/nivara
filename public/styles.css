@@ -108,8 +108,7 @@ main > .bleed { max-width: none; padding-inline: max(var(--gut), calc((100% - va
 .clip { flex: none; width: var(--clip-w); height: var(--clip-h); background: var(--steel); margin-left: var(--plate-gap); }
 .sleeve { flex: none; width: var(--sleeve-w); height: var(--sleeve-h); background: var(--steel); }
 .plates { display: flex; gap: var(--plate-gap); padding-left: var(--plate-gap); min-width: 0; }
-.plate { all: unset; box-sizing: border-box; position: relative; width: var(--w); flex: 0 1 auto; min-width: var(--plate-min); height: var(--plate-h); border-radius: var(--r-rubber); background: var(--c); animation: load var(--load) var(--ease) backwards; animation-delay: calc(var(--i) * var(--stagger)); transition: transform var(--fast) var(--ease); }
-.plate::after { content: ""; position: absolute; inset: calc(50% - var(--shaft) / 2) 0 auto; height: var(--shaft); background: var(--steel); }
+.plate { all: unset; box-sizing: border-box; width: var(--w); flex: 0 1 auto; min-width: var(--plate-min); height: var(--plate-h); border-radius: var(--r-rubber); background: var(--c); animation: load var(--load) var(--ease) backwards; animation-delay: calc(var(--i) * var(--stagger)); transition: transform var(--fast) var(--ease); }
 button.plate { cursor: pointer; }
 button.plate:hover { transform: translateY(var(--lift)); }
 .plate:focus-visible { outline: var(--focus) solid var(--chalk); outline-offset: var(--rule); }
@@ -173,13 +172,13 @@ button.plate:hover { transform: translateY(var(--lift)); }
 
 /* ---------- tables (stock, forecast, back office) ---------- */
 table { width: 100%; border-collapse: collapse; }
-th { text-align: left; font-weight: 700; font-size: var(--t-sm); color: var(--iron); padding: 0 var(--s-3) var(--s-2); border-bottom: var(--rule) solid var(--rubber); white-space: nowrap; vertical-align: bottom; }
+th { text-align: left; font-weight: 700; font-size: var(--t-sm); color: var(--iron); padding: 0 var(--s-3) var(--s-2); border-bottom: var(--rule) solid var(--rubber); vertical-align: bottom; }
 td { padding: var(--s-3); border-bottom: var(--hair) solid var(--line); vertical-align: top; }
 th:first-child, td:first-child { padding-left: 0; }
 th:last-child, td:last-child { padding-right: 0; }
 td.lead, td.big { font: 700 var(--t-1)/var(--lh-head) var(--display); font-stretch: var(--w-name); }
 td .sub { display: block; font: 400 var(--t-sm)/var(--lh-body) var(--text); color: var(--iron); }
-@media (max-width: 759px) {
+@media (max-width: 899px) {
   table, tbody, tr, td { display: block; }
   thead, td.wide { display: none; }
   tbody { border-top: var(--rule) solid var(--rubber); }
@@ -194,7 +193,7 @@ td .sub { display: block; font: 400 var(--t-sm)/var(--lh-body) var(--text); colo
 }
 
 /* ---------- status word with plate edge ---------- */
-.st { white-space: nowrap; font-weight: 700; }
+.st { font-weight: 700; }
 .st::before { content: ""; display: inline-block; width: var(--edge-light); height: 1em; border-radius: var(--r-rubber); margin-right: var(--s-2); vertical-align: var(--st-drop); background: var(--line); }
 .st.heavy::before { width: var(--edge-heavy); background: var(--red); }
 .st.mid::before { width: var(--edge-mid); background: var(--yellow); }
