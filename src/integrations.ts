@@ -18,7 +18,7 @@ const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta';
 
 /** `ollama` (default) or `gemini`. Anything else stays on Ollama. Read at call time so env wins over import order. */
 export const llmProvider = (): 'ollama' | 'gemini' => env.LLM_PROVIDER?.trim().toLowerCase() === 'gemini' ? 'gemini' : 'ollama';
-export const llmModel = () => llmProvider() === 'gemini' ? (env.GEMINI_MODEL || 'gemma-4-31b-it') : (env.GEMMA_MODEL || 'gemma3:4b');
+export const llmModel = () => llmProvider() === 'gemini' ? (env.GEMINI_MODEL || 'gemma-4-26b-a4b-it') : (env.GEMMA_MODEL || 'gemma3:4b');
 /** Assistant note when the model can't be used. Same fallback the keyword router already shows. */
 export const llmDownNote = () => llmProvider() === 'gemini'
   ? `Gemma (${llmModel()}) unavailable (Gemini API); keyword router + templated answer.`

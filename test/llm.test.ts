@@ -45,14 +45,14 @@ test('gemini selects the free-tier Gemma model and the generateContent REST call
     usageMetadata: { promptTokenCount: 4, candidatesTokenCount: 6 },
   }));
   assert.equal(llmProvider(), 'gemini');
-  assert.equal(llmModel(), 'gemma-4-31b-it');
+  assert.equal(llmModel(), 'gemma-4-26b-a4b-it');
   assert.equal(await gemma([
     { role: 'system', content: 'sys' },
     { role: 'user', content: 'hi' },
     { role: 'assistant', content: 'prev' },
   ], { json: true, timeoutMs: 1000 }), 'hello there');
   const [call] = calls;
-  assert.equal(call.url, 'https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent');
+  assert.equal(call.url, 'https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent');
   assert.equal((call.init.headers as Record<string, string>)['x-goog-api-key'], 'test-key');
   const body = JSON.parse(String(call.init.body));
   assert.equal(body.systemInstruction.parts[0].text, 'sys');
@@ -75,7 +75,7 @@ test('gemini with no key, an HTTP error, or a timeout does not call a live model
   await assert.rejects(gemma([{ role: 'user', content: 'hi' }]), /GEMINI_API_KEY missing/);
   assert.equal(hits, 0);
   const note = llmDownNote();
-  assert.match(note, /gemma-4-31b-it/);
+  assert.match(note, /gemma-4-26b-a4b-it/);
   assert.match(note, /Gemini API/);
   assert.match(note, /keyword router \+ templated answer/);
   assert.doesNotMatch(note, /11434/);

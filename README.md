@@ -98,7 +98,7 @@ the service in `screen` (logs `/tmp/nivara-<svc>.log`), and fails loudly unless 
 1. Render → **New → Blueprint** → pick this repo/branch.
 2. Fill the `sync: false` vars: `MONGODB_URI` (Atlas; allow `0.0.0.0/0` in Atlas Network Access, free Render has no
    static IP) and `GEMINI_API_KEY` (Google AI Studio). The blueprint already sets `LLM_PROVIDER=gemini`,
-   `GEMINI_MODEL=gemma-4-31b-it` (alt `gemma-4-26b-a4b-it`), `MONGODB_DB=nivara`, `FORECAST_MODE=fallback`.
+   `GEMINI_MODEL=gemma-4-26b-a4b-it` (alt `gemma-4-31b-it`), `MONGODB_DB=nivara`, `FORECAST_MODE=fallback`.
 3. Optional: `SERPAPI_API_KEY`, `BACKBOARD_API_KEY`, `ELEVENLABS_API_KEY`, `SENTRY_DSN`; leave `TEMPORAL_*` and
    `OLLAMA_*` empty.
 
@@ -112,7 +112,7 @@ its labelled fallbacks (keyword router + templated answers, in-process workflows
 | `MONGODB_URI` | data (default `mongodb://localhost:27017`) | health reports Mongo down; routes that read the DB fail |
 | `LLM_PROVIDER` | `ollama` (default) or `gemini` | — |
 | `OLLAMA_BASE_URL`, `GEMMA_MODEL` | Gemma via Ollama (default local `gemma3:4b`) | keyword router + templated answers; order extraction returns 503 |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Gemma via Google AI Studio (`gemma-4-31b-it` by default) | same keyword router + templates |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Gemma via Google AI Studio (`gemma-4-26b-a4b-it` by default) | same keyword router + templates |
 | `SERPAPI_API_KEY` | live supplier prices (Temporal refresh, `SUPPLIER_REFRESH_MAX` products per run, default 3) | stored quotes, labelled |
 | `BACKBOARD_API_KEY` | memory saved/searched in Backboard | Mongo only, labelled |
 | `ELEVENLABS_API_KEY` | Scribe STT + TTS (live only once the key is verified) | browser Web Speech API |

@@ -21,7 +21,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemma-4-31b-it
+        value: gemma-4-26b-a4b-it
       - key: OLLAMA_BASE_URL
         sync: false
       - key: OLLAMA_API_KEY
