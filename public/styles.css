@@ -108,8 +108,7 @@ main > .bleed { max-width: none; padding-inline: max(var(--gut), calc((100% - va
 .clip { flex: none; width: var(--clip-w); height: var(--clip-h); background: var(--steel); margin-left: var(--plate-gap); }
 .sleeve { flex: none; width: var(--sleeve-w); height: var(--sleeve-h); background: var(--steel); }
 .plates { display: flex; gap: var(--plate-gap); padding-left: var(--plate-gap); min-width: 0; }
-.plate { all: unset; box-sizing: border-box; position: relative; width: var(--w); flex: 0 1 auto; min-width: var(--plate-min); height: var(--plate-h); border-radius: var(--r-rubber); background: var(--c); animation: load var(--load) var(--ease) backwards; animation-delay: calc(var(--i) * var(--stagger)); transition: transform var(--fast) var(--ease); }
-.plate::after { content: ""; position: absolute; inset: calc(50% - var(--shaft) / 2) 0 auto; height: var(--shaft); background: var(--steel); }
+.plate { all: unset; box-sizing: border-box; width: var(--w); flex: 0 1 auto; min-width: var(--plate-min); height: var(--plate-h); border-radius: var(--r-rubber); background: var(--c); animation: load var(--load) var(--ease) backwards; animation-delay: calc(var(--i) * var(--stagger)); transition: transform var(--fast) var(--ease); }
 button.plate { cursor: pointer; }
 button.plate:hover { transform: translateY(var(--lift)); }
 .plate:focus-visible { outline: var(--focus) solid var(--chalk); outline-offset: var(--rule); }
