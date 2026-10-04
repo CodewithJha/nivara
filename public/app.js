@@ -51,3 +51,67 @@ function restockWhy(r) {
   return `${left}${lasts}. ${r.risk === 'high' ? `New stock takes ${plural(r.leadTimeDays, 'day')}.` : 'Runs out this week.'}`;
 }
 let health = null, flash = '';
+
+const views = {
+  async dashboard() {
+    const d = await api('/dashboard');
+    const p = d.pending.orders, hp = d.highPriority, th = d.supplierThreshold, f = d.forecast;
+    const worth = d.opportunities.filter(o => o.significant), small = d.opportunities.filter(o => !o.significant);
+    const restockJob = r => ({ level: LEVEL[r.risk], to: 'p-' + r.sku, title: `Restock ${r.name}${r.risk === 'medium' ? ' this week' : ''}`,
+      facts: `${restockWhy(r)}${r.reorderQty ? ` Order ${r.reorderQty}.` : ''}`,
+      acts: `<button class="btn primary" onclick="send(${esc(JSON.stringify(`Why is ${r.name} at risk?`))});go('ask')">Ask why</button><a class="btn" href="#forecast">See the forecast</a>` });
+    const orderJob = o => ({ level: FLAG[o.flag], to: 'o-' + o._id, title: `Deliver ${firstName(o.customerName)}'s order`,
+      facts: `${dueWords(o, d.date).replace(/<[^>]+>/g, '')}. ${orderName(o._id)}: ${itemList(o)}. ${inr(o.total)}.`,
+      acts: `${deliverBtn(o, 'btn primary')}<a class="btn" href="#orders">All orders</a>` });
+    const jobs = [
+      ...p.filter(o => o.flag === 'overdue').map(orderJob),
+      ...hp.filter(r => r.risk === 'high').map(restockJob),
+      ...p.filter(o => o.flag && o.flag !== 'overdue').map(orderJob),
+      ...hp.filter(r => r.risk === 'medium').map(restockJob),
+      ...worth.map(o => ({ level: 'light', to: 's-' + o.sku, title: `Pay less for ${o.name}`,
+        facts: `${o.best.supplier} sells it at ${inr(o.best.unitCost)}. You pay ${inr(o.currentCost)} at ${o.currentSupplier}. That's ${inr(o.savingPerUnit)} less a unit (${o.savingPercent}%).`,
+        acts: '<a class="btn primary" href="#suppliers">Compare suppliers</a>' })),
+    ];
+    const top = jobs[0], tapPlates = matchMedia('(min-width: 900px)').matches; // phone plates are too thin to tap; the rows carry the jump
+    const count = Object.entries(Object.groupBy(jobs, j => j.level));
+    return `<section class="load bleed" aria-label="Today's load">
+      <div class="words"><p class="date">${esc(new Date(d.date + 'T00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
+      <p class="tally">${count.length ? count.map(([lvl, js]) => `<span>${js.length} <span class="k">${WEIGHT[lvl]}</span></span>`).join('') : 'Empty bar. Nothing to lift today.'}</p></div>
+      <div class="barbell"><span class="shaft" aria-hidden="true"></span><span class="collar" aria-hidden="true"></span>
+        <div class="plates">${jobs.map((j, i) => tapPlates
+          ? `<button class="plate ${j.level}" style="--i:${i}" aria-label="${esc(j.title)}, ${WEIGHT[j.level]}" title="${esc(j.title)}" onclick="go('${esc(j.to)}')"></button>`
+          : `<span class="plate ${j.level}" style="--i:${i}" aria-hidden="true"></span>`).join('')}</div>
+        <span class="clip" aria-hidden="true"></span><span class="sleeve" aria-hidden="true"></span></div>
+      ${d.demo ? '<p class="demo">Sample shop data (seeded, marked demo). Your real products and orders in MongoDB replace it.</p>' : ''}
+    </section>
+    ${top ? `<section class="first bleed ${top.level}" aria-labelledby="job">
+      <p class="kick">${cap(WEIGHT[top.level])} <span>· ${jobs.length === 1 ? 'your one job today' : `first of ${jobs.length} jobs today`}</span></p>
+      <h1 id="job">${esc(top.title)}</h1>
+      <p class="facts">${esc(top.facts)}</p>
+      <div class="acts">${top.acts}</div></section>`
+    : `<section class="first bleed clear"><h1 id="job">Nothing needs you today.</h1><p class="facts">No late orders, nothing about to run out, no cheaper quote worth switching for.</p></section>`}
+    <div class="day"><div>
+      <section class="sec" id="deliver"><h2>Deliver <span class="n">${p.length}</span></h2>
+        ${p.length ? `<ul class="rows">${p.map(o => orderRow(o, d.date)).join('')}</ul>` : '<p class="empty">No orders waiting. Paste new ones from WhatsApp or Instagram on <a href="#orders">Orders</a>.</p>'}</section>
+      <section class="sec" id="restock"><h2>Restock <span class="n">${hp.length}</span></h2>
+        ${hp.length ? `<ul class="rows">${hp.map(r => row({ id: 'p-' + r.sku, level: LEVEL[r.risk], name: esc(r.name),
+          why: `${esc(restockWhy(r))} ${r.demand7} expected to sell in 7 days.`, fig: r.reorderQty ? `<b>${r.reorderQty}</b><span>to order</span>` : '' })).join('')}</ul>` : '<p class="empty">Nothing runs out this week.</p>'}
+        <p class="note">${methodNote(f.method)} ${f.date !== d.date ? `Forecast from ${esc(day(f.date))}. Refresh it on <a href="#forecast">Forecast</a>.` : `${esc(f.model ?? '')} · ${esc(day(f.date))}`}</p></section>
+      <section class="sec" id="save"><h2>Pay less <span class="n">${worth.length}</span></h2>
+        <p class="lede">From the quotes you stored. A quote counts when it saves at least ${inr(th.rupees)} and ${th.percent}% a unit.</p>
+        ${worth.length ? `<ul class="rows">${worth.map(o => row({ id: 's-' + o.sku, level: 'light', name: esc(o.name),
+          why: `${esc(o.best.supplier)} at ${inr(o.best.unitCost)}. You pay ${inr(o.currentCost)} at ${esc(o.currentSupplier)}.`,
+          fig: `<b>${inr(o.savingPerUnit)}</b><span>less a unit · ${o.savingPercent}%</span>` })).join('')}</ul>` : '<p class="empty">Your suppliers are already the cheapest you have quotes for.</p>'}
+        ${small.length ? `<p class="note">Too small to count: ${esc(small.map(o => `${o.name} (${inr(o.savingPerUnit)}, ${o.savingPercent}%)`).join('; '))}.</p>` : ''}
+        ${d.opportunities.some(o => o.skippedBlocked.length) ? `<p class="note">Left out because you blocked them: ${esc([...new Set(d.opportunities.flatMap(o => o.skippedBlocked))].join(', '))}.</p>` : ''}
+        ${d.livePrices.length ? `<h3 class="h2 sec">Online prices</h3>${table([['Product', r => esc(r.name), 'lead'], ['Cheapest listing', r => r.cheapest ? `${inr(r.cheapest.price)} · <a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.sourceDomain)}</a>` : '<span class="quiet">No usable listings</span>', 'num'], ['Checked', r => esc(when(r.checkedAt)), 'num']], d.livePrices)}
+          <p class="note">Google Shopping via SerpApi, refreshed by the morning workflow. These are retail listings: check the pack size before comparing with your cost.</p>`
+        : `<p class="note">${d.serpConfigured ? 'Online prices: nothing fetched yet. Make a fresh brief to fetch them.' : 'Online prices are off (no SerpApi key). Showing stored quotes only.'}</p>`}</section>
+    </div>
+    <aside>
+      ${askBox(['What should I restock?', 'Show my pending orders.', 'What sold the most?', 'What should I focus on today?'])}
+      <section class="sec brief"><h2>${d.brief?.date === d.date ? 'Morning brief' : 'Latest brief'}</h2>
+        ${d.brief ? `<p class="note">${esc(when(d.brief.createdAt))} · ${d.brief.by === 'template+gemma' ? 'facts from the database, first line summarised by Gemma' : d.brief.by === 'gemma' ? 'written by Gemma (older brief)' : 'facts from the database (no Gemma summary)'}</p><pre class="sec-gap">${esc(d.brief.text)}</pre>` : '<p class="empty">No brief yet. One is made every morning at 8, or make one now.</p>'}
+        <div class="acts"><button class="btn" onclick="runWf('dailyBriefWorkflow', this)">Make a fresh brief</button><span class="small quiet" id="wfout" role="status"></span></div></section>
+    </aside></div>`;
+  },
