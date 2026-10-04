@@ -289,7 +289,8 @@ textarea { font-size: var(--t-1); line-height: var(--lh-field); resize: vertical
   .nav [aria-current="page"] { border-top-color: var(--steel); }
   .nav .x, .nav .office { display: none; }
   .nav .more { display: flex; }
-  main { padding-bottom: calc(var(--tab-h) + var(--s-8)); }
+  main { padding-bottom: var(--s-7); }
+  .data-credit { margin-bottom: calc(var(--tab-h) + var(--s-5) + env(safe-area-inset-bottom)); } /* stays readable above the bottom tab bar */
   .head { padding-block: var(--s-6) var(--s-4); }
   .head h1 { font-size: var(--t-2); }
   .sec { margin-top: var(--s-7); }
