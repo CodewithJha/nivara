@@ -10,7 +10,7 @@ const { ensureTiger, poolForSync } = await import('../src/tiger.ts');
 const { client, col } = await import('../src/db.ts');
 
 after(async () => {
-  try { await client.db().dropDatabase(); await client.close(); } catch { /* ok */ }
+  try { await client.db(process.env.MONGODB_DB).dropDatabase(); await client.close(); } catch { /* ok */ }
   try { await poolForSync()?.end(); } catch { /* ok */ }
 });
 

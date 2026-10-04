@@ -10,11 +10,12 @@ const { importOrders } = await import('../scripts/import-orders.ts');
 const { toShopProducts } = await import('../scripts/import/catalog.ts');
 const { readJson } = await import('../scripts/import/http.ts');
 const mongoOk = await client.connect().then(() => true, () => false);
-after(async () => { if (mongoOk) await client.db().dropDatabase(); await client.close(); });
+after(async () => { if (mongoOk) await client.db(process.env.MONGODB_DB).dropDatabase(); await client.close(); });
 
 test('sample orders map onto real seeded SKUs with pending and delivered', { skip: !mongoOk && 'MongoDB not reachable' }, async () => {
   const catalog = readJson<{ products: any[] }>(fileURLToPath(new URL('../data/real/products.json', import.meta.url)))!.products;
   const products = toShopProducts(catalog, new Map()) as any[];
+  await client.db(process.env.MONGODB_DB).dropDatabase();
   await col.products.insertMany(products);
   await col.customers.insertOne({ _id: 'C01', name: 'Rahul Verma', channel: 'whatsapp' });
 

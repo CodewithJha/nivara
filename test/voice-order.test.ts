@@ -23,7 +23,7 @@ before(async () => {
   await new Promise<void>(r => { const s = app.listen(0, '127.0.0.1', () => { base = `http://127.0.0.1:${(s.address() as AddressInfo).port}`; servers.push(s); r(); }); });
 });
 afterEach(() => { globalThis.fetch = realFetch; delete process.env.ELEVENLABS_API_KEY; });
-after(async () => { servers.forEach(s => s.close()); if (mongoOk) await client.db().dropDatabase(); await client.close(); });
+after(async () => { servers.forEach(s => s.close()); if (mongoOk) await client.db(process.env.MONGODB_DB).dropDatabase(); await client.close(); });
 
 test('voice/order without key → 501', { skip: !mongoOk && 'MongoDB not reachable' }, async () => {
   const r = await fetch(`${base}/api/voice/order`, { method: 'POST', headers: { 'content-type': 'audio/webm' }, body: Buffer.from('x') });

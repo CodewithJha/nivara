@@ -45,7 +45,7 @@ async function reset() {
 before(async () => { if (mongoOk) await reset(); await new Promise<void>(r => { const s = app.listen(0, '127.0.0.1', () => { base = `http://127.0.0.1:${(s.address() as AddressInfo).port}`; servers.push(s); r(); }); }); });
 const servers: any[] = [];
 afterEach(async () => { globalThis.fetch = realFetch; KEYS.forEach(k => delete process.env[k]); if (mongoOk) await reset(); });
-after(async () => { servers.forEach(s => s.close()); if (mongoOk) await client.db().dropDatabase(); await client.close(); });
+after(async () => { servers.forEach(s => s.close()); if (mongoOk) await client.db(process.env.MONGODB_DB).dropDatabase(); await client.close(); });
 
 // ---------- SerpApi via the supplierRefresh activity ----------
 
