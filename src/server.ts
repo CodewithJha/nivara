@@ -39,23 +39,31 @@ async function getTemporal() {
   } catch (e: any) { temporal.error = e.message; }
   return temporal.client;
 }
-const WORKFLOWS = { dailyBriefWorkflow: ['lowStockCheck', 'forecast', 'supplierRefresh', 'dailyBrief'], lowStockWorkflow: ['lowStockCheck'], forecastWorkflow: ['forecast'], supplierRefreshWorkflow: ['supplierRefresh'] } as const;
+// Phases run in order; the steps inside a phase are independent and run in parallel (mirrors temporal/workflows.ts).
+// The brief reads the fresh forecast but not live prices, so it runs alongside the SerpApi refresh.
+const WORKFLOWS = {
+  dailyBriefWorkflow: [['forecast'], ['lowStockCheck', 'supplierRefresh', 'dailyBrief']],
+  lowStockWorkflow: [['lowStockCheck']], forecastWorkflow: [['forecast']], supplierRefreshWorkflow: [['supplierRefresh']],
+} as const;
 type WF = keyof typeof WORKFLOWS;
+/** Keep below the web client's request timeout so a slow worker reads "still running", not a timeout. */
+const WORKFLOW_WAIT_MS = Number(process.env.WORKFLOW_WAIT_MS) || 40_000;
 
 /** Fallback when Temporal is down: same activities, in-process, with a small retry loop. Clearly labelled. */
 async function runDirect(name: WF) {
   const result: Record<string, any> = {}, retries: string[] = [];
-  for (const step of WORKFLOWS[name]) {
+  const runStep = async (step: string) => {
     for (let attempt = 1; ; attempt++) {
-      try { result[step] = step === 'supplierRefresh' ? await acts.supplierRefresh(attempt) : await (acts as any)[step](); break; }
+      try { result[step] = step === 'supplierRefresh' ? await acts.supplierRefresh(attempt) : await (acts as any)[step](); return; }
       catch (e: any) {
         retries.push(`${step} attempt ${attempt}: ${e.message}`);
-        if (attempt >= 5) { if (step === 'supplierRefresh' && name === 'dailyBriefWorkflow') { result[step] = { error: e.message }; break; } throw e; }
+        if (attempt >= 5) { if (step === 'supplierRefresh' && name === 'dailyBriefWorkflow') { result[step] = { error: e.message }; return; } throw e; }
         await new Promise(r => setTimeout(r, 500 * attempt));
       }
     }
-  }
-  return { runner: 'direct-fallback (Temporal unavailable)', result, retries };
+  };
+  for (const phase of WORKFLOWS[name]) await Promise.all(phase.map(runStep));
+  return { mode: 'direct' as const, runner: 'direct-fallback (Temporal unavailable)', result, retries };
 }
 
 // ---------- routes ----------
@@ -187,8 +195,10 @@ r.post('/workflows/:name/run', async (q, s) => {
   const t = await getTemporal();
   if (!t) return s.json(await traced(`workflow.${name}`, {}, () => runDirect(name)));
   const h = await t.workflow.start(name, { taskQueue: 'nivara', workflowId: `${name}-${Date.now()}` });
-  const result = await Promise.race([h.result(), new Promise(res => setTimeout(() => res(null), 120_000))]);
-  s.json({ runner: 'temporal', workflowId: h.workflowId, runId: h.firstExecutionRunId, result, note: result ? undefined : 'Still running after 120s — is `npm run worker` up? Check the Temporal UI.' });
+  const out = await Promise.race([h.result(), new Promise(res => setTimeout(() => res(null), WORKFLOW_WAIT_MS))]);
+  const steps = WORKFLOWS[name].flat();
+  const result = out && steps.length === 1 ? { [steps[0]]: out } : out; // same { step: output } shape as runDirect
+  s.json({ mode: 'temporal', runner: 'temporal', workflowId: h.workflowId, runId: h.firstExecutionRunId, result, note: result ? undefined : `Still running after ${WORKFLOW_WAIT_MS / 1000}s — is \`npm run worker\` up? Check the Temporal UI.` });
 });
 r.get('/workflows', async (_q, s) => {
   const t = await getTemporal();

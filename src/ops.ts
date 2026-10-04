@@ -36,8 +36,10 @@ export async function forecastDemand({ force = false, latest = false } = {}) {
   }
   return span('gen_ai.execute_tool', 'execute_tool forecast_demand', { 'gen_ai.tool.name': 'forecast_demand' }, async set => {
     const since = daysAgo(HISTORY_DAYS, t);
-    const rows = await col.sales.find({ date: { $gte: since, $lt: t } }).toArray();
-    const products = await col.products.find().toArray();
+    const [rows, products, reserved, tiger, proxy] = await Promise.all([
+      col.sales.find({ date: { $gte: since, $lt: t } }).toArray(), col.products.find().toArray(),
+      reservedBySku(), tigerDemand(), col.sales.findOne({ source: 'proxy' }),
+    ]);
     const series: Record<string, number[]> = {};
     for (const p of products) {
       const byDate = new Map(rows.filter(r => r.sku === p._id).map(r => [r.date, r.qty]));
@@ -50,8 +52,6 @@ export async function forecastDemand({ force = false, latest = false } = {}) {
       log.warn({ err: e.message }, 'TabPFN unavailable, using moving average');
       pred = Object.fromEntries(Object.entries(series).map(([k, v]) => [k, movingAverage7(v)]));
     }
-    const reserved = await reservedBySku();
-    const tiger = await tigerDemand();
     const items = products.map(p => {
       // TabPFN/MA = forward 7d demand for stock plan; Tiger caggs = realised 7d/28d that calibrate the brief/agent
       const forecast7 = Math.round((pred[p._id] ?? 0) * 10) / 10;
@@ -65,7 +65,6 @@ export async function forecastDemand({ force = false, latest = false } = {}) {
         ...stockPlan({ stock: p.stock, reserved: reserved[p._id] ?? 0, demand7: forecast7, leadTimeDays: p.leadTimeDays }),
       };
     }).sort((a, b) => ['high', 'medium', 'low'].indexOf(a.risk) - ['high', 'medium', 'low'].indexOf(b.risk) || (a.daysOfCover ?? 1e9) - (b.daysOfCover ?? 1e9));
-    const proxy = await col.sales.findOne({ source: 'proxy' });
     const doc = {
       date: t, method, model: model && `TabPFN ${model}`, fallbackReason: reason, historyDays: HISTORY_DAYS,
       tigerAggregates: Object.keys(tiger).length > 0,
@@ -178,16 +177,15 @@ export async function supplierPriceRefresh(attempt = 1) {
   const atRisk = inv.lowStock.toSorted((a: any, b: any) => cost[b.sku] * b.reorderQty - cost[a.sku] * a.reorderQty);
   const rest = inv.items.filter((i: any) => !atRisk.some((a: any) => a.sku === i.sku)).toSorted((a: any, b: any) => (cost[b.sku] ?? 0) - (cost[a.sku] ?? 0));
   const targets = [...atRisk, ...rest].slice(0, max);
-  const refreshed = [];
-  for (const t of targets) {
+  const refreshed = await Promise.all(targets.map(async t => {
     try {
       const web = await serpShopping(t.name);
       const offers = web.offers.filter(o => !isBlocked(o.source, blocked)).sort((a, b) => a.price - b.price);
       const cheapest = offers[0] ?? null;
       await col.supplierPrices.replaceOne({ _id: t.sku }, { sku: t.sku, name: t.name, query: web.query, offers, cheapest, sourceDomain: cheapest?.sourceDomain ?? null, link: cheapest?.link ?? null, hiddenBlocked: web.offers.length - offers.length, rejected: web.rejected ?? 0, checkedAt: new Date() }, { upsert: true });
-      refreshed.push({ product: t.name, offers: offers.length, cheapest });
-    } catch (e: any) { refreshed.push({ product: t.name, error: e.message }); }
-  }
+      return { product: t.name, offers: offers.length, cheapest };
+    } catch (e: any) { return { product: t.name, error: e.message }; }
+  }));
   if (refreshed.length && refreshed.every(r => 'error' in r)) throw new Error(`SerpApi failed for all ${refreshed.length} products: ${(refreshed[0] as any).error}`);
   return { attempt, source: 'serpapi', refreshed };
 }

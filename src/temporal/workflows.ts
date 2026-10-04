@@ -6,14 +6,15 @@ const a = proxyActivities<typeof acts>({
   retry: { initialInterval: '2 seconds', backoffCoefficient: 2, maximumInterval: '30 seconds', maximumAttempts: 5 },
 });
 
+/** Forecast once, then the steps that only read it in parallel. The brief doesn't use live prices. */
 export async function dailyBriefWorkflow() {
-  const lowStock = await a.lowStockCheck();
   const forecast = await a.forecast();
-  let suppliers;
-  try { suppliers = await a.supplierRefresh(); }
-  catch (e: any) { log.warn('supplier refresh exhausted retries; brief continues without it', { err: e.message }); suppliers = { error: e.message }; }
-  const brief = await a.dailyBrief();
-  return { lowStock, forecast, suppliers, brief };
+  const [lowStockCheck, supplierRefresh, dailyBrief] = await Promise.all([
+    a.lowStockCheck(),
+    a.supplierRefresh().catch((e: any) => { log.warn('supplier refresh exhausted retries; brief continues without it', { err: e.message }); return { error: e.message }; }),
+    a.dailyBrief(),
+  ]);
+  return { forecast, lowStockCheck, supplierRefresh, dailyBrief };
 }
 export const lowStockWorkflow = () => a.lowStockCheck();
 export const forecastWorkflow = () => a.forecast();
