@@ -115,3 +115,104 @@ const views = {
         <div class="acts"><button class="btn" onclick="runWf('dailyBriefWorkflow', this)">Make a fresh brief</button><span class="small quiet" id="wfout" role="status"></span></div></section>
     </aside></div>`;
   },
+
+  async assistant() {
+    setTimeout(() => $('#q')?.focus());
+    return head('Ask', 'Ask about stock, orders, suppliers or today. Answers come from your database; every answer links to its trace on Activity.') +
+      `<div class="day"><div>${askBox([], false)}</div>
+      <aside><section class="sec"><h2>Try asking</h2>${tries(["Give me today's business brief", 'What should I restock?', 'Which products are likely to run out?', 'Why are you recommending this?', 'What did I sell the most this week?', 'Find cheaper suppliers for this product', 'What orders are still pending?', "Remember that I don't buy from Supplier C"])}</section></aside></div>`;
+  },
+
+  async orders() {
+    const [{ orders }, d] = await Promise.all([api('/orders'), api('/dashboard')]);
+    const pending = d.pending.orders, done = orders.filter(o => o.status !== 'pending');
+    return head('Orders', `${plural(pending.length, 'order')} to deliver.${orders.some(o => o.demo) ? ' Sample orders (seeded, marked demo).' : ''}`) +
+    `<section class="sec"><h2>New order from a chat</h2>
+      <p class="lede">Paste the WhatsApp or Instagram message. Gemma reads it, the code checks every product and customer against your records, and nothing is saved until you confirm.</p>
+      <label class="lbl" for="otext">Message</label>
+      <textarea id="otext" rows="3">Rahul wants 3 chocolate bars and one shaker, deliver tomorrow</textarea>
+      <div class="acts gap"><button class="btn primary" onclick="extract(this)">Read the message</button></div>
+      <div id="draft" aria-live="polite"></div></section>
+    <section class="sec"><h2>To deliver <span class="n">${pending.length}</span></h2>
+      ${pending.length ? `<ul class="rows">${pending.map(o => orderRow(o, d.date)).join('')}</ul>` : '<p class="empty">Nothing to deliver. New orders you confirm above land here.</p>'}</section>
+    <section class="sec"><h2>Done <span class="n">${done.length}</span></h2>
+      ${done.length ? `<ul class="rows">${done.map(o => orderRow(o, d.date)).join('')}</ul>` : '<p class="empty">No delivered orders yet.</p>'}</section>`;
+  },
+
+  async inventory() {
+    const [{ products }, { suppliers }] = await Promise.all([api('/inventory'), api('/suppliers')]);
+    const sup = Object.fromEntries(suppliers.map(s => [s._id, s.name]));
+    return head('Stock', `What is on the shelf: ${plural(products.length, 'product')}. What to reorder is on <a href="#forecast">Forecast</a>.`) +
+      Object.entries(Object.groupBy(products, p => p.category)).map(([cat, ps]) => `<section class="sec"><h2>${esc(cap(cat))} <span class="n">${ps.length}</span></h2>
+      ${table([['Product', p => `${esc(p.name)}<span class="sub">${esc(p._id)}</span>`, 'lead'], ['In stock', p => p.stock, 'num big'], ['Sells at', p => inr(p.price), 'num'], ['Costs you', p => inr(p.cost), 'num'], ['Supplier', p => esc(sup[p.supplierId] ?? p.supplierId)], ['Delivery takes', p => plural(p.leadTimeDays, 'day'), 'num']], ps)}</section>`).join('');
+  },
+
+  async forecast() {
+    const f = await api('/forecast');
+    const COVER_DAYS = 21, frac = n => Math.min(n / COVER_DAYS, 1);
+    return head('Forecast', 'What sells in the next 7 days, and how long your stock lasts against how long a new delivery takes.') +
+    `<section><p>${methodNote(f.method)} <span class="quiet">${esc(f.model ?? '')} · learned from ${f.historyDays} days of sales · worked out ${esc(when(f.createdAt))}</span></p>
+      ${f.fallbackReason ? `<p class="warn">Why the fallback: ${esc(f.fallbackReason)}</p>` : ''}
+      <div class="acts gap"><button class="btn" onclick="this.disabled=true;api('/forecast?force=1').then(route, e => this.insertAdjacentHTML('afterend', fail(e)))">Work it out again</button></div></section>
+    <section class="sec">${table([
+      ['Product', r => esc(r.name), 'lead'],
+      ['Left', r => `${r.available}<span class="sub">${r.stock} in stock, ${r.reserved} held</span>`, 'num big'],
+      ['Sold last 7 days', r => r.last7Sold, 'num wide'],
+      ['Next 7 days', r => r.demand7, 'num'],
+      ['Lasts', r => `${r.daysOfCover == null ? 'Not running out' : plural(r.daysOfCover, 'day')} <span class="quiet">· delivery ${plural(r.leadTimeDays, 'day')}</span>
+        <div class="cover ${LEVEL[r.risk]}" style="--cover:${r.daysOfCover == null ? 1 : frac(r.daysOfCover)};--lead:${frac(r.leadTimeDays)}" role="img" aria-label="${r.daysOfCover == null ? 'Not running out' : plural(r.daysOfCover, 'day')} of stock, delivery takes ${plural(r.leadTimeDays, 'day')}"></div>`],
+      ['Risk', r => risk(r.risk)],
+      ['Order', r => r.reorderQty || '—', 'num big']], f.items)}
+    <p class="note">Bar: days of stock, up to 3 weeks. Notch: days a new delivery takes. Red means it runs out before a reorder could arrive; amber means it runs out within 7 days. Order covers the delivery time + 7 days + 3 safety days, minus what is left after pending orders; 0 when the product is fine.</p></section>`;
+  },
+
+  async suppliers() {
+    const s = await api('/suppliers');
+    return head('Suppliers', 'Who you buy from, what others quote, and the rules Nivara remembers for you.') +
+    `<section class="sec"><h2>Check a price online</h2>
+      <div class="field"><input id="sq" aria-label="Product to search" placeholder="Product, e.g. whey protein 1kg" value="Chocolate Protein Bar" onkeydown="if(event.key==='Enter')supSearch($('#sbtn'))"><button class="btn primary" id="sbtn" onclick="supSearch(this)">Search prices</button></div>
+      <div id="sres" aria-live="polite"></div></section>
+    <section class="sec"><h2>Cheaper quotes <span class="n">${s.opportunities.filter(o => o.significant).length}</span></h2>
+      <p class="lede">Stored quotes against what you pay now. Faded rows save too little to count.</p>
+      ${s.opportunities.length ? `<ul class="rows">${s.opportunities.map(o => row({ level: o.significant ? 'light' : '', dim: !o.significant, name: esc(o.name),
+        why: `${esc(o.best.supplier)} at ${inr(o.best.unitCost)}. You pay ${inr(o.currentCost)} at ${esc(o.currentSupplier)}.${o.skippedBlocked.length ? `<br>Left out, blocked: ${esc(o.skippedBlocked.join(', '))}` : ''}`,
+        fig: `<b>${inr(o.savingPerUnit)}</b><span>less a unit · ${o.savingPercent}%${o.significant ? '' : ' · not counted'}</span>` })).join('')}</ul>` : '<p class="empty">No cheaper quotes stored.</p>'}</section>
+    <section class="sec"><h2>What Nivara remembers</h2><div id="mem"><p class="loading">Loading…</p></div>
+      <label class="lbl gap" for="mtext">Tell it something to remember</label>
+      <div class="field"><input id="mtext" placeholder="e.g. I never buy from Supplier C" onkeydown="if(event.key==='Enter')saveMem($('#mbtn'))"><button class="btn" id="mbtn" onclick="saveMem(this)">Remember</button></div></section>`;
+  },
+
+  async workflows() {
+    const w = await api('/workflows');
+    return head('Workflows', w.temporal ? `${st('light', 'Temporal connected')} <a href="${esc(w.uiUrl)}" target="_blank" rel="noopener">Open the Temporal UI</a>` : st('mid', 'Temporal unavailable: workflows run in-process')) +
+    `<section>${w.schedule ? `<p>Next morning brief: <b>${esc(when(w.schedule.next))}</b></p>` : ''}</section>
+    <section class="sec"><h2>Run now</h2><ul class="rows">${Object.entries(WF).map(([n, label]) => row({ level: null, name: label, why: `<span class="small">${n}</span>`, act: `<button class="btn" onclick="runWf('${n}', this)">Run</button>` })).join('')}</ul>
+      <pre class="out" id="wfout" role="status"></pre></section>
+    ${w.runs.length ? `<section class="sec"><h2>Recent runs</h2>${table([['Workflow', r => esc(WF[r.type] ?? r.type), 'lead'], ['ID', r => `<span class="small">${esc(r.id)}</span>`], ['Status', r => st(r.status === 'COMPLETED' ? 'light' : r.status === 'RUNNING' ? 'mid' : 'heavy', cap(r.status.toLowerCase()))], ['Started', r => esc(when(r.start)), 'num']], w.runs)}</section>` : ''}
+    <section class="sec"><h2>Recent briefs</h2>${table([['When', r => esc(when(r.createdAt)), 'lead'], ['By', r => esc(r.by)], ['Brief', r => `<pre class="small">${esc(r.text)}</pre>`]], w.briefs)}</section>`;
+  },
+
+  async activity() {
+    const { traces } = await api('/traces');
+    return head('Activity', `Every answer, order reading and workflow step is traced: model calls, tool calls, time taken, errors. ${health?.integrations?.sentry?.status === 'live' ? 'Also sent to Sentry.' : 'Sentry is not set up, so traces stay here.'}`) +
+    `<section>${table([['When', r => esc(when(r.at)), 'lead'], ['What', r => esc(r.kind)], ['Input', r => esc(String(r.input ?? '').slice(0, 80))], ['Took', r => `${r.ms} ms`, 'num'], ['Result', r => r.error ? st('heavy', String(r.error).slice(0, 80)) : st('light', 'OK')], ['', r => `<button class="link" onclick="showTrace('${esc(r._id)}')">Spans</button>`]], traces, 'No traces yet. Ask a question or read an order message and it shows up here.')}</section><div id="trace"></div>`;
+  },
+
+  async health() {
+    health = await api('/health');
+    return head('Health', 'What is connected. When something is down, Nivara falls back and keeps working with less.') +
+      `<section><ul class="rows">${Object.entries(health.integrations).map(([k, v]) => row({ level: v.status === 'live' ? 'light' : 'mid', name: esc(HEALTH[k] ?? k), why: esc(v.detail),
+        fig: `<b class="${v.status === 'live' ? 'green' : 'amber'}">${v.status === 'live' ? 'Live' : 'Fallback'}</b>` })).join('')}</ul></section>`;
+  },
+};
+const WF = { dailyBriefWorkflow: 'Morning brief', lowStockWorkflow: 'Low-stock check', forecastWorkflow: 'Forecast', supplierRefreshWorkflow: 'Online prices' };
+const HEALTH = { mongodb: 'MongoDB', gemma: 'Gemma', mastra: 'Mastra tools', tabpfn: 'TabPFN forecast', serpapi: 'SerpApi prices', backboard: 'Backboard memory', elevenlabs: 'ElevenLabs voice', temporal: 'Temporal', sentry: 'Sentry' };
+const TITLES = { dashboard: 'Today', assistant: 'Ask', orders: 'Orders', inventory: 'Stock', forecast: 'Forecast', suppliers: 'Suppliers', workflows: 'Workflows', activity: 'Activity', health: 'Health' };
+
+function go(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+  el.focus({ preventScroll: true });
+  el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 1600);
+}
