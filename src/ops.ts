@@ -224,9 +224,22 @@ export function templateBrief(f: Awaited<ReturnType<typeof briefFacts>>) {
   return l.join('\n');
 }
 
-/** Deterministic brief; Gemma adds a 1–2 sentence summary on top, kept only if it doesn't leak field names. */
-export async function generateDailyBrief({ store = true } = {}) {
-  const facts = await briefFacts();
+/** Orders or stock changed: today's stock plan and brief no longer match the data. */
+export async function invalidateDay() {
+  const date = today();
+  await Promise.all([col.forecasts.deleteMany({ date }), col.briefs.updateMany({ date }, { $set: { stale: true } })]);
+}
+
+/**
+ * Deterministic brief; Gemma adds a 1–2 sentence summary on top, kept only if it doesn't leak field names.
+ * Cached per day until invalidateDay(); `fresh` rebuilds it (the morning workflow).
+ */
+export async function generateDailyBrief({ store = true, fresh = false } = {}) {
+  if (!fresh) {
+    const cached = await col.briefs.findOne({ date: today(), stale: { $ne: true } }, { sort: { createdAt: -1 } });
+    if (cached) return { ...cached, cached: true };
+  }
+  const facts = await span('brief.facts', 'brief facts', {}, () => briefFacts());
   const brief = templateBrief(facts);
   let summary: string | null = null;
   try {

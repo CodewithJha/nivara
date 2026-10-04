@@ -133,7 +133,7 @@ r.post('/orders', async (q, s) => {
   const items = o.items.map(i => { const p = products.find(p => p._id === i.sku)!; return { sku: p._id, name: p.name, quantity: i.quantity, price: p.price }; });
   const order = { _id: 'O' + Date.now().toString(36).toUpperCase(), customerId, customerName: o.customerName, items, total: items.reduce((a, i) => a + i.price * i.quantity, 0), status: 'pending' as const, deliveryDate: o.deliveryDate ?? null, createdAt: new Date(), source: 'assistant-extraction' };
   await col.orders.insertOne(order);
-  await col.forecasts.deleteMany({ date: today() }); // reserved stock changed → recompute plan
+  await ops.invalidateDay(); // reserved stock changed → recompute plan and brief
   s.status(201).json(order);
 });
 
@@ -145,7 +145,7 @@ r.post('/orders/:id/deliver', async (q, s) => {
     await col.products.updateOne({ _id: i.sku }, { $inc: { stock: -i.quantity } });
     await col.sales.updateOne({ sku: i.sku, date: today() }, { $inc: { qty: i.quantity }, $set: { source: 'order' } }, { upsert: true });
   }
-  await col.forecasts.deleteMany({ date: today() });
+  await ops.invalidateDay();
   const tiger = await syncDeliveredOrder({ ...o, deliveredAt: new Date() });
   s.json({ ...o, tigerSync: tiger });
 });
