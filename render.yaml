@@ -1,10 +1,10 @@
-# Render Blueprint. One web service; Mongo = Atlas, Gemma = a hosted Ollama/OpenAI-compatible endpoint.
-# Without a reachable Gemma endpoint the app still runs (keyword router + templated answers, labelled).
+# Render Blueprint. One free web service. Mongo = Atlas. Gemma = Gemini API or a hosted Ollama endpoint.
+# Missing optional hosts/keys: labelled fallbacks (keyword router, in-process workflows, moving-average forecast).
 services:
   - type: web
     name: nivara
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/health
@@ -13,13 +13,21 @@ services:
         value: "24"
       - key: MONGODB_URI
         sync: false
-      - key: OLLAMA_BASE_URL          # e.g. http://<digitalocean-gpu-droplet-ip>:11434
+      - key: MONGODB_DB
+        value: nivara
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
         sync: false
-      - key: OLLAMA_API_KEY           # if the endpoint sits behind a bearer-token proxy
+      - key: GEMINI_MODEL
+        value: gemma-4-31b-it
+      - key: OLLAMA_BASE_URL
+        sync: false
+      - key: OLLAMA_API_KEY
         sync: false
       - key: GEMMA_MODEL
         value: gemma3:4b
-      - key: FORECAST_MODE            # TabPFN needs torch (~1GB); on Render default to the labelled fallback
+      - key: FORECAST_MODE
         value: fallback
       - key: SERPAPI_API_KEY
         sync: false
@@ -29,7 +37,7 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
-      - key: TEMPORAL_ADDRESS         # Temporal Cloud endpoint; leave unset to run workflows in-process
+      - key: TEMPORAL_ADDRESS
         sync: false
       - key: TEMPORAL_NAMESPACE
         sync: false
@@ -42,4 +50,4 @@ services:
   #   runtime: node
   #   buildCommand: npm ci
   #   startCommand: npm run worker
-  #   envVars: copy the web service's envVars (MONGODB_URI, OLLAMA_*, TEMPORAL_*, partner keys)
+  #   envVars: copy the web service's envVars (MONGODB_URI, LLM_*, OLLAMA_*, TEMPORAL_*, partner keys)
