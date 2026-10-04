@@ -148,3 +148,40 @@ r.post('/voice/tts', async (q, s) => {
   try { s.type('audio/mpeg').send(Buffer.from(await elevenTTS(text))); }
   catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs TTS failed'); s.status(502).json({ error: e.message, fallback: 'browser-speech-synthesis' }); }
 });
+
+r.post('/workflows/:name/run', async (q, s) => {
+  const name = body(z.enum(Object.keys(WORKFLOWS) as [WF, ...WF[]]), q.params.name);
+  const t = await getTemporal();
+  if (!t) return s.json(await traced(`workflow.${name}`, {}, () => runDirect(name)));
+  const h = await t.workflow.start(name, { taskQueue: 'nivara', workflowId: `${name}-${Date.now()}` });
+  const result = await Promise.race([h.result(), new Promise(res => setTimeout(() => res(null), 120_000))]);
+  s.json({ runner: 'temporal', workflowId: h.workflowId, runId: h.firstExecutionRunId, result, note: result ? undefined : 'Still running after 120s — is `npm run worker` up? Check the Temporal UI.' });
+});
+r.get('/workflows', async (_q, s) => {
+  const t = await getTemporal();
+  let runs: any[] = [], schedule: any = null;
+  if (t) {
+    for await (const w of t.workflow.list({ query: 'TaskQueue = "nivara"', pageSize: 10 })) { runs.push({ id: w.workflowId, type: w.type, status: w.status.name, start: w.startTime }); if (runs.length >= 10) break; }
+    schedule = await t.schedule.getHandle('daily-brief').describe().then(d => ({ id: 'daily-brief', next: d.info.nextActionTimes?.[0], recent: d.info.recentActions?.length }), () => null);
+  }
+  s.json({ temporal: !!t, uiUrl: t ? process.env.TEMPORAL_UI_URL ?? 'http://localhost:8233' : null, runs, schedule, briefs: await col.briefs.find().sort({ createdAt: -1 }).limit(5).toArray() });
+});
+
+r.get('/traces', async (_q, s) => s.json({ traces: await col.traces.find({}, { projection: { spans: 0 } }).sort({ at: -1 }).limit(50).toArray() }));
+r.get('/traces/:id', async (q, s) => s.json(await col.traces.findOne({ _id: q.params.id }) ?? {}));
+
+app.use('/api', r);
+Sentry.setupExpressErrorHandler(app); // captures 5xx; no-op without SENTRY_DSN
+app.use((e: any, _q: express.Request, s: express.Response, _n: express.NextFunction) => {
+  const status = e.status ?? 500;
+  if (status >= 500) log.error({ err: e.message, stack: e.stack }, 'request failed'); else log.warn({ err: e.message }, 'bad request');
+  s.status(status).json({ error: e.message });
+});
+
+if (import.meta.main) {
+  await mongo.connect();
+  if (!(await col.products.countDocuments())) log.info({ seeded: await seed() }, 'empty database → demo data seeded');
+  const port = Number(process.env.PORT ?? 3000);
+  const server = app.listen(port, () => log.info(`Nivara on http://localhost:${port}`));
+  process.once('SIGTERM', () => server.close(() => Sentry.close(2000).finally(() => process.exit(0))));
+}
