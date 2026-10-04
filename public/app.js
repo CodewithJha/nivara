@@ -255,14 +255,15 @@ function go(id) {
 const turns = [];
 const tries = list => list.length ? `<ul class="tries">${list.map(q => `<li><button class="link" onclick="send(this.textContent)">${esc(q)}</button></li>`).join('')}</ul>` : '';
 const askBox = (list, titled = true) => `<section class="sec ask" id="ask" tabindex="-1"${titled ? ' aria-labelledby="ask-h"' : ' aria-label="Ask"'}>${titled ? '<h2 id="ask-h">Ask</h2>' : ''}
-  <div class="field"><input id="q" placeholder="Which orders are late?" aria-label="Ask about your shop" onkeydown="if(event.key==='Enter')send(this.value)"><button class="btn primary" onclick="send($('#q').value)">Ask</button><button class="btn" id="mic" onclick="listen(this)">Speak</button></div>
+  <div class="field"><input id="q" placeholder="Which orders are late?" aria-label="Ask about your shop" onkeydown="if(event.key==='Enter')send(this.value)"><button class="btn primary" id="askbtn" onclick="send($('#q').value)"${asking ? ' disabled aria-busy="true"' : ''}>${asking ? 'Thinking…' : 'Ask'}</button><button class="btn" id="mic" onclick="listen(this)">Speak</button></div>
   ${tries(list)}
   <p class="small quiet voice" id="voicemode"></p>
   <div class="log" id="chat" aria-live="polite">${drawTurns()}</div></section>`;
 const MODE = { template: 'written from database facts', 'template+gemma': 'database facts, summary by Gemma' };
 function renderTurn(t) {
   const r = t.r;
-  if (!r) return `<article class="turn"><p class="q">${esc(t.q)}</p><p class="quiet">Working it out. Gemma runs on your own machine, so this can take a few seconds.</p></article>`;
+  if (t.error) return `<article class="turn"><p class="q">${esc(t.q)}</p>${errorBox(t.error, 'answer that', () => answer(t))}</article>`;
+  if (!r) return `<article class="turn" aria-busy="true"><p class="q">${esc(t.q)}</p><p class="thinking" role="status"><span class="st">Thinking</span> Checking your orders, stock and suppliers. This can take a few seconds.</p></article>`;
   const mode = r.answerMode === 'gemma' ? `written by ${r.model}` : MODE[r.answerMode] ?? r.answerMode;
   return `<article class="turn"><p class="q">${esc(t.q)}</p><pre class="a">${esc(r.answer)}</pre>
     <p class="meta">${[mode && `<span>${esc(cap(mode))}</span>`, r.traceId && `<a href="#activity">Trace ${esc(r.traceId.slice(0, 8))}</a>`, `<button class="link" onclick="speak(${turns.indexOf(t)})">Read aloud</button>`].filter(Boolean).join('')}</p>
@@ -271,28 +272,37 @@ function renderTurn(t) {
 }
 function drawTurns() { return turns.slice().reverse().map(renderTurn).join(''); }
 const drawLog = () => { if ($('#chat')) $('#chat').innerHTML = drawTurns(); };
+let asking = false;
+function setAsking(on) {
+  asking = on;
+  const b = $('#askbtn');
+  if (!b) return;
+  b.disabled = on; b.toggleAttribute('aria-busy', on); b.textContent = on ? 'Thinking…' : 'Ask';
+}
 async function send(text) {
   text = (text || '').trim();
-  if (!text) return;
-  const history = turns.flatMap(t => [{ role: 'user', content: t.q }, ...(t.r ? [{ role: 'assistant', content: t.r.answer.slice(0, 4000) }] : [])]).slice(-8);
-  const t = { q: text };
+  if (!text || asking) return;
+  const t = { q: text, history: turns.flatMap(t => [{ role: 'user', content: t.q }, ...(t.r ? [{ role: 'assistant', content: t.r.answer.slice(0, 4000) }] : [])]).slice(-8) };
   turns.push(t);
   if ($('#q')) $('#q').value = '';
-  drawLog();
-  try { t.r = await api('/assistant', { method: 'POST', body: { message: text, history } }); }
-  catch (e) { t.r = { answer: `Couldn't answer that: ${e.message}`, route: 'error', tool: '-' }; }
-  drawLog();
+  await answer(t);
+}
+async function answer(t) {
+  t.error = undefined;
+  setAsking(true); drawLog();
+  try { t.r = await api('/assistant', { method: 'POST', body: { message: t.q, history: t.history }, retry: true }); }
+  catch (e) { t.error = e; }
+  setAsking(false); drawLog();
 }
 const elevenOn = () => health?.integrations?.elevenlabs?.status === 'live';
 const voiceNotice = msg => { if ($('#voicemode')) $('#voicemode').textContent = msg; };
+const browserSpeak = text => speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { lang: 'en-IN' }));
+/** ElevenLabs when it is live; any failure (request, autoplay) falls back to the browser voice without a message. */
 async function speak(i) {
   const text = turns[i].r.answer;
-  if (elevenOn()) {
-    const r = await fetch('/api/voice/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) }).catch(e => ({ ok: false, statusText: e.message }));
-    if (r.ok) return new Audio(URL.createObjectURL(await r.blob())).play();
-    voiceNotice(`ElevenLabs speech failed (${r.status || r.statusText}). Using browser speech.`);
-  }
-  speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { lang: 'en-IN' }));
+  if (!elevenOn()) return browserSpeak(text);
+  try { await new Audio(URL.createObjectURL(await api('/voice/tts', { method: 'POST', body: { text }, as: 'blob', retry: true }))).play(); }
+  catch { browserSpeak(text); }
 }
 let rec;
 async function listen(btn) {
@@ -306,16 +316,15 @@ async function listen(btn) {
       rec.ondataavailable = e => chunks.push(e.data);
       rec.onstop = async () => {
         stream.getTracks().forEach(t => t.stop()); btn.textContent = label;
-        const blob = new Blob(chunks, { type: rec.mimeType }); // Safari records audio/mp4, Chrome audio/webm
-        const r = await fetch('/api/voice/stt', { method: 'POST', headers: { 'content-type': blob.type.split(';')[0] || 'audio/webm' }, body: blob }).catch(e => ({ ok: false, json: async () => ({ error: e.message }) }));
-        const j = await r.json().catch(() => ({}));
-        if (r.ok && j.text) return send(j.text);
-        voiceNotice(`ElevenLabs transcription failed (${j.error || r.status}). Speak again: using browser speech.`);
+        const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' }); // Safari records audio/mp4, Chrome audio/webm
+        const j = await api('/voice/stt', { method: 'POST', body: blob, retry: true }).catch(() => ({}));
+        if (j.text) return send(j.text);
+        voiceNotice("Didn't catch that. Say it again: listening with browser speech.");
         browserListen(btn, label);
       };
       rec.start(); btn.textContent = 'Stop';
       return;
-    } catch (e) { voiceNotice(`Microphone recording unavailable (${e.message}). Using browser speech.`); }
+    } catch { voiceNotice('Recording is not available here, so browser speech is listening.'); }
   }
   browserListen(btn, label);
 }
@@ -420,7 +429,7 @@ async function route() {
   try {
     $('#view').innerHTML = (note ? `<p class="flash" role="status">${st('light', 'Done')} ${esc(note)}</p>` : '') + await views[name]();
     if (name === 'suppliers') loadMem();
-    voiceNotice(elevenOn() ? 'Voice: ElevenLabs' : `Voice: browser speech (${health?.integrations?.elevenlabs?.detail ?? 'ElevenLabs not live'})`);
+    voiceNotice(elevenOn() ? 'Voice: ElevenLabs' : 'Voice: browser speech');
   } catch (e) { $('#view').innerHTML = `<div class="sec">${errorBox(e, `load ${TITLES[name]}`, route)}</div>`; }
   if (!first) { scrollTo(0, 0); const h = $('#view h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
   first = false;
