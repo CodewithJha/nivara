@@ -70,7 +70,7 @@ export function annotate(attrs: Record<string, string | number | boolean>) {
 // ---------- Gemma: Ollama (default) or Gemini API (Google AI Studio). Same return: the assistant text. ----------
 
 type ChatMsg = { role: string; content: string };
-type ChatOpts = { json?: boolean; timeoutMs?: number; maxTokens?: number };
+type ChatOpts = { json?: boolean; timeoutMs?: number; maxTokens?: number; thinkingLevel?: string }; // thinkingLevel: Gemini API only
 /** Output-token cap for every Gemma call (latency grows with output length); callers may ask for fewer. */
 export const GEMMA_MAX_TOKENS = Number(env.GEMMA_MAX_TOKENS) || 1024;
 const maxTokens = (opts: ChatOpts) => Math.min(opts.maxTokens ?? GEMMA_MAX_TOKENS, GEMMA_MAX_TOKENS);
@@ -103,7 +103,7 @@ async function geminiChat(messages: ChatMsg[], opts: ChatOpts, model: string, se
     body: JSON.stringify({
       ...(system && { systemInstruction: { parts: [{ text: system }] } }),
       contents,
-      generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens(opts), ...(opts.json && { responseMimeType: 'application/json' }) },
+      generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens(opts), ...(opts.json && { responseMimeType: 'application/json' }), ...(opts.thinkingLevel && { thinkingConfig: { thinkingLevel: opts.thinkingLevel } }) },
     }),
     signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
   }).catch(e => { throw unavailable(e.message); });
