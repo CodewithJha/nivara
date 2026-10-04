@@ -10,6 +10,43 @@ export function movingAverage7(daily: number[], window = 14): number {
   return Math.round((tail.reduce((a, b) => a + b, 0) / tail.length) * 7 * 10) / 10;
 }
 
+// ---------- precomputed TabPFN runs ----------
+// Hosts without Python (Render) can't run TabPFN. `npm run forecast:publish` runs it elsewhere and stores the
+// per-SKU predictions in Mongo (`forecastRuns`); the server reuses the newest fresh run instead of a moving average.
+
+export type ForecastRun = { model: string; package?: string; asOf: string; historyDays: number; skus: number; of: number; pred: Record<string, number>; createdAt: Date | string };
+
+/** Default freshness = one 7-day forecast horizon. */
+export const RUN_MAX_AGE_HOURS = 168;
+
+/** Usable = has predictions and is younger than maxAgeHours. */
+export function freshRun(run: Pick<ForecastRun, 'pred' | 'createdAt'> | null | undefined, now = new Date(), maxAgeHours = RUN_MAX_AGE_HOURS): boolean {
+  if (!run?.pred || !Object.keys(run.pred).length) return false;
+  const age = now.getTime() - new Date(run.createdAt).getTime();
+  return Number.isFinite(age) && age >= 0 && age <= maxAgeHours * 36e5;
+}
+
+/** Run predictions per SKU; SKUs the run doesn't cover (or bad values) get the moving average and are listed in `uncovered`. */
+export function mergeRunPred(series: Record<string, number[]>, runPred: Record<string, number>) {
+  const pred: Record<string, number> = {}, uncovered: string[] = [];
+  for (const [sku, daily] of Object.entries(series)) {
+    const v = runPred[sku];
+    if (typeof v === 'number' && Number.isFinite(v) && v >= 0) pred[sku] = v;
+    else { pred[sku] = movingAverage7(daily); uncovered.push(sku); }
+  }
+  return { pred, uncovered };
+}
+
+/** /api/health entry for TabPFN, from the newest forecast doc: live (ran here) | precomputed (published run) | fallback. */
+export function tabpfnHealth(f: { method?: string; model?: string; createdAt?: Date | string; fallbackReason?: string; precomputed?: { at: Date | string; skus: number; of: number } } | null | undefined) {
+  if (!f) return { status: 'fallback', detail: 'no forecast yet' };
+  if (f.method !== 'tabpfn') return { status: 'fallback', detail: `last forecast: ${f.method}${f.fallbackReason ? ` (${f.fallbackReason.slice(0, 120)})` : ''}` };
+  const at = new Date(f.precomputed?.at ?? f.createdAt ?? 0).toISOString();
+  return f.precomputed
+    ? { status: 'live', mode: 'precomputed', model: f.model, at, detail: `${f.model ?? 'TabPFN'} forecast precomputed ${at} (${f.precomputed.skus}/${f.precomputed.of} products), served from MongoDB` }
+    : { status: 'live', mode: 'live', model: f.model, at, detail: `${f.model ?? 'TabPFN'} forecast ran on this server ${at}` };
+}
+
 export type Risk = 'high' | 'medium' | 'low';
 
 /**
