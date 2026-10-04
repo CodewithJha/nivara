@@ -90,26 +90,26 @@ the service in `screen` (logs `/tmp/nivara-<svc>.log`), and fails loudly unless 
 (server also passes `/api/health`) or the worker log shows `RUNNING`. The worker starts with
 `SUPPLIER_FAIL_FIRST_N=2` (retry demo) unless you set it.
 
-## Deploying (Render) — prepared, not deployed
+## Deploy to Render
 
-`render.yaml` defines one Node web service (`npm ci` / `npm start`, health check `/api/health`). Set
-`MONGODB_URI` to Atlas. Gemma needs a reachable OpenAI-compatible endpoint; options:
+The app is host-agnostic: `npm start` binds `process.env.PORT`, and `src/server.ts` only listens when it is the
+process entry. Missing Temporal / TabPFN / LLM hosts or keys use the existing labelled fallbacks.
 
-1. **Ollama on a DigitalOcean GPU droplet** (or any VM): `ollama pull gemma3:4b`, expose 11434 behind a reverse
-   proxy with a bearer token, set `OLLAMA_BASE_URL` + `OLLAMA_API_KEY`. Documented option only, not set up here.
-2. Any hosted OpenAI-compatible Gemma endpoint (vLLM, etc.): same two variables, `GEMMA_MODEL` = its model id.
-3. None: the app still works (keyword router, templated answers, extraction returns 503), clearly labelled.
-
-TabPFN is off on Render by default (`FORECAST_MODE=fallback`, labelled) because torch is ~1 GB. Temporal on
-Render needs Temporal Cloud (`TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_API_KEY`) plus the commented
-worker service in `render.yaml`; otherwise workflows run in-process.
+`render.yaml` is a free web service (`npm ci` / `npm start`, health `/api/health`). In the Render dashboard (or
+via Blueprint): set `MONGODB_URI` (Atlas). For Gemma on the free instance, set `LLM_PROVIDER=gemini` and
+`GEMINI_API_KEY` (`GEMINI_MODEL` defaults to `gemma-4-31b-it`; alt `gemma-4-26b-a4b-it`). Or point
+`OLLAMA_BASE_URL` at any OpenAI-compatible host. Leave `TEMPORAL_ADDRESS` unset (in-process workflows).
+`FORECAST_MODE=fallback` is already in the blueprint (torch is too large for free). Optional: `SERPAPI_API_KEY`,
+`BACKBOARD_API_KEY`, `ELEVENLABS_API_KEY`, `SENTRY_DSN`. Seed once with `MONGODB_URI='…' npm run seed`. No auth.
 
 ## Environment variables
 
 | Var | Needed for | Without it |
 |---|---|---|
-| `MONGODB_URI` | data (default `mongodb://localhost:27017`) | app won't start |
-| `OLLAMA_BASE_URL`, `GEMMA_MODEL` | Gemma (default local `gemma3:4b`) | keyword router + templated answers; order extraction returns 503 |
+| `MONGODB_URI` | data (default `mongodb://localhost:27017`) | health reports Mongo down; routes that read the DB fail |
+| `LLM_PROVIDER` | `ollama` (default) or `gemini` | — |
+| `OLLAMA_BASE_URL`, `GEMMA_MODEL` | Gemma via Ollama (default local `gemma3:4b`) | keyword router + templated answers; order extraction returns 503 |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Gemma via Google AI Studio (`gemma-4-31b-it` by default) | same keyword router + templates |
 | `SERPAPI_API_KEY` | live supplier prices (Temporal refresh, `SUPPLIER_REFRESH_MAX` products per run, default 3) | stored quotes, labelled |
 | `BACKBOARD_API_KEY` | memory saved/searched in Backboard | Mongo only, labelled |
 | `ELEVENLABS_API_KEY` | Scribe STT + TTS (live only once the key is verified) | browser Web Speech API |
