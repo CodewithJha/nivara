@@ -244,12 +244,13 @@ export async function searchCatalog(query: string, limit = 8) {
       const params: any[] = [filters.q, limit];
       const text = `search_tsv @@ plainto_tsquery('english', $1)`;
       // hard filters apply to text AND vector matches (a vector hit must not slip past "under ₹3000")
-      let filt = 'TRUE';
+      let filt = 'TRUE', cat = 'TRUE';
       if (filters.maxPrice != null) { params.push(filters.maxPrice); filt += ` AND price <= $${params.length}`; }
-      if (filters.category) { params.push(filters.category); filt += ` AND category = $${params.length}`; }
+      // category is a guess from words like "whey": it narrows text matches only, close vector matches may sit in another category
+      if (filters.category) { params.push(filters.category); cat = `category = $${params.length}`; }
       // OFF "no sugar" ≈ sugar-free / very low; 5g/100g catches bars labelled low-sugar without empty results
       if (filters.noSugar) filt += ` AND (tags->>'sugarPer100g') IS NOT NULL AND (tags->>'sugarPer100g')::float <= 5`;
-      const where = `${text} AND ${filt}`;
+      const where = `${text} AND ${cat} AND ${filt}`;
       let rows;
       if (vec) {
         params.push(`[${vec.join(',')}]`);
@@ -259,7 +260,7 @@ export async function searchCatalog(query: string, limit = 8) {
                   ts_rank(search_tsv, plainto_tsquery('english', $1)) AS text_rank,
                   (1 - (embedding <=> ${v})) AS vec_score
              FROM catalog_items
-            WHERE embedding IS NOT NULL AND (${text} OR embedding <=> ${v} < 0.55) AND ${filt}
+            WHERE embedding IS NOT NULL AND ((${text} AND ${cat}) OR embedding <=> ${v} < 0.55) AND ${filt}
             ORDER BY (ts_rank(search_tsv, plainto_tsquery('english', $1)) + 2 * (1 - (embedding <=> ${v}))) DESC
             LIMIT $2`,
           params,
