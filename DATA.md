@@ -28,7 +28,7 @@ npm run data:prices    # Open Prices INR
 npm run data:trends    # Google Trends → data/raw/trends_in.csv (needs SERPAPI_API_KEY; else uses cache)
 npm run data:demand    # proxy weekly/daily from catalog × trends
 npm run seed           # import → Atlas products/sales + Tiger hypertable + catalog embeddings
-npm run seed -- --offline   # use cached raw files only
+npm run seed -- --online    # refetch sources (default uses cached raw files)
 ```
 
 Importers live in `scripts/import/{catalog,prices,trends,demand}.ts` and are idempotent / offline-capable.
