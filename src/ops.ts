@@ -122,6 +122,7 @@ export async function publishForecastRun({ top, chunk = 50, timeoutMs = Number(p
   if (!r) throw new Error('no products to forecast');
   const run = { source: 'tabpfn' as const, model: `TabPFN ${r.model}`, package: r.package, asOf: t, historyDays: HISTORY_DAYS, skus: skus.length, of: products.length, pred, seconds: Math.round((Date.now() - started) / 1000), createdAt: new Date() };
   const { insertedId } = await col.forecastRuns.insertOne(run);
+  await invalidateDay(); // today's cached brief was built on the previous forecast
   const f = await forecastDemand({ force: true, source: 'precomputed' });
   return { runId: insertedId, model: run.model, package: run.package, asOf: t, skus: run.skus, of: run.of, seconds: run.seconds, forecast: { method: f.method, model: f.model, precomputed: f.precomputed } };
 }
