@@ -74,3 +74,16 @@ test('api: non-JSON success body is a server error; blobs pass through with thei
   assert.equal(calls[0].init.headers['content-type'], 'audio/webm');
   assert.equal(calls[0].init.body, audio);
 });
+
+test('api: friendly words come from the server envelope or the error kind, never raw detail', async () => {
+  const envd = await load(() => Response.json({ error: { code: 'order_not_pending', message: 'That order is already delivered or no longer exists.' } }, { status: 404 })).api('/orders/x/deliver', { method: 'POST' }).catch((e: any) => e);
+  assert.equal(envd.code, 'order_not_pending');
+  assert.equal(envd.friendly, 'That order is already delivered or no longer exists.');
+  const net = await load(() => { throw new TypeError('Load failed'); }).api('/x').catch((e: any) => e);
+  assert.doesNotMatch(net.friendly, /Load failed|TypeError|undefined/);
+  assert.match(net.friendly, /connection/);
+  const html = await load(() => new Response('<html>502 Bad Gateway</html>', { status: 502 })).api('/x', { retry: false }).catch((e: any) => e);
+  assert.equal(html.friendly, 'Something went wrong on our side. Try again in a moment.');
+  const legacy = await load(() => Response.json({ error: 'MongoServerError: boom' }, { status: 500 })).api('/x', { retry: false }).catch((e: any) => e);
+  assert.doesNotMatch(legacy.friendly, /Mongo|boom/);
+});
