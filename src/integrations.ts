@@ -88,3 +88,29 @@ export async function gemmaCapabilities(): Promise<string[] | null> {
     return r.ok ? ((await r.json()) as any).capabilities ?? ['completion'] : null;
   } catch { return null; }
 }
+
+// ---------- TabPFN (python subprocess) ----------
+
+const PY = env.TABPFN_PYTHON ?? fileURLToPath(new URL('../forecast/.venv/bin/python', import.meta.url));
+const PY_SCRIPT = fileURLToPath(new URL('../forecast/forecast.py', import.meta.url));
+
+/** series: { sku: daily qty[] (oldest→newest) } → { model, pred: { sku: next-7-day total } }. Throws on any failure. */
+export function tabpfnForecast(series: Record<string, number[]>, timeoutMs = Number(env.TABPFN_TIMEOUT_MS ?? 180_000)): Promise<{ model: string; pred: Record<string, number> }> {
+  return span('forecast.tabpfn', 'tabpfn regressor', { skus: Object.keys(series).length }, () => new Promise((resolve, reject) => {
+    if (env.FORECAST_MODE === 'fallback') return reject(new Error('FORECAST_MODE=fallback'));
+    const p = spawn(PY, [PY_SCRIPT], { timeout: timeoutMs });
+    let out = '', err = '';
+    p.stdout.on('data', d => (out += d));
+    p.stderr.on('data', d => (err += d));
+    p.on('error', reject);
+    p.on('close', code => {
+      if (code !== 0) return reject(new Error(`tabpfn exit ${code}: ${err.trim().split('\n').pop()}`));
+      try {
+        const r = JSON.parse(out);
+        if (typeof r?.pred !== 'object' || !Object.keys(series).every(k => typeof r.pred[k] === 'number' && Number.isFinite(r.pred[k]) && r.pred[k] >= 0)) throw new Error('bad output');
+        resolve({ model: String(r.model), pred: r.pred });
+      } catch (e: any) { reject(new Error('tabpfn invalid output: ' + e.message)); }
+    });
+    p.stdin.end(JSON.stringify(series));
+  }));
+}
