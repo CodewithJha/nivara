@@ -203,15 +203,15 @@ export function buildDraft<Pr extends P & { price: number; stock: number }, C ex
 ) {
   const problems: string[] = [];
   const cust = matchCustomer(ex.customer, customers);
-  if (!cust) problems.push(`"${ex.customer}" is not an existing customer — will be created on confirm.`);
+  if (!cust) problems.push(`${ex.customer} is a new customer. They will be added when you save.`);
   const items = ex.items.map(i => {
     const p = matchProduct(i.product, products);
-    if (!p) problems.push(`No product matches "${i.product}".`);
-    else if (p.stock < i.quantity) problems.push(`Only ${p.stock} × ${p.name} in stock (asked ${i.quantity}).`);
+    if (!p) problems.push(`No product matches "${i.product}". Check the spelling in the message.`);
+    else if (p.stock < i.quantity) problems.push(`Only ${p.stock} ${p.name} in stock; the message asks for ${i.quantity}.`);
     return { requested: i.product, quantity: i.quantity, product: p && { sku: p._id, name: p.name, price: p.price, stock: p.stock } };
   });
   const deliveryDate = resolveDate(ex.delivery_text, today);
-  if (ex.delivery_text && !deliveryDate) problems.push(`Could not resolve delivery date "${ex.delivery_text}".`);
+  if (ex.delivery_text && !deliveryDate) problems.push(`Couldn't work out a delivery date from "${ex.delivery_text}". Add a day or date to the message.`);
   const total = items.reduce((s, i) => s + (i.product ? i.product.price * i.quantity : 0), 0);
   return { customer: { name: cust?.name ?? ex.customer, id: cust?._id ?? null, isNew: !cust }, items, deliveryText: ex.delivery_text ?? null, deliveryDate, total, problems };
 }
