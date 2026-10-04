@@ -114,3 +114,35 @@ export function tabpfnForecast(series: Record<string, number[]>, timeoutMs = Num
     p.stdin.end(JSON.stringify(series));
   }));
 }
+
+// ---------- SerpApi Google Shopping ----------
+
+const OfferSchema = z.object({ title: z.string().trim().min(1).max(300), source: z.string().trim().min(1).max(120), price: z.number().finite().positive(), link: z.url({ protocol: /^https?$/ }) });
+export type Offer = z.infer<typeof OfferSchema> & { currency: 'INR'; sourceDomain: string; thumbnail?: string };
+
+/** SerpApi shopping_results → validated offers. Anything without a title, seller, positive price and http(s) link is dropped. */
+export function normalizeOffers(results: unknown): { offers: Offer[]; rejected: number } {
+  const raw = Array.isArray(results) ? results : [];
+  const offers = raw.flatMap((x: any) => {
+    const r = OfferSchema.safeParse({ title: x?.title, source: x?.source, price: x?.extracted_price, link: x?.link ?? x?.product_link });
+    return r.success ? [{ ...r.data, currency: 'INR' as const, sourceDomain: new URL(r.data.link).hostname.replace(/^www\./, ''), thumbnail: typeof x.thumbnail === 'string' ? x.thumbnail : undefined }] : [];
+  });
+  return { offers: offers.slice(0, 20), rejected: raw.length - offers.length };
+}
+
+export const serpLive = () => !!env.SERPAPI_API_KEY;
+export async function serpShopping(q: string): Promise<{ available: boolean; reason?: string; offers: Offer[]; rejected?: number; query: string }> {
+  if (!env.SERPAPI_API_KEY) return { available: false, reason: 'Live supplier search is not configured (no SerpApi key), so this uses only the supplier quotes stored in your database.', offers: [], query: q };
+  return span('tool.serpapi', 'serpapi google_shopping', { q }, async set => {
+    const u = new URL('https://serpapi.com/search.json');
+    Object.entries({ engine: 'google_shopping', q, gl: 'in', hl: 'en', location: 'India', api_key: env.SERPAPI_API_KEY! }).forEach(([k, v]) => u.searchParams.set(k, v));
+    const r = await fetch(u, { signal: AbortSignal.timeout(20_000) });
+    if (!r.ok) throw new Error(`SerpApi HTTP ${r.status}`);
+    const j: any = await r.json();
+    if (j.error) throw new Error(`SerpApi: ${j.error}`);
+    const { offers, rejected } = normalizeOffers(j.shopping_results);
+    set('results', offers.length);
+    set('rejected', rejected);
+    return { available: true, offers, rejected, query: q };
+  });
+}
