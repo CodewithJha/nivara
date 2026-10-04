@@ -2,8 +2,21 @@
 import { col, daysAgo, today, type Preference } from './db.ts';
 import { MIN_SUPPLIER_SAVING_PERCENT, MIN_SUPPLIER_SAVING_RUPEES, bestQuote, blockTarget, inr, looksClean, matchProduct, methodLabel, movingAverage7, orderFlag, shortDate, stockPlan } from './logic.ts';
 import { backboardLive, backboardList, backboardSave, backboardSearch, gemma, log, serpLive, serpShopping, span, tabpfnForecast } from './integrations.ts';
+import { tigerDemand } from './tiger.ts';
 
 const HISTORY_DAYS = 60;
+
+/** Flag days whose qty is > mean + 2σ over the series (simple anomaly marker for the forecast tool). */
+export function anomalyFlags(daily: number[]): { index: number; qty: number; z: number }[] {
+  if (daily.length < 7) return [];
+  const mean = daily.reduce((a, b) => a + b, 0) / daily.length;
+  const sd = Math.sqrt(daily.reduce((a, b) => a + (b - mean) ** 2, 0) / daily.length) || 0;
+  if (sd === 0) return [];
+  return daily.flatMap((qty, index) => {
+    const z = (qty - mean) / sd;
+    return z >= 2 ? [{ index, qty, z: Math.round(z * 10) / 10 }] : [];
+  }).slice(-5);
+}
 
 async function reservedBySku() {
   const r: Record<string, number> = {};
@@ -37,12 +50,21 @@ export async function forecastDemand({ force = false, latest = false } = {}) {
       pred = Object.fromEntries(Object.entries(series).map(([k, v]) => [k, movingAverage7(v)]));
     }
     const reserved = await reservedBySku();
+    const tiger = await tigerDemand();
     const items = products.map(p => {
-      const demand7 = Math.round((pred[p._id] ?? 0) * 10) / 10;
+      // TabPFN/MA = forward 7d demand for stock plan; Tiger caggs = realised 7d/28d that calibrate the brief/agent
+      const forecast7 = Math.round((pred[p._id] ?? 0) * 10) / 10;
+      const demand7 = Math.round((tiger[p._id]?.demand7 ?? forecast7) * 10) / 10;
       const last7 = series[p._id].slice(-7).reduce((a, b) => a + b, 0);
-      return { sku: p._id, name: p.name, stock: p.stock, reserved: reserved[p._id] ?? 0, leadTimeDays: p.leadTimeDays, last7Sold: last7, demand7, ...stockPlan({ stock: p.stock, reserved: reserved[p._id] ?? 0, demand7, leadTimeDays: p.leadTimeDays }) };
+      const anomalies = anomalyFlags(series[p._id]);
+      return {
+        sku: p._id, name: p.name, stock: p.stock, reserved: reserved[p._id] ?? 0, leadTimeDays: p.leadTimeDays,
+        last7Sold: last7, forecast7, demand7, demand28: tiger[p._id]?.demand28, anomalies,
+        tiger: !!tiger[p._id],
+        ...stockPlan({ stock: p.stock, reserved: reserved[p._id] ?? 0, demand7: forecast7, leadTimeDays: p.leadTimeDays }),
+      };
     }).sort((a, b) => ['high', 'medium', 'low'].indexOf(a.risk) - ['high', 'medium', 'low'].indexOf(b.risk) || (a.daysOfCover ?? 1e9) - (b.daysOfCover ?? 1e9));
-    const doc = { date: t, method, model: model && `TabPFN ${model}`, fallbackReason: reason, historyDays: HISTORY_DAYS, items, createdAt: new Date() };
+    const doc = { date: t, method, model: model && `TabPFN ${model}`, fallbackReason: reason, historyDays: HISTORY_DAYS, tigerAggregates: Object.keys(tiger).length > 0, items, createdAt: new Date() };
     await col.forecasts.insertOne(doc);
     set('method', method);
     return doc;
@@ -143,8 +165,11 @@ export async function supplierPriceRefresh(attempt = 1) {
   if (!serpLive()) return { attempt, source: 'stored', reason: 'SERPAPI_API_KEY not set — no live search run; dashboard keeps showing stored supplier quotes.', refreshed: [] };
   const [inv, products, { blocked }] = await Promise.all([getInventory(), col.products.find().toArray(), blockedSuppliers()]);
   const cost = Object.fromEntries(products.map(p => [p._id, p.cost]));
-  // ponytail: top-N at-risk SKUs per run to save SerpApi quota; rotate through all SKUs if the plan allows more searches
-  const targets = inv.lowStock.toSorted((a: any, b: any) => cost[b.sku] * b.reorderQty - cost[a.sku] * a.reorderQty).slice(0, Number(process.env.SUPPLIER_REFRESH_MAX ?? 3));
+  // At-risk first, then fill remaining quota with highest-price real-catalog SKUs so SerpApi covers the OFF catalogue
+  const max = Number(process.env.SUPPLIER_REFRESH_MAX ?? 5);
+  const atRisk = inv.lowStock.toSorted((a: any, b: any) => cost[b.sku] * b.reorderQty - cost[a.sku] * a.reorderQty);
+  const rest = inv.items.filter((i: any) => !atRisk.some((a: any) => a.sku === i.sku)).toSorted((a: any, b: any) => (cost[b.sku] ?? 0) - (cost[a.sku] ?? 0));
+  const targets = [...atRisk, ...rest].slice(0, max);
   const refreshed = [];
   for (const t of targets) {
     try {

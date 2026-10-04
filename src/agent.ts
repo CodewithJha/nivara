@@ -7,8 +7,10 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { col, today } from './db.ts';
 import { Extraction, buildDraft, inr, looksClean, matchProduct, methodLabel, shortDate, units } from './logic.ts';
+import * as Sentry from '@sentry/node';
 import { MODEL, OLLAMA, annotate, gemma, gemmaCapabilities, llmDownNote, llmModel, llmProvider, log, parseJson, span, traced } from './integrations.ts';
 import * as ops from './ops.ts';
+import { searchCatalog } from './tiger.ts';
 
 const none = z.object({});
 const TOOLS = {
@@ -16,6 +18,7 @@ const TOOLS = {
   forecast_demand: { description: 'Same data focused on the demand forecast and stockout risk. Use for "which products will run out", "why is this product at risk" and "why do you recommend this".', args: none, run: () => ops.forecastDemand() },
   get_pending_orders: { description: 'Pending (not yet delivered) customer orders with due dates; flags overdue.', args: none, run: () => ops.getPendingOrders() },
   get_sales_summary: { description: 'Units sold per product over the last N days, best first.', args: z.object({ days: z.coerce.number().int().min(1).max(90).default(7) }), run: (a: { days: number }) => ops.salesSummary(a.days) },
+  search_catalog: { description: 'Hybrid search over the real product catalogue (Tiger pgvector + full-text). Use for "protein under 1500 no sugar", find products by constraint.', args: z.object({ query: z.string().trim().min(2).max(120) }), run: (a: { query: string }) => searchCatalog(a.query) },
   search_supplier_prices: { description: 'Find cheaper suppliers for one product: live web prices (SerpApi) and stored supplier quotes. Respects blocked suppliers.', args: z.object({ product: z.string().trim().min(1).max(80) }), run: (a: { product: string }) => ops.searchSupplierPrices(a.product) },
   get_business_memory: { description: "The owner's saved business preferences/rules (e.g. blocked suppliers).", args: none, run: () => ops.getMemory() },
   save_business_memory: { description: 'Save a durable business preference the owner states, e.g. "I don\'t buy from Supplier X". Pass their exact words.', args: z.object({ text: z.string().trim().min(3).max(300) }), run: (a: { text: string }) => ops.saveMemory(a.text) },
@@ -59,11 +62,13 @@ export function keywordRoute(q: string): { tool: ToolName; args: any } {
   const s = q.toLowerCase();
   if (/\b(remember|never buy|don'?t buy|do not buy|stop buying|avoid|note that)\b/.test(s)) return { tool: 'save_business_memory', args: { text: q } };
   if (/\b(memory|preferences?|what do you (remember|know))\b/.test(s)) return { tool: 'get_business_memory', args: {} };
-  if (/\b(supplier|cheaper|cheapest|price|wholesale)\b/.test(s)) return { tool: 'search_supplier_prices', args: { product: q } };
+  if (/\b(under|below|no sugar|sugar[- ]?free|find .*protein|catalog|catalogue|show me)\b/.test(s) || (/\bprotein\b/.test(s) && /\b(under|below|₹|rs)\b/.test(s)))
+    return { tool: 'search_catalog', args: { query: q } };
+  if (/\b(supplier|cheaper|cheapest|wholesale)\b/.test(s) || (/\bprice\b/.test(s) && !/\bunder\b/.test(s))) return { tool: 'search_supplier_prices', args: { product: q } };
   if (/\b(pending|undelivered|orders?)\b/.test(s)) return { tool: 'get_pending_orders', args: {} };
   if (/\b(sell|sold|best ?seller|top|most)\b/.test(s)) return { tool: 'get_sales_summary', args: { days: /month/.test(s) ? 30 : 7 } };
   if (/\b(restock|reorder|low stock|buy)\b/.test(s)) return { tool: 'get_inventory', args: {} };
-  if (/\b(run out|stock ?out|forecast|demand|why|explain|reason)\b/.test(s)) return { tool: 'forecast_demand', args: {} };
+  if (/\b(run out|stock ?out|forecast|demand|why|explain|reason|anomal)/.test(s)) return { tool: 'forecast_demand', args: {} };
   return { tool: 'generate_daily_brief', args: {} };
 }
 
@@ -144,6 +149,12 @@ function salesAnswer(out: any) {
     ...(rest.length ? ['Next best:', ...rest.slice(0, 4).map((t: any) => `• ${t.name}: ${units(t.qty)} (${inr(t.revenue)})`)] : [])].join('\n');
 }
 
+function catalogAnswer(out: any) {
+  if (!out.hits?.length) return `No catalogue matches for "${out.query}"${out.filters?.maxPrice ? ` under ₹${out.filters.maxPrice}` : ''}${out.filters?.noSugar ? ' with little/no sugar' : ''}.`;
+  return [`Catalogue matches (${out.mode}${out.source === 'mongo-fallback' ? ', Tiger fallback' : ''}):`,
+    ...out.hits.slice(0, 6).map((h: any) => `• ${h.name} (${h.sku}) — ${inr(h.price)}${h.sugarPer100g != null ? `, sugar ${h.sugarPer100g}g/100g` : ''}${h.demand7 != null ? `, ~${one(h.demand7)} sold / 7d` : ''}`)].join('\n');
+}
+
 function supplierAnswer(out: any) {
   const l = [out.product ? `${out.product.name}: you currently pay ${inr(out.product.cost)} per unit${out.product.currentSupplier ? ` (${out.product.currentSupplier})` : ''}.` : `I couldn't match "${out.query}" to a product in your catalogue.`];
   const o = out.dbOpportunity;
@@ -163,6 +174,7 @@ export function templateAnswer(tool: ToolName, out: any, focus?: string): string
     case 'forecast_demand': return riskAnswer(out, focus);
     case 'get_pending_orders': return ordersAnswer(out);
     case 'get_sales_summary': return salesAnswer(out);
+    case 'search_catalog': return catalogAnswer(out);
     case 'search_supplier_prices': return supplierAnswer(out);
     case 'save_business_memory': {
       const p = out.saved;
@@ -177,8 +189,9 @@ export function templateAnswer(tool: ToolName, out: any, focus?: string): string
 /** Standard operational questions (the keyword router recognises them) get templates; anything else is open-ended. */
 export const isStructured = (q: string) => keywordRoute(q).tool !== 'generate_daily_brief' || /\b(focus|today|brief|attention|priorit\w*|summary)\b/i.test(q);
 
-export async function ask(message: string, history: Msg[] = []) {
+export async function ask(message: string, history: Msg[] = [], conversationId?: string) {
   return traced('assistant', message, async () => {
+    if (conversationId) Sentry.setConversationId(conversationId);
     const status = await llmStatus();
     let route: 'mastra-tools' | 'gemma-json-router' | 'keyword-router' = 'keyword-router';
     let pick: { tool: ToolName; args: any } | undefined, answer: string | undefined, data: any;
@@ -198,7 +211,7 @@ export async function ask(message: string, history: Msg[] = []) {
     if (!pick && status.reachable) {
       try {
         const raw = await gemma([
-          { role: 'system', content: `Pick exactly one tool for the shop owner's latest message. Reply ONLY with JSON {"tool": "<name>", "args": {...}}.\nTools:\n${Object.entries(TOOLS).map(([k, t]) => `- ${k}: ${t.description}${k === 'search_supplier_prices' ? ' args: {"product": "<product name>"}' : k === 'save_business_memory' ? ' args: {"text": "<owner words>"}' : k === 'get_sales_summary' ? ' args: {"days": 7}' : ' args: {}'}`).join('\n')}` },
+          { role: 'system', content: `Pick exactly one tool for the shop owner's latest message. Reply ONLY with JSON {"tool": "<name>", "args": {...}}.\nTools:\n${Object.entries(TOOLS).map(([k, t]) => `- ${k}: ${t.description}${k === 'search_supplier_prices' ? ' args: {"product": "<product name>"}' : k === 'search_catalog' ? ' args: {"query": "<constraints>"}' : k === 'save_business_memory' ? ' args: {"text": "<owner words>"}' : k === 'get_sales_summary' ? ' args: {"days": 7}' : ' args: {}'}`).join('\n')}` },
           ...history.slice(-4), { role: 'user', content: message },
         ], { json: true, timeoutMs: 60_000 });
         pick = Route.parse(parseJson(raw));

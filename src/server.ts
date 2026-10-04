@@ -12,6 +12,7 @@ import { OLLAMA, backboardLive, elevenLive, elevenStatus, elevenSTT, elevenTTS, 
 import * as ops from './ops.ts';
 import * as acts from './temporal/activities.ts';
 import { seed } from './seed.ts';
+import { searchCatalog, tigerStatus } from './tiger.ts';
 
 export const app = express();
 export default app;
@@ -60,11 +61,12 @@ async function runDirect(name: WF) {
 const r = express.Router();
 
 r.get('/health', async (_q, s) => {
-  const [llm, t, mongoOk, lastForecast, voice] = await Promise.all([
+  const [llm, t, mongoOk, lastForecast, voice, tiger] = await Promise.all([
     llmStatus(), getTemporal(),
     mongo.db().admin().ping().then(() => true, () => false),
     col.forecasts.findOne({}, { sort: { createdAt: -1 } }).catch(() => null),
     elevenStatus(),
+    tigerStatus(),
   ]);
   const live = (on: boolean, detail: string) => ({ status: on ? 'live' : 'fallback', detail });
   s.json({
@@ -77,6 +79,7 @@ r.get('/health', async (_q, s) => {
         : (llm.reachable ? `${llmModel()} @ ${OLLAMA} (caps: ${llm.capabilities?.join(',')})` : `${llmModel()} unreachable at ${OLLAMA} — keyword router + templates`)),
       mastra: live(llm.reachable && llm.nativeTools, !llm.reachable ? 'Gemma unreachable — tools run via keyword router' : llm.nativeTools ? 'Mastra agent native tool calling' : 'Mastra tools invoked via Gemma JSON router (model lacks native tool calling)'),
       tabpfn: live(lastForecast?.method === 'tabpfn', lastForecast ? `last forecast: ${lastForecast.method}${lastForecast.fallbackReason ? ` (${lastForecast.fallbackReason.slice(0, 120)})` : ''}` : 'no forecast yet'),
+      tiger: live(tiger.live, tiger.detail),
       serpapi: live(serpLive(), serpLive() ? 'key set — Google Shopping via the Temporal supplierRefresh activity (results cached in supplierPrices)' : 'SERPAPI_API_KEY missing — stored supplier quotes only'),
       backboard: live(backboardLive(), backboardLive() ? 'key set — memories saved to and searched in Backboard; Mongo stays source of truth' : 'BACKBOARD_API_KEY missing — memory stored in Mongo only'),
       elevenlabs: live(voice.ok, voice.detail),
@@ -105,9 +108,15 @@ r.get('/suppliers', async (_q, s) => s.json({ suppliers: await col.suppliers.fin
 r.get('/suppliers/search', async (q, s) => s.json(await ops.searchSupplierPrices(body(z.string().trim().min(2).max(80), q.query.q))));
 
 r.post('/assistant', async (q, s) => {
-  const b = body(z.object({ message: z.string().trim().min(1).max(500), history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(4000) })).max(12).default([]) }), q.body);
-  s.json(await ask(b.message, b.history));
+  const b = body(z.object({
+    message: z.string().trim().min(1).max(500),
+    history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(4000) })).max(12).default([]),
+    conversationId: z.string().trim().min(1).max(80).optional(),
+  }), q.body);
+  s.json(await ask(b.message, b.history, b.conversationId ?? q.get('x-conversation-id') ?? undefined));
 });
+
+r.get('/catalog/search', async (q, s) => s.json(await searchCatalog(body(z.string().trim().min(2).max(120), q.query.q))));
 
 r.post('/orders/extract', async (q, s) => s.json(await extractOrder(body(z.object({ text: z.string().trim().min(3).max(500) }), q.body).text)));
 
@@ -147,6 +156,22 @@ r.post('/voice/stt', express.raw({ type: 'audio/*', limit: '10mb' }), async (q, 
   if (!Buffer.isBuffer(q.body) || !q.body.length) throw Object.assign(new Error('Send audio bytes with an audio/* content-type'), { status: 400 });
   try { s.json({ text: await elevenSTT(q.body, q.get('content-type') ?? 'audio/webm') }); }
   catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs STT failed'); s.status(502).json({ error: e.message, fallback: 'browser-web-speech' }); }
+});
+
+/** WhatsApp voice note → ElevenLabs Scribe (Hindi/Hinglish) → Gemma order extraction → draft (not auto-written). */
+r.post('/voice/order', express.raw({ type: 'audio/*', limit: '10mb' }), async (q, s) => {
+  if (!elevenLive()) return s.status(501).json({ error: 'ELEVENLABS_API_KEY not set', fallback: 'browser-web-speech' });
+  if (!Buffer.isBuffer(q.body) || !q.body.length) throw Object.assign(new Error('Send audio bytes with an audio/* content-type'), { status: 400 });
+  let text: string;
+  try { text = await elevenSTT(q.body, q.get('content-type') ?? 'audio/webm'); }
+  catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs STT failed'); return s.status(502).json({ error: e.message, fallback: 'browser-web-speech' }); }
+  if (!text.trim()) return s.status(422).json({ error: 'Empty transcript', text });
+  try {
+    const extracted = await extractOrder(text);
+    s.json({ text, ...extracted, note: 'Draft only — confirm via POST /api/orders' });
+  } catch (e: any) {
+    s.status(e.status ?? 422).json({ text, error: e.message });
+  }
 });
 r.post('/voice/tts', async (q, s) => {
   if (!elevenLive()) return s.status(501).json({ error: 'ELEVENLABS_API_KEY not set', fallback: 'browser-speech-synthesis' });
