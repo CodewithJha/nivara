@@ -11,7 +11,7 @@ cd "$DIR"
 port_of()  { case $1 in server) echo "${PORT:-3000}";; temporal) echo 7233;; *) echo "";; esac; }
 pattern()  { case $1 in server) echo 'node .*src/server\.ts';; worker) echo 'node .*src/temporal/worker\.ts';; temporal) echo 'temporal server start-dev';; esac; }
 command_of() { case $1 in
-  server) echo 'npm start';;
+  server) echo "env TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-localhost:7233} npm start";; # server dials Temporal only when set
   worker) echo "env SUPPLIER_FAIL_FIRST_N=${SUPPLIER_FAIL_FIRST_N:-2} npm run worker";; # 2 = Temporal retry demo
   temporal) echo 'npm run temporal:dev -- --log-level warn';;
 esac; }

@@ -1,6 +1,6 @@
 import { MongoClient } from 'mongodb';
 
-// ponytail: one MongoClient per process (globalThis keeps it across warm starts). A new pool only on cold start; restart to pick up a new MONGODB_URI.
+// One MongoClient (and pool) per process, cached on globalThis so every importer reuses it. Restart to pick up a new MONGODB_URI.
 
 export type Product = { _id: string; name: string; aliases: string[]; category: string; price: number; cost: number; stock: number; supplierId: string; leadTimeDays: number; demo?: boolean };
 export type Customer = { _id: string; name: string; phone?: string; channel: 'whatsapp' | 'instagram'; demo?: boolean };
@@ -10,8 +10,8 @@ export type Supplier = { _id: string; name: string; contact?: string; quotes: { 
 export type Preference = { _id?: any; text: string; kind: 'block_supplier' | 'note'; supplier?: string; createdAt: Date; mirror: 'backboard' | 'local-only'; backboardId?: string };
 
 const g = globalThis as typeof globalThis & { __nivaraMongo?: MongoClient };
-export const client = g.__nivaraMongo ??= new MongoClient(process.env.MONGODB_URI ?? 'mongodb://localhost:27017', { serverSelectionTimeoutMS: 5000 });
-const db = client.db(process.env.MONGODB_DB ?? 'nivara');
+export const client = g.__nivaraMongo ??= new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017', { serverSelectionTimeoutMS: 5000 });
+const db = client.db(process.env.MONGODB_DB || 'nivara');
 
 export const col = {
   products: db.collection<Product>('products'),

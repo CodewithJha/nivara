@@ -185,9 +185,12 @@ app.use((e: any, _q: express.Request, s: express.Response, _n: express.NextFunct
 });
 
 if (import.meta.main) {
-  await mongo.connect();
-  if (!(await col.products.countDocuments())) log.info({ seeded: await seed() }, 'empty database → demo data seeded');
-  const port = Number(process.env.PORT ?? 3000);
+  // Mongo down at boot: keep serving so /api/health reports it; the driver reconnects on the next query.
+  try {
+    await mongo.connect();
+    if (!(await col.products.countDocuments())) log.info({ seeded: await seed() }, 'empty database → demo data seeded');
+  } catch (e: any) { log.error({ err: e.message }, 'MongoDB unavailable at boot; check MONGODB_URI'); }
+  const port = Number(process.env.PORT || 3000);
   const server = app.listen(port, () => log.info(`Nivara on http://localhost:${port}`));
   process.once('SIGTERM', () => server.close(() => Sentry.close(2000).finally(() => process.exit(0))));
 }
