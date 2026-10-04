@@ -1,4 +1,9 @@
 customer,product,quantity,delivery_date,status,source
-Rahul Verma,whey protein,1,tomorrow,pending,owner-csv
-Priya Singh,creatine,2,,pending,owner-csv
-Aman Khan,protein bar,6,2026-10-06,pending,owner-csv
+Rahul Verma,MB biozyme whey,1,tomorrow,pending,sample-csv
+Priya Singh,Wellcore Creatine Monohydrate,2,,pending,sample-csv
+Aman Khan,Yoga Bar Protein Bar,6,today,pending,sample-csv
+Sneha Gupta,Dabur Chyawanprash,1,in 3 days,pending,sample-csv
+Vikram Rao,Optimum nutrition whey protein,1,2026-10-01,delivered,sample-csv
+Neha Sharma,Triple strength Omega 3 fish oil,2,2026-10-02,delivered,sample-csv
+Arjun Mehta,Max protein active choco fudge bar,12,2026-10-02,delivered,sample-csv
+Kavya Iyer,Mulivitamin,1,2026-10-03,delivered,sample-csv

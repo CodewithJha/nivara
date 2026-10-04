@@ -5,6 +5,7 @@ import { backboardLive, backboardList, backboardSave, backboardSearch, gemma, lo
 import { tigerDemand } from './tiger.ts';
 
 const HISTORY_DAYS = 60;
+const BRIEF_MAX_TOKENS = Number(process.env.BRIEF_MAX_TOKENS) || 160; // the summary is kept only if ≤ 400 chars
 
 /** Flag days whose qty is > mean + 2σ over the series (simple anomaly marker for the forecast tool). */
 export function anomalyFlags(daily: number[]): { index: number; qty: number; z: number }[] {
@@ -52,7 +53,9 @@ export async function forecastDemand({ force = false, latest = false, source = '
     if (cached) return { ...cached, items: cached.items.map((i: any) => ({ ...i, ...stockPlan(i) })) };
   }
   return span('gen_ai.execute_tool', 'execute_tool forecast_demand', { 'gen_ai.tool.name': 'forecast_demand' }, async set => {
-    const { products, series } = await demandSeries(t);
+    const [{ products, series }, reserved, tiger, proxy] = await Promise.all([
+      demandSeries(t), reservedBySku(), tigerDemand(), col.sales.findOne({ source: 'proxy' }),
+    ]);
     let method: 'tabpfn' | 'fallback-moving-average' = 'tabpfn', reason: string | undefined, pred: Record<string, number>, model: string | undefined;
     let precomputed: { runId: unknown; at: Date; asOf: string; skus: number; of: number } | undefined, uncovered = new Set<string>();
     try {
@@ -72,8 +75,6 @@ export async function forecastDemand({ force = false, latest = false, source = '
         pred = Object.fromEntries(Object.entries(series).map(([k, v]) => [k, movingAverage7(v)]));
       }
     }
-    const reserved = await reservedBySku();
-    const tiger = await tigerDemand();
     const items = products.map(p => {
       // TabPFN/MA = forward 7d demand for stock plan; Tiger caggs = realised 7d/28d that calibrate the brief/agent
       const forecast7 = Math.round((pred[p._id] ?? 0) * 10) / 10;
@@ -88,7 +89,6 @@ export async function forecastDemand({ force = false, latest = false, source = '
         ...stockPlan({ stock: p.stock, reserved: reserved[p._id] ?? 0, demand7: forecast7, leadTimeDays: p.leadTimeDays }),
       };
     }).sort((a, b) => ['high', 'medium', 'low'].indexOf(a.risk) - ['high', 'medium', 'low'].indexOf(b.risk) || (a.daysOfCover ?? 1e9) - (b.daysOfCover ?? 1e9));
-    const proxy = await col.sales.findOne({ source: 'proxy' });
     const doc = {
       date: t, method, model, fallbackReason: reason, precomputed, historyDays: HISTORY_DAYS,
       tigerAggregates: Object.keys(tiger).length > 0,
@@ -225,16 +225,15 @@ export async function supplierPriceRefresh(attempt = 1) {
   const atRisk = inv.lowStock.toSorted((a: any, b: any) => cost[b.sku] * b.reorderQty - cost[a.sku] * a.reorderQty);
   const rest = inv.items.filter((i: any) => !atRisk.some((a: any) => a.sku === i.sku)).toSorted((a: any, b: any) => (cost[b.sku] ?? 0) - (cost[a.sku] ?? 0));
   const targets = [...atRisk, ...rest].slice(0, max);
-  const refreshed = [];
-  for (const t of targets) {
+  const refreshed = await Promise.all(targets.map(async t => {
     try {
       const web = await serpShopping(t.name);
       const offers = web.offers.filter(o => !isBlocked(o.source, blocked)).sort((a, b) => a.price - b.price);
       const cheapest = offers[0] ?? null;
       await col.supplierPrices.replaceOne({ _id: t.sku }, { sku: t.sku, name: t.name, query: web.query, offers, cheapest, sourceDomain: cheapest?.sourceDomain ?? null, link: cheapest?.link ?? null, hiddenBlocked: web.offers.length - offers.length, rejected: web.rejected ?? 0, checkedAt: new Date() }, { upsert: true });
-      refreshed.push({ product: t.name, offers: offers.length, cheapest });
-    } catch (e: any) { refreshed.push({ product: t.name, error: e.message }); }
-  }
+      return { product: t.name, offers: offers.length, cheapest };
+    } catch (e: any) { return { product: t.name, error: e.message }; }
+  }));
   if (refreshed.length && refreshed.every(r => 'error' in r)) throw new Error(`SerpApi failed for all ${refreshed.length} products: ${(refreshed[0] as any).error}`);
   return { attempt, source: 'serpapi', refreshed };
 }
@@ -271,17 +270,31 @@ export function templateBrief(f: Awaited<ReturnType<typeof briefFacts>>) {
   return l.join('\n');
 }
 
-/** Deterministic brief; Gemma adds a 1–2 sentence summary on top, kept only if it doesn't leak field names. */
-export async function generateDailyBrief({ store = true } = {}) {
-  const facts = await briefFacts();
+/** Orders or stock changed: today's stock plan and brief no longer match the data. */
+export async function invalidateDay() {
+  const date = today();
+  await Promise.all([col.forecasts.deleteMany({ date }), col.briefs.updateMany({ date }, { $set: { stale: true } })]);
+}
+
+/**
+ * Deterministic brief; Gemma adds a 1–2 sentence summary on top, kept only if it doesn't leak field names.
+ * Cached per day until invalidateDay(); `fresh` rebuilds it (the morning workflow).
+ */
+export async function generateDailyBrief({ store = true, fresh = false } = {}) {
+  if (!fresh) {
+    const cached = await col.briefs.findOne({ date: today(), stale: { $ne: true } }, { sort: { createdAt: -1 } });
+    if (cached) return { ...cached, cached: true };
+  }
+  const facts = await span('brief.facts', 'brief facts', {}, () => briefFacts());
   const brief = templateBrief(facts);
   let summary: string | null = null;
   try {
     const g = (await gemma([
       { role: 'system', content: 'You help a small online fitness-supplements shop owner in India. In one or two short sentences, say what matters most today, using only the brief below. Do not add any number, name or product that is not in the brief. Plain text.' },
       { role: 'user', content: brief },
-    ])).trim();
-    if (g && g.length <= 400 && looksClean(g)) summary = g; else log.warn({ len: g.length }, 'brief: Gemma summary rejected (empty, too long or leaked field names)');
+    ], { maxTokens: BRIEF_MAX_TOKENS })).trim();
+    // a summary cut off by the token cap doesn't end a sentence
+    if (g && g.length <= 400 && /[.!?]["')]?$/.test(g) && looksClean(g)) summary = g; else log.warn({ len: g.length }, 'brief: Gemma summary rejected (empty, cut off, too long or leaked field names)');
   } catch (e: any) { log.warn({ err: e.message }, 'brief: Gemma unavailable, template only'); }
   const doc = { date: facts.date, text: summary ? `${summary}\n\n${brief}` : brief, summary, by: summary ? 'template+gemma' as const : 'template' as const, facts, createdAt: new Date() };
   if (store) await col.briefs.insertOne(doc);

@@ -3,7 +3,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as Sentry from '@sentry/node';
 
-process.env.MONGODB_DB = 'nivara_test';
+process.env.MONGODB_DB = 'nivara_test_sentry'; // one DB per file: node --test runs files in parallel processes
 process.env.LOG_LEVEL = 'silent';
 process.env.OLLAMA_API_KEY = 'sk-ollama-secret';
 delete process.env.SENTRY_SEND_CONTENT;

@@ -14,6 +14,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { client, col, today, type Order } from '../src/db.ts';
 import { matchCustomer, matchProduct, resolveDate } from '../src/logic.ts';
 import { extractOrder } from '../src/agent.ts';
+import { invalidateDay } from '../src/ops.ts';
 
 function arg(flag: string) {
   const i = process.argv.indexOf(flag);
@@ -102,7 +103,7 @@ export async function importOrders({ csvPath, whatsappPath }: { csvPath?: string
     }
   }
 
-  if (created.length) await col.orders.insertMany(created);
+  if (created.length) { await col.orders.insertMany(created); await invalidateDay(); }
   return { imported: created.length, csv: !!csvPath, whatsapp: !!whatsappPath };
 }
 

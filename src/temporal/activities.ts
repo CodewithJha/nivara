@@ -14,6 +14,6 @@ export const forecast = () => traced('activity.forecast', {}, async () => {
 });
 export const supplierRefresh = (attempt = attemptNo()) => traced('activity.supplierRefresh', { attempt }, () => ops.supplierPriceRefresh(attempt));
 export const dailyBrief = () => traced('activity.dailyBrief', {}, async () => {
-  const b = await ops.generateDailyBrief();
+  const b = await ops.generateDailyBrief({ fresh: true });
   return { date: b.date, by: b.by, text: b.text };
 });

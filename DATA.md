@@ -8,7 +8,7 @@ Nivara ships a **supplement-specific real stand-in** until the shop owner import
 | **Open Food Facts (India)** | Catalogue identity (name, brand, categories) for dietary / bodybuilding / protein products | ODbL | https://world.openfoodfacts.org | `data/raw/off_india.json` → `data/real/products.json` | 2026-10-04 |
 | **Open Prices** | INR observed prices joined by `product_code`; missing → `priceSource:"manual"` by productType | ODbL | https://prices.openfoodfacts.org | `data/raw/open_prices_inr.json` | 2026-10-04 |
 | **Google Trends IN** (SerpApi `engine=google_trends`, geo=IN) | Search-interest index per productType (5y weekly; partial week dropped) | SerpApi / Google | SerpApi google_trends | `data/raw/trends_in.csv` | 2026-10-04 |
-| **Proxy demand** | `trends_index(type) × equal_sku_share(type) × type_baseline` → weekly then daily | derived | — | `data/real/demand_proxy.json` | 2026-10-04 |
+| **Proxy demand** | `trends_index(type) × equal_sku_share(type) × type_baseline`, scaled so the average week totals `SHOP_WEEKLY_UNITS` (default 200) → weekly then daily | derived | — | `data/real/demand_proxy.json` | 2026-10-04 |
 | **SerpApi Google Shopping** | Live supplier refresh (Temporal) | SerpApi ToS | https://serpapi.com | Mongo `supplierPrices` | on refresh |
 | **Owner CSV / WhatsApp** | Real orders | owner | — | `npm run import:orders` | when provided |
 

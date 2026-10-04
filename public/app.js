@@ -19,16 +19,49 @@ const st = (level, word) => `<span class="st ${level}">${esc(word)}</span>`;
 const risk = r => st(LEVEL[r], { high: 'Runs out first', medium: 'This week', low: 'Fine' }[r] ?? r);
 const methodNote = m => m === 'tabpfn' ? st('light', 'TabPFN forecast') : st('mid', `${m} forecast (TabPFN unavailable)`);
 
-async function api(path, opts = {}) {
-  const r = await fetch('/api' + path, { headers: { 'content-type': 'application/json' }, ...opts, body: opts.body && JSON.stringify(opts.body) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || r.statusText);
-  return j;
-}
 const table = (cols, rows, empty = 'Nothing here yet.') => rows.length
   ? `<table><thead><tr>${cols.map(c => `<th scope="col" class="${c[2] ?? ''}">${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c => `<td class="${c[2] ?? ''}" data-label="${esc(c[0])}"><div>${c[1](r)}</div></td>`).join('')}</tr>`).join('')}</tbody></table>`
   : `<p class="empty">${empty}</p>`;
-const fail = e => `<p class="warn" role="alert">That didn't work: ${esc(e.message)}. Try again, or check <a href="#health">Health</a>.</p>`;
+
+// ---------- errors and pending buttons ----------
+// One error component for every failed request: plain words from the error kind, a Retry, raw detail folded away.
+const OOPS = {
+  timeout: 'It took too long to answer.',
+  network: "Nivara couldn't be reached. Check your connection.",
+  server: 'Something went wrong on the server.',
+  request: "Nivara couldn't use that request.",
+};
+const retries = new Map();
+let retrySeq = 0;
+function errorBox(e, what, retry) {
+  const id = ++retrySeq;
+  if (retry) retries.set(id, retry);
+  const detail = [e?.status && `HTTP ${e.status}`, e?.detail ?? e?.message].filter(Boolean).join(' · ');
+  return `<div class="err" role="alert" data-err="${id}"><p>Couldn't ${esc(what)}. ${OOPS[e?.kind] ?? OOPS.server}</p>
+    <div class="acts">${retry ? `<button class="btn" onclick="retryNow(${id})">Retry</button>` : ''}<a href="#health">Check Health</a></div>
+    ${detail ? `<details class="note"><summary>Details</summary><pre>${esc(detail)}</pre></details>` : ''}</div>`;
+}
+function retryNow(id) {
+  const fn = retries.get(id);
+  retries.delete(id);
+  const box = document.querySelector(`[data-err="${id}"]`);
+  (box?.closest('.row-err') ?? box)?.remove();
+  fn?.();
+}
+/** Error for an inline action: shown under the button's group, replacing that group's previous error. */
+function showError(btn, html) {
+  const host = btn.closest('.row') ?? btn.closest('.acts, .field') ?? btn;
+  const next = host.nextElementSibling;
+  if (next?.matches('.err, .row-err')) next.remove();
+  host.insertAdjacentHTML('afterend', host.matches('.row') ? `<li class="row-err">${html}</li>` : html);
+}
+/** Disables the button and shows `label` while fn runs. */
+async function busy(btn, label, fn) {
+  const text = btn.textContent;
+  btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.textContent = label;
+  try { return await fn(); }
+  finally { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = text; }
+}
 const head = (title, sub = '') => `<header class="head"><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</header>`;
 const row = ({ id, level = '', name, why = '', fig = '', act = '', dim }) => `<li class="row${act ? ' has-act' : ''}${dim ? ' dim' : ''}"${id ? ` id="${esc(id)}" tabindex="-1"` : ''}>
   ${level === null ? '<i></i>' : `<i class="edge ${level}" aria-hidden="true"></i>`}<span><span class="name">${name}</span>${why ? `<span class="why">${why}</span>` : ''}</span><span class="fig">${fig}</span><span class="act">${act}</span></li>`;
@@ -112,7 +145,7 @@ const views = {
       ${askBox(['What should I restock?', 'Show my pending orders.', 'What sold the most?', 'What should I focus on today?'])}
       <section class="sec brief"><h2>${d.brief?.date === d.date ? 'Morning brief' : 'Latest brief'}</h2>
         ${d.brief ? `<p class="note">${esc(when(d.brief.createdAt))} · ${d.brief.by === 'template+gemma' ? 'facts from the database, first line summarised by Gemma' : d.brief.by === 'gemma' ? 'written by Gemma (older brief)' : 'facts from the database (no Gemma summary)'}</p><pre class="sec-gap">${esc(d.brief.text)}</pre>` : '<p class="empty">No brief yet. One is made every morning at 8, or make one now.</p>'}
-        <div class="acts"><button class="btn" onclick="runWf('dailyBriefWorkflow', this)">Make a fresh brief</button><span class="small quiet" id="wfout" role="status"></span></div></section>
+        <div class="acts"><button class="btn" onclick="runWf('dailyBriefWorkflow', this)">Make a fresh brief</button></div><div id="wfout" aria-live="polite"></div></section>
     </aside></div>`;
   },
 
@@ -154,7 +187,7 @@ const views = {
     `<section><p>${methodNote(f.method)} <span class="quiet">${esc(f.model ?? '')} · learned from ${f.historyDays} days of sales · worked out ${esc(when(f.createdAt))}${f.precomputed ? ` from a TabPFN run made ${esc(when(f.precomputed.at))} (${f.precomputed.skus} of ${f.precomputed.of} products)` : ''}</span></p>
       ${f.demandNote ? `<p class="warn">${esc(f.demandNote)}</p>` : ''}
       ${f.fallbackReason ? `<p class="warn">Why the fallback: ${esc(f.fallbackReason)}</p>` : ''}
-      <div class="acts gap"><button class="btn" onclick="this.disabled=true;api('/forecast?force=1').then(route, e => this.insertAdjacentHTML('afterend', fail(e)))">Work it out again</button></div></section>
+      <div class="acts gap"><button class="btn" onclick="refreshForecast(this)">Work it out again</button></div></section>
     <section class="sec">${table([
       ['Product', r => esc(r.name), 'lead'],
       ['Left', r => `${r.available}<span class="sub">${r.stock} in stock, ${r.reserved} held</span>`, 'num big'],
@@ -188,7 +221,7 @@ const views = {
     return head('Workflows', w.temporal ? `${st('light', 'Temporal connected')} <a href="${esc(w.uiUrl)}" target="_blank" rel="noopener">Open the Temporal UI</a>` : st('mid', 'Temporal unavailable: workflows run in-process')) +
     `<section>${w.schedule ? `<p>Next morning brief: <b>${esc(when(w.schedule.next))}</b></p>` : ''}</section>
     <section class="sec"><h2>Run now</h2><ul class="rows">${Object.entries(WF).map(([n, label]) => row({ level: null, name: label, why: `<span class="small">${n}</span>`, act: `<button class="btn" onclick="runWf('${n}', this)">Run</button>` })).join('')}</ul>
-      <pre class="out" id="wfout" role="status"></pre></section>
+      <div id="wfout" aria-live="polite"></div></section>
     ${w.runs.length ? `<section class="sec"><h2>Recent runs</h2>${table([['Workflow', r => esc(WF[r.type] ?? r.type), 'lead'], ['ID', r => `<span class="small">${esc(r.id)}</span>`], ['Status', r => st(r.status === 'COMPLETED' ? 'light' : r.status === 'RUNNING' ? 'mid' : 'heavy', cap(r.status.toLowerCase()))], ['Started', r => esc(when(r.start)), 'num']], w.runs)}</section>` : ''}
     <section class="sec"><h2>Recent briefs</h2>${table([['When', r => esc(when(r.createdAt)), 'lead'], ['By', r => esc(r.by)], ['Brief', r => `<pre class="small">${esc(r.text)}</pre>`]], w.briefs)}</section>`;
   },
@@ -222,44 +255,54 @@ function go(id) {
 const turns = [];
 const tries = list => list.length ? `<ul class="tries">${list.map(q => `<li><button class="link" onclick="send(this.textContent)">${esc(q)}</button></li>`).join('')}</ul>` : '';
 const askBox = (list, titled = true) => `<section class="sec ask" id="ask" tabindex="-1"${titled ? ' aria-labelledby="ask-h"' : ' aria-label="Ask"'}>${titled ? '<h2 id="ask-h">Ask</h2>' : ''}
-  <div class="field"><input id="q" placeholder="Which orders are late?" aria-label="Ask about your shop" onkeydown="if(event.key==='Enter')send(this.value)"><button class="btn primary" onclick="send($('#q').value)">Ask</button><button class="btn" id="mic" onclick="listen(this)">Speak</button></div>
+  <div class="field"><input id="q" placeholder="Which orders are late?" aria-label="Ask about your shop" onkeydown="if(event.key==='Enter')send(this.value)"><button class="btn primary" id="askbtn" onclick="send($('#q').value)"${asking ? ' disabled aria-busy="true"' : ''}>${asking ? 'Thinking…' : 'Ask'}</button><button class="btn" id="mic" onclick="listen(this)">Speak</button></div>
   ${tries(list)}
   <p class="small quiet voice" id="voicemode"></p>
   <div class="log" id="chat" aria-live="polite">${drawTurns()}</div></section>`;
 const MODE = { template: 'written from database facts', 'template+gemma': 'database facts, summary by Gemma' };
 function renderTurn(t) {
   const r = t.r;
-  if (!r) return `<article class="turn"><p class="q">${esc(t.q)}</p><p class="quiet">Working it out. Gemma runs on your own machine, so this can take a few seconds.</p></article>`;
+  if (t.error) return `<article class="turn"><p class="q">${esc(t.q)}</p>${errorBox(t.error, 'answer that', () => answer(t))}</article>`;
+  if (!r) return `<article class="turn" aria-busy="true"><p class="q">${esc(t.q)}</p><p class="thinking" role="status"><span class="st">Thinking</span> Checking your orders, stock and suppliers. This can take a few seconds.</p></article>`;
   const mode = r.answerMode === 'gemma' ? `written by ${r.model}` : MODE[r.answerMode] ?? r.answerMode;
   return `<article class="turn"><p class="q">${esc(t.q)}</p><pre class="a">${esc(r.answer)}</pre>
-    <p class="meta">${[mode && `<span>${esc(cap(mode))}</span>`, r.traceId && `<a href="#activity">Trace ${esc(r.traceId.slice(0, 8))}</a>`, `<button class="link" onclick="speak(${turns.indexOf(t)})">Read aloud</button>`].filter(Boolean).join('')}</p>
+    <p class="meta">${[mode && `<span>${esc(cap(mode))}</span>`, r.traceId && traceLink(r.traceId), `<button class="link" onclick="speak(${turns.indexOf(t)})">Read aloud</button>`].filter(Boolean).join('')}</p>
     <details><summary>How this was answered</summary><p>Tool ${esc(r.tool)} · route ${esc(r.route)}</p>${r.notes?.length ? `<p>${r.notes.map(esc).join('<br>')}</p>` : ''}
       ${r.data ? `<pre>${esc(JSON.stringify(r.data, null, 1).slice(0, 4000))}</pre>` : ''}</details></article>`;
 }
 function drawTurns() { return turns.slice().reverse().map(renderTurn).join(''); }
 const drawLog = () => { if ($('#chat')) $('#chat').innerHTML = drawTurns(); };
+let asking = false;
+function setAsking(on) {
+  asking = on;
+  const b = $('#askbtn');
+  if (!b) return;
+  b.disabled = on; b.toggleAttribute('aria-busy', on); b.textContent = on ? 'Thinking…' : 'Ask';
+}
 async function send(text) {
   text = (text || '').trim();
-  if (!text) return;
-  const history = turns.flatMap(t => [{ role: 'user', content: t.q }, ...(t.r ? [{ role: 'assistant', content: t.r.answer.slice(0, 4000) }] : [])]).slice(-8);
-  const t = { q: text };
+  if (!text || asking) return;
+  const t = { q: text, history: turns.flatMap(t => [{ role: 'user', content: t.q }, ...(t.r ? [{ role: 'assistant', content: t.r.answer.slice(0, 4000) }] : [])]).slice(-8) };
   turns.push(t);
   if ($('#q')) $('#q').value = '';
-  drawLog();
-  try { t.r = await api('/assistant', { method: 'POST', body: { message: text, history } }); }
-  catch (e) { t.r = { answer: `Couldn't answer that: ${e.message}`, route: 'error', tool: '-' }; }
-  drawLog();
+  await answer(t);
+}
+async function answer(t) {
+  t.error = undefined;
+  setAsking(true); drawLog();
+  try { t.r = await api('/assistant', { method: 'POST', body: { message: t.q, history: t.history }, retry: true }); }
+  catch (e) { t.error = e; }
+  setAsking(false); drawLog();
 }
 const elevenOn = () => health?.integrations?.elevenlabs?.status === 'live';
 const voiceNotice = msg => { if ($('#voicemode')) $('#voicemode').textContent = msg; };
+const browserSpeak = text => speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { lang: 'en-IN' }));
+/** ElevenLabs when it is live; any failure (request, autoplay) falls back to the browser voice without a message. */
 async function speak(i) {
   const text = turns[i].r.answer;
-  if (elevenOn()) {
-    const r = await fetch('/api/voice/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) }).catch(e => ({ ok: false, statusText: e.message }));
-    if (r.ok) return new Audio(URL.createObjectURL(await r.blob())).play();
-    voiceNotice(`ElevenLabs speech failed (${r.status || r.statusText}). Using browser speech.`);
-  }
-  speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { lang: 'en-IN' }));
+  if (!elevenOn()) return browserSpeak(text);
+  try { await new Audio(URL.createObjectURL(await api('/voice/tts', { method: 'POST', body: { text }, as: 'blob', retry: true }))).play(); }
+  catch { browserSpeak(text); }
 }
 let rec;
 async function listen(btn) {
@@ -273,16 +316,15 @@ async function listen(btn) {
       rec.ondataavailable = e => chunks.push(e.data);
       rec.onstop = async () => {
         stream.getTracks().forEach(t => t.stop()); btn.textContent = label;
-        const blob = new Blob(chunks, { type: rec.mimeType }); // Safari records audio/mp4, Chrome audio/webm
-        const r = await fetch('/api/voice/stt', { method: 'POST', headers: { 'content-type': blob.type.split(';')[0] || 'audio/webm' }, body: blob }).catch(e => ({ ok: false, json: async () => ({ error: e.message }) }));
-        const j = await r.json().catch(() => ({}));
-        if (r.ok && j.text) return send(j.text);
-        voiceNotice(`ElevenLabs transcription failed (${j.error || r.status}). Speak again: using browser speech.`);
+        const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' }); // Safari records audio/mp4, Chrome audio/webm
+        const j = await api('/voice/stt', { method: 'POST', body: blob, retry: true }).catch(() => ({}));
+        if (j.text) return send(j.text);
+        voiceNotice("Didn't catch that. Say it again: listening with browser speech.");
         browserListen(btn, label);
       };
       rec.start(); btn.textContent = 'Stop';
       return;
-    } catch (e) { voiceNotice(`Microphone recording unavailable (${e.message}). Using browser speech.`); }
+    } catch { voiceNotice('Recording is not available here, so browser speech is listening.'); }
   }
   browserListen(btn, label);
 }
@@ -298,9 +340,9 @@ function browserListen(btn, label) {
 // ---------- orders ----------
 let draft;
 async function extract(btn) {
-  btn.disabled = true; $('#draft').innerHTML = '<p class="loading">Gemma is reading the message…</p>';
+  $('#draft').innerHTML = '<p class="loading" role="status">Gemma is reading the message…</p>';
   try {
-    const r = await api('/orders/extract', { method: 'POST', body: { text: $('#otext').value } });
+    const r = await busy(btn, 'Reading…', () => api('/orders/extract', { method: 'POST', body: { text: $('#otext').value }, retry: true }));
     draft = r.draft;
     const unmatched = draft.items.some(i => !i.product);
     $('#draft').innerHTML = `<div class="sec"><h2>Check this order</h2>
@@ -311,79 +353,111 @@ async function extract(btn) {
       ${draft.problems.length ? `<p class="warn">${draft.problems.map(esc).join('<br>')}</p>` : ''}
       <div class="acts gap"><button class="btn primary" onclick="confirmOrder(this)" ${unmatched ? 'disabled title="Fix the unmatched items first"' : ''}>Confirm and save</button>${unmatched ? '<span class="small red">Fix the unmatched items in the message first.</span>' : ''}</div>
       <details class="note"><summary>What Gemma read (validated)</summary><pre>${esc(JSON.stringify(r.extraction, null, 1))}</pre></details></div>`;
-  } catch (e) { $('#draft').innerHTML = fail(e); }
-  btn.disabled = false;
+  } catch (e) { $('#draft').innerHTML = errorBox(e, 'read the message', () => extract(btn)); }
 }
 async function confirmOrder(btn) {
-  btn.disabled = true;
   try {
-    const o = await api('/orders', { method: 'POST', body: { customerId: draft.customer.id, customerName: draft.customer.name, items: draft.items.map(i => ({ sku: i.product.sku, quantity: i.quantity })), deliveryDate: draft.deliveryDate } });
+    const o = await busy(btn, 'Saving…', () => api('/orders', { method: 'POST', body: { customerId: draft.customer.id, customerName: draft.customer.name, items: draft.items.map(i => ({ sku: i.product.sku, quantity: i.quantity })), deliveryDate: draft.deliveryDate } }));
     flash = `Saved ${orderName(o._id)} for ${draft.customer.name}.`; route();
-  } catch (e) { $('#draft').insertAdjacentHTML('beforeend', fail(e)); btn.disabled = false; }
+  } catch (e) { showError(btn, errorBox(e, 'save the order', () => confirmOrder(btn))); }
 }
 async function deliver(id, btn) {
-  btn.disabled = true;
-  try { await api(`/orders/${id}/deliver`, { method: 'POST' }); flash = `${orderName(id)} marked delivered.`; route(); }
-  catch (e) { btn.insertAdjacentHTML('afterend', fail(e)); btn.disabled = false; }
+  try { await busy(btn, 'Saving…', () => api(`/orders/${id}/deliver`, { method: 'POST' })); flash = `${orderName(id)} marked delivered.`; route(); }
+  catch (e) { showError(btn, errorBox(e, `mark ${orderName(id)} delivered`, () => deliver(id, btn))); }
+}
+async function refreshForecast(btn) {
+  try { await busy(btn, 'Working it out…', () => api('/forecast?force=1', { timeoutMs: API.longTimeoutMs })); route(); }
+  catch (e) { showError(btn, errorBox(e, 'work out the forecast', () => refreshForecast(btn))); }
 }
 
 // ---------- suppliers / memory ----------
 async function supSearch(btn) {
-  btn.disabled = true; $('#sres').innerHTML = '<p class="loading">Searching…</p>';
+  $('#sres').innerHTML = '<p class="loading" role="status">Searching…</p>';
   try {
-    const r = await api('/suppliers/search?q=' + encodeURIComponent($('#sq').value));
+    const r = await busy(btn, 'Searching…', () => api('/suppliers/search?q=' + encodeURIComponent($('#sq').value)));
     $('#sres').innerHTML = `<p class="lede gap">${r.product ? `Matched <b>${esc(r.product.name)}</b>. You pay ${inr(r.product.cost)} and sell at ${inr(r.product.price)}.` : 'Not in your catalogue, so it was searched as typed.'}</p>
       ${r.web.available ? `${r.web.hiddenBlocked ? `<p class="note">${plural(r.web.hiddenBlocked, 'result')} hidden: blocked supplier.</p>` : ''}${table([['Listing', o => `<a href="${esc(o.link)}" target="_blank" rel="noopener">${esc(o.title)}</a>`], ['Seller', o => `${esc(o.source)}<span class="sub">${esc(o.sourceDomain)}</span>`], ['Price', o => inr(o.price), 'num big']], r.web.offers.slice().sort((a, b) => a.price - b.price))}<p class="note">Live Google Shopping results via SerpApi. Retail listings: check the pack size before comparing with your unit cost.</p>` : `<p class="warn">${esc(r.web.reason)}</p>`}
       ${r.dbOpportunity ? `<p class="lede gap">Stored quote: <b>${esc(r.dbOpportunity.best.supplier)}</b> at ${inr(r.dbOpportunity.best.unitCost)} a unit, ${inr(r.dbOpportunity.savingPerUnit)} less (${r.dbOpportunity.savingPercent}%${r.dbOpportunity.significant ? '' : ', too small to count'}).</p>` : ''}
       ${r.memory ? `<p class="note">Blocked-supplier memory: ${esc(r.memory.source)}</p>` : ''}`;
-  } catch (e) { $('#sres').innerHTML = fail(e); }
-  btn.disabled = false;
+  } catch (e) { $('#sres').innerHTML = errorBox(e, 'search prices', () => supSearch(btn)); }
 }
 async function loadMem() {
-  const m = await api('/memory');
+  let m;
+  try { m = await api('/memory'); }
+  catch (e) { if ($('#mem')) $('#mem').innerHTML = errorBox(e, 'load what Nivara remembers', loadMem); return; }
   if ($('#mem')) $('#mem').innerHTML = (m.preferences.length ? `<ul class="rows">${m.preferences.map(p => row({ level: null, name: `“${esc(p.text)}”`,
     why: `${p.kind === 'block_supplier' ? `Blocks ${esc(p.supplier)}` : cap(esc(p.kind))} · stored in ${p.mirror === 'backboard' ? 'Mongo and Backboard' : 'Mongo only'}` })).join('')}</ul>` : '<p class="empty">Nothing remembered yet.</p>') +
     `<p class="note">Backboard: ${m.backboard.live ? `live, ${plural(m.backboard.memories.length, 'memory', 'memories')}` : esc(m.backboard.error || 'not set up (no BACKBOARD_API_KEY)')}</p>`;
 }
 async function saveMem(btn) {
-  btn.disabled = true;
-  try { await api('/memory', { method: 'POST', body: { text: $('#mtext').value } }); flash = 'Remembered.'; route(); }
-  catch (e) { btn.insertAdjacentHTML('afterend', fail(e)); btn.disabled = false; }
+  try { await busy(btn, 'Saving…', () => api('/memory', { method: 'POST', body: { text: $('#mtext').value } })); flash = 'Remembered.'; route(); }
+  catch (e) { showError(btn, errorBox(e, 'save that', () => saveMem(btn))); }
 }
 
 // ---------- workflows / traces ----------
+const STEP = {
+  forecast: { title: 'Forecast', view: s => `<p>${methodNote(s.method)} ${s.highRisk ? `${plural(s.highRisk, 'product')} run out before new stock can arrive.` : 'Nothing runs out before new stock can arrive.'}</p>` },
+  lowStockCheck: { title: 'Low stock', view: s => s.lowStock.length
+    ? `<ul class="rows">${s.lowStock.map(i => row({ level: LEVEL[i.risk], name: esc(i.name), why: RISK_WHY[i.risk] ?? '', fig: i.reorderQty ? `<b>${i.reorderQty}</b><span>to order</span>` : '' })).join('')}</ul>`
+    : '<p class="empty">Nothing runs out this week.</p>' },
+  supplierRefresh: { title: 'Online prices', view: s => s.error ? '<p class="note">Skipped this time: the price search kept failing. Stored quotes still apply.</p>'
+    : s.source === 'stored' ? '<p class="note">Online prices are off (no SerpApi key). Stored quotes still apply.</p>'
+    : `<ul class="rows">${s.refreshed.map(p => row({ level: null, name: esc(p.product), why: p.error ? 'No price this time' : p.cheapest ? `${esc(p.cheapest.source)} · ${plural(p.offers, 'listing')}` : 'No usable listings',
+      fig: p.cheapest ? `<b>${inr(p.cheapest.price)}</b><span>cheapest</span>` : '' })).join('')}</ul>` },
+  dailyBrief: { title: 'Brief', view: s => `<pre>${esc(s.text)}</pre>` },
+};
+const RISK_WHY = { high: 'Runs out before new stock can arrive', medium: 'Runs out this week' };
+const traceLink = id => `<a href="#activity/${esc(id)}">Trace ${esc(id.slice(0, 8))}</a>`;
+function runResult(name, r) {
+  const steps = Object.keys(STEP).filter(k => r.result?.[k]).map(k => [k, r.result[k]]);
+  const trace = r.traceId ?? steps.map(([, s]) => s.traceId).find(Boolean);
+  return `<article class="run" aria-labelledby="run-h">
+    <h3 id="run-h">${esc(WF[name] ?? name)}</h3>
+    <p class="meta"><span>${r.result ? st('light', 'Done') : st('mid', 'Still running')}</span><span>${st('', r.mode === 'temporal' ? 'Temporal' : 'Direct')}</span>${trace ? traceLink(trace) : ''}</p>
+    ${r.mode === 'direct' ? '<p class="note">Ran directly (Temporal worker offline on this host).</p>' : ''}
+    ${r.result ? '' : '<p class="note">The worker has not finished yet. It keeps going; check Recent runs or the Temporal UI.</p>'}
+    ${steps.map(([k, s]) => `<section class="step"><h4>${STEP[k].title}</h4>${STEP[k].view(s)}</section>`).join('')}
+    ${r.retries?.length ? `<p class="note">Needed ${plural(r.retries.length, 'retry', 'retries')} to finish.</p>` : ''}
+    <details class="note"><summary>Details</summary><pre>${esc(JSON.stringify(r, null, 1))}</pre></details></article>`;
+}
 async function runWf(name, btn) {
-  btn.disabled = true; $('#wfout').textContent = `Running ${WF[name] ?? name}…`;
-  try { const r = await api(`/workflows/${name}/run`, { method: 'POST' }); $('#wfout').textContent = `${r.runner}${r.workflowId ? ' · ' + r.workflowId : ''}${r.retries?.length ? '\nretries: ' + r.retries.join('\n') : ''}\n` + JSON.stringify(r.result, null, 1).slice(0, 3000); if (location.hash === '#dashboard' || !location.hash) setTimeout(route, 800); }
-  catch (e) { $('#wfout').textContent = `That didn't work: ${e.message}`; }
-  btn.disabled = false;
+  const out = $('#wfout');
+  out.innerHTML = `<p class="note" role="status">Running ${esc(WF[name] ?? name)}…</p>`;
+  try {
+    const r = await busy(btn, 'Running…', () => api(`/workflows/${name}/run`, { method: 'POST', timeoutMs: API.longTimeoutMs }));
+    if (location.hash === '#dashboard' || !location.hash) { flash = `${WF[name]} done.`; return route(); }
+    out.innerHTML = runResult(name, r);
+  } catch (e) { out.innerHTML = errorBox(e, `run ${(WF[name] ?? name).toLowerCase()}`, () => runWf(name, btn)); }
 }
 async function showTrace(id) {
   try {
-    const t = await api('/traces/' + id);
+    const t = await api('/traces/' + encodeURIComponent(id));
     const t0 = t.spans[0]?.start ?? 0;
     $('#trace').innerHTML = `<section class="sec"><h2>${esc(t.kind)} <span class="n">${t.ms} ms · ${esc(id.slice(0, 8))}</span></h2>
       ${table([['+ms', s => s.start - t0, 'num'], ['Span', s => `<b>${esc(s.op)}</b> ${esc(s.name)}`], ['Took', s => `${s.ms} ms`, 'num'], ['Attributes', s => `<details><summary class="small">${plural(Object.keys(s.attrs).length, 'attribute')}</summary><pre class="small">${esc(JSON.stringify(s.attrs, null, 1))}</pre></details>`], ['Error', s => s.error ? st('heavy', s.error) : '']], t.spans)}
       <p class="lede gap"><b>Final output:</b> ${esc(t.output)}</p></section>`;
     go('trace');
-  } catch (e) { $('#trace').innerHTML = fail(e); }
+  } catch (e) { $('#trace').innerHTML = errorBox(e, 'load the trace', () => showTrace(id)); }
 }
 
 // ---------- router ----------
 let first = true;
 async function route() {
-  const name = TITLES[location.hash.slice(1)] ? location.hash.slice(1) : 'dashboard';
+  const [view, param] = location.hash.slice(1).split('/'); // #activity/<traceId> opens that trace
+  const name = TITLES[view] ? view : 'dashboard';
   document.querySelectorAll('.nav a, #more a').forEach(a => a.hash === '#' + name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   $(`#more a[href="#${name}"]`) ? $('.more').setAttribute('aria-current', 'page') : $('.more').removeAttribute('aria-current');
   try { $('#more').hidePopover(); } catch {}
   document.title = `${TITLES[name]} · Nivara`;
   const note = flash; flash = '';
-  $('#view').innerHTML = '<p class="loading">Loading…</p>';
+  retries.clear();
+  $('#view').innerHTML = '<p class="loading" role="status">Loading…</p>';
   try {
     $('#view').innerHTML = (note ? `<p class="flash" role="status">${st('light', 'Done')} ${esc(note)}</p>` : '') + await views[name]();
-    if (name === 'suppliers') loadMem().catch(e => $('#mem') && ($('#mem').innerHTML = fail(e)));
-    voiceNotice(elevenOn() ? 'Voice: ElevenLabs' : `Voice: browser speech (${health?.integrations?.elevenlabs?.detail ?? 'ElevenLabs not live'})`);
-  } catch (e) { $('#view').innerHTML = fail(e); }
+    if (name === 'suppliers') loadMem();
+    if (name === 'activity' && param) showTrace(decodeURIComponent(param));
+    voiceNotice(elevenOn() ? 'Voice: ElevenLabs' : 'Voice: browser speech');
+  } catch (e) { $('#view').innerHTML = `<div class="sec">${errorBox(e, `load ${TITLES[name]}`, route)}</div>`; }
   if (!first) { scrollTo(0, 0); const h = $('#view h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
   first = false;
 }

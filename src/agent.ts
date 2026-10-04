@@ -227,6 +227,9 @@ export function templateAnswer(tool: ToolName, out: any, focus?: string): string
 /** Standard operational questions (the keyword router recognises them) get templates; anything else is open-ended. */
 export const isStructured = (q: string) => keywordRoute(q).tool !== 'generate_daily_brief' || /\b(focus|today|brief|attention|priorit\w*|summary)\b/i.test(q);
 
+/** "Give me today's brief": the keyword router agrees and names it, so a Gemma routing round trip adds only latency. */
+export const asksForBrief = (q: string) => /\bbrief(ing)?\b/i.test(q) && keywordRoute(q).tool === 'generate_daily_brief';
+
 export async function ask(message: string, history: Msg[] = [], conversationId?: string) {
   return traced('assistant', message, async () => {
     if (conversationId) Sentry.setConversationId(conversationId);
@@ -234,15 +237,16 @@ export async function ask(message: string, history: Msg[] = [], conversationId?:
     let route: 'mastra-tools' | 'gemma-json-router' | 'keyword-router' = 'keyword-router';
     let pick: { tool: ToolName; args: any } | undefined, answer: string | undefined, data: any;
     const notes: string[] = [];
+    if (asksForBrief(message)) { pick = { tool: 'generate_daily_brief', args: {} }; notes.push('Brief asked for by name; no routing call needed.'); }
 
-    if (status.reachable && status.nativeTools) {
+    if (!pick && status.reachable && status.nativeTools) {
       try {
         const r: any = await span('gen_ai.chat', 'mastra agent.generate', { 'gen_ai.request.model': MODEL }, () => mastraAgent.generate([...history.slice(-6), { role: 'user', content: message }] as any, { maxSteps: 3 } as any));
         const tr = (r.toolResults ?? r.steps?.flatMap((s: any) => s.toolResults ?? []) ?? [])[0];
         if (tr && r.text) { route = 'mastra-tools'; pick = { tool: (tr.toolName ?? tr.payload?.toolName) as ToolName, args: tr.args ?? tr.payload?.args }; data = tr.result ?? tr.payload?.result; answer = r.text; }
         else notes.push('Mastra agent returned no tool call; fell back to JSON router.');
       } catch (e: any) { notes.push(`Mastra tool calling failed (${e.message.slice(0, 120)}); fell back to JSON router.`); }
-    } else if (status.reachable) notes.push(llmProvider() === 'gemini'
+    } else if (!pick && status.reachable) notes.push(llmProvider() === 'gemini'
       ? `${llmModel()} via Gemini API; Gemma selects tools via validated JSON instead.`
       : `${llmModel()} does not advertise native tool calling in Ollama; Gemma selects tools via validated JSON instead.`);
 

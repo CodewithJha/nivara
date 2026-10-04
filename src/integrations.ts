@@ -70,14 +70,17 @@ export function annotate(attrs: Record<string, string | number | boolean>) {
 // ---------- Gemma: Ollama (default) or Gemini API (Google AI Studio). Same return: the assistant text. ----------
 
 type ChatMsg = { role: string; content: string };
-type ChatOpts = { json?: boolean; timeoutMs?: number };
+type ChatOpts = { json?: boolean; timeoutMs?: number; maxTokens?: number };
+/** Output-token cap for every Gemma call (latency grows with output length); callers may ask for fewer. */
+export const GEMMA_MAX_TOKENS = Number(env.GEMMA_MAX_TOKENS) || 1024;
+const maxTokens = (opts: ChatOpts) => Math.min(opts.maxTokens ?? GEMMA_MAX_TOKENS, GEMMA_MAX_TOKENS);
 
 async function ollamaChat(messages: ChatMsg[], opts: ChatOpts, model: string, set: (k: string, v: any) => void): Promise<string> {
   const unavailable = (why: string) => Object.assign(new Error(`Gemma (${model}) unavailable at ${OLLAMA}: ${why}`), { status: 503 });
   const r = await fetch(`${OLLAMA}/v1/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(env.OLLAMA_API_KEY && { authorization: `Bearer ${env.OLLAMA_API_KEY}` }) },
-    body: JSON.stringify({ model, messages, temperature: 0.2, ...(opts.json && { response_format: { type: 'json_object' } }) }),
+    body: JSON.stringify({ model, messages, temperature: 0.2, max_tokens: maxTokens(opts), ...(opts.json && { response_format: { type: 'json_object' } }) }),
     signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
   }).catch(e => { throw unavailable(e.message); });
   if (!r.ok) throw unavailable(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
@@ -100,7 +103,7 @@ async function geminiChat(messages: ChatMsg[], opts: ChatOpts, model: string, se
     body: JSON.stringify({
       ...(system && { systemInstruction: { parts: [{ text: system }] } }),
       contents,
-      generationConfig: { temperature: 0.2, ...(opts.json && { responseMimeType: 'application/json' }) },
+      generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens(opts), ...(opts.json && { responseMimeType: 'application/json' }) },
     }),
     signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
   }).catch(e => { throw unavailable(e.message); });

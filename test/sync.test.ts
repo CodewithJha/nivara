@@ -1,15 +1,16 @@
-process.env.MONGODB_DB = process.env.MONGODB_DB || 'nivara_test';
-process.env.LOG_LEVEL = 'silent';
-
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { orderToLines, upsertOrderLines } from '../src/sync.ts';
-import { shopPulse, keywordRoute } from '../src/agent.ts';
-import { ensureTiger, poolForSync } from '../src/tiger.ts';
-import { client, col } from '../src/db.ts';
+
+// Dynamic imports: static ones are hoisted above this line and db.ts would bind to the real 'nivara' DB.
+process.env.MONGODB_DB = 'nivara_test_sync';
+process.env.LOG_LEVEL = 'silent';
+const { orderToLines, upsertOrderLines } = await import('../src/sync.ts');
+const { shopPulse, keywordRoute } = await import('../src/agent.ts');
+const { ensureTiger, poolForSync } = await import('../src/tiger.ts');
+const { client, col } = await import('../src/db.ts');
 
 after(async () => {
-  try { await client.close(); } catch { /* ok */ }
+  try { await client.db(process.env.MONGODB_DB).dropDatabase(); await client.close(); } catch { /* ok */ }
   try { await poolForSync()?.end(); } catch { /* ok */ }
 });
 

@@ -3,7 +3,7 @@ import { after, afterEach, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 
-process.env.MONGODB_DB = 'nivara_test';
+process.env.MONGODB_DB = 'nivara_test_partners'; // one DB per file: node --test runs files in parallel processes
 process.env.LOG_LEVEL = 'silent';
 process.env.SUPPLIER_FAIL_FIRST_N = '0';
 const KEYS = ['SERPAPI_API_KEY', 'BACKBOARD_API_KEY', 'BACKBOARD_ASSISTANT_ID', 'ELEVENLABS_API_KEY'];
@@ -45,7 +45,7 @@ async function reset() {
 before(async () => { if (mongoOk) await reset(); await new Promise<void>(r => { const s = app.listen(0, '127.0.0.1', () => { base = `http://127.0.0.1:${(s.address() as AddressInfo).port}`; servers.push(s); r(); }); }); });
 const servers: any[] = [];
 afterEach(async () => { globalThis.fetch = realFetch; KEYS.forEach(k => delete process.env[k]); if (mongoOk) await reset(); });
-after(async () => { servers.forEach(s => s.close()); if (mongoOk) await client.db().dropDatabase(); await client.close(); });
+after(async () => { servers.forEach(s => s.close()); if (mongoOk) await client.db(process.env.MONGODB_DB).dropDatabase(); await client.close(); });
 
 // ---------- SerpApi via the supplierRefresh activity ----------
 

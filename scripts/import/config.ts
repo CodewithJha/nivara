@@ -12,6 +12,9 @@ export const MANUAL_PRICE: Record<string, number> = {
 
 export const MANUAL_COST_RATIO = 0.72;
 
+/** Average units the whole shop sells per week; proxy demand is scaled to this total. */
+export const SHOP_WEEKLY_UNITS = Number(process.env.SHOP_WEEKLY_UNITS) || 200;
+
 export const PRODUCT_TYPES = ['whey', 'creatine', 'multivitamin', 'omega', 'bcaa', 'preworkout', 'ayurvedic', 'other'] as const;
 export type ProductType = (typeof PRODUCT_TYPES)[number];
 
