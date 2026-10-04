@@ -5,6 +5,7 @@ import { backboardLive, backboardList, backboardSave, backboardSearch, gemma, lo
 import { tigerDemand } from './tiger.ts';
 
 const HISTORY_DAYS = 60;
+const BRIEF_MAX_TOKENS = Number(process.env.BRIEF_MAX_TOKENS) || 160; // the summary is kept only if ≤ 400 chars
 
 /** Flag days whose qty is > mean + 2σ over the series (simple anomaly marker for the forecast tool). */
 export function anomalyFlags(daily: number[]): { index: number; qty: number; z: number }[] {
@@ -232,8 +233,9 @@ export async function generateDailyBrief({ store = true } = {}) {
     const g = (await gemma([
       { role: 'system', content: 'You help a small online fitness-supplements shop owner in India. In one or two short sentences, say what matters most today, using only the brief below. Do not add any number, name or product that is not in the brief. Plain text.' },
       { role: 'user', content: brief },
-    ])).trim();
-    if (g && g.length <= 400 && looksClean(g)) summary = g; else log.warn({ len: g.length }, 'brief: Gemma summary rejected (empty, too long or leaked field names)');
+    ], { maxTokens: BRIEF_MAX_TOKENS })).trim();
+    // a summary cut off by the token cap doesn't end a sentence
+    if (g && g.length <= 400 && /[.!?]["')]?$/.test(g) && looksClean(g)) summary = g; else log.warn({ len: g.length }, 'brief: Gemma summary rejected (empty, cut off, too long or leaked field names)');
   } catch (e: any) { log.warn({ err: e.message }, 'brief: Gemma unavailable, template only'); }
   const doc = { date: facts.date, text: summary ? `${summary}\n\n${brief}` : brief, summary, by: summary ? 'template+gemma' as const : 'template' as const, facts, createdAt: new Date() };
   if (store) await col.briefs.insertOne(doc);
