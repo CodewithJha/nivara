@@ -293,3 +293,98 @@ function browserListen(btn, label) {
   sr.onend = () => (btn.textContent = label);
   btn.textContent = 'Listening…'; sr.start();
 }
+
+// ---------- orders ----------
+let draft;
+async function extract(btn) {
+  btn.disabled = true; $('#draft').innerHTML = '<p class="loading">Gemma is reading the message…</p>';
+  try {
+    const r = await api('/orders/extract', { method: 'POST', body: { text: $('#otext').value } });
+    draft = r.draft;
+    const unmatched = draft.items.some(i => !i.product);
+    $('#draft').innerHTML = `<div class="sec"><h2>Check this order</h2>
+      <p class="lede"><b>${esc(draft.customer.name)}</b> ${draft.customer.isNew ? st('mid', 'New customer') : `<span class="small">${esc(draft.customer.id)}</span>`}
+        · Delivery <b>${draft.deliveryDate ? esc(day(draft.deliveryDate)) : 'not given'}</b>${draft.deliveryText ? ` <span class="small">from “${esc(draft.deliveryText)}”</span>` : ''}</p>
+      ${table([['Asked for', i => esc(i.requested), 'lead'], ['Matched product', i => i.product ? `${esc(i.product.name)}<span class="sub">${esc(i.product.sku)}</span>` : st('heavy', 'No match')], ['Qty', i => i.quantity, 'num big'], ['Price', i => i.product ? inr(i.product.price) : '—', 'num'], ['In stock', i => i.product?.stock ?? '—', 'num']], draft.items)}
+      <p class="total">Total <b>${inr(draft.total)}</b></p>
+      ${draft.problems.length ? `<p class="warn">${draft.problems.map(esc).join('<br>')}</p>` : ''}
+      <div class="acts gap"><button class="btn primary" onclick="confirmOrder(this)" ${unmatched ? 'disabled title="Fix the unmatched items first"' : ''}>Confirm and save</button>${unmatched ? '<span class="small red">Fix the unmatched items in the message first.</span>' : ''}</div>
+      <details class="note"><summary>What Gemma read (validated)</summary><pre>${esc(JSON.stringify(r.extraction, null, 1))}</pre></details></div>`;
+  } catch (e) { $('#draft').innerHTML = fail(e); }
+  btn.disabled = false;
+}
+async function confirmOrder(btn) {
+  btn.disabled = true;
+  try {
+    const o = await api('/orders', { method: 'POST', body: { customerId: draft.customer.id, customerName: draft.customer.name, items: draft.items.map(i => ({ sku: i.product.sku, quantity: i.quantity })), deliveryDate: draft.deliveryDate } });
+    flash = `Saved ${orderName(o._id)} for ${draft.customer.name}.`; route();
+  } catch (e) { $('#draft').insertAdjacentHTML('beforeend', fail(e)); btn.disabled = false; }
+}
+async function deliver(id, btn) {
+  btn.disabled = true;
+  try { await api(`/orders/${id}/deliver`, { method: 'POST' }); flash = `${orderName(id)} marked delivered.`; route(); }
+  catch (e) { btn.insertAdjacentHTML('afterend', fail(e)); btn.disabled = false; }
+}
+
+// ---------- suppliers / memory ----------
+async function supSearch(btn) {
+  btn.disabled = true; $('#sres').innerHTML = '<p class="loading">Searching…</p>';
+  try {
+    const r = await api('/suppliers/search?q=' + encodeURIComponent($('#sq').value));
+    $('#sres').innerHTML = `<p class="lede gap">${r.product ? `Matched <b>${esc(r.product.name)}</b>. You pay ${inr(r.product.cost)} and sell at ${inr(r.product.price)}.` : 'Not in your catalogue, so it was searched as typed.'}</p>
+      ${r.web.available ? `${r.web.hiddenBlocked ? `<p class="note">${plural(r.web.hiddenBlocked, 'result')} hidden: blocked supplier.</p>` : ''}${table([['Listing', o => `<a href="${esc(o.link)}" target="_blank" rel="noopener">${esc(o.title)}</a>`], ['Seller', o => `${esc(o.source)}<span class="sub">${esc(o.sourceDomain)}</span>`], ['Price', o => inr(o.price), 'num big']], r.web.offers.slice().sort((a, b) => a.price - b.price))}<p class="note">Live Google Shopping results via SerpApi. Retail listings: check the pack size before comparing with your unit cost.</p>` : `<p class="warn">${esc(r.web.reason)}</p>`}
+      ${r.dbOpportunity ? `<p class="lede gap">Stored quote: <b>${esc(r.dbOpportunity.best.supplier)}</b> at ${inr(r.dbOpportunity.best.unitCost)} a unit, ${inr(r.dbOpportunity.savingPerUnit)} less (${r.dbOpportunity.savingPercent}%${r.dbOpportunity.significant ? '' : ', too small to count'}).</p>` : ''}
+      ${r.memory ? `<p class="note">Blocked-supplier memory: ${esc(r.memory.source)}</p>` : ''}`;
+  } catch (e) { $('#sres').innerHTML = fail(e); }
+  btn.disabled = false;
+}
+async function loadMem() {
+  const m = await api('/memory');
+  if ($('#mem')) $('#mem').innerHTML = (m.preferences.length ? `<ul class="rows">${m.preferences.map(p => row({ level: null, name: `“${esc(p.text)}”`,
+    why: `${p.kind === 'block_supplier' ? `Blocks ${esc(p.supplier)}` : cap(esc(p.kind))} · stored in ${p.mirror === 'backboard' ? 'Mongo and Backboard' : 'Mongo only'}` })).join('')}</ul>` : '<p class="empty">Nothing remembered yet.</p>') +
+    `<p class="note">Backboard: ${m.backboard.live ? `live, ${plural(m.backboard.memories.length, 'memory', 'memories')}` : esc(m.backboard.error || 'not set up (no BACKBOARD_API_KEY)')}</p>`;
+}
+async function saveMem(btn) {
+  btn.disabled = true;
+  try { await api('/memory', { method: 'POST', body: { text: $('#mtext').value } }); flash = 'Remembered.'; route(); }
+  catch (e) { btn.insertAdjacentHTML('afterend', fail(e)); btn.disabled = false; }
+}
+
+// ---------- workflows / traces ----------
+async function runWf(name, btn) {
+  btn.disabled = true; $('#wfout').textContent = `Running ${WF[name] ?? name}…`;
+  try { const r = await api(`/workflows/${name}/run`, { method: 'POST' }); $('#wfout').textContent = `${r.runner}${r.workflowId ? ' · ' + r.workflowId : ''}${r.retries?.length ? '\nretries: ' + r.retries.join('\n') : ''}\n` + JSON.stringify(r.result, null, 1).slice(0, 3000); if (location.hash === '#dashboard' || !location.hash) setTimeout(route, 800); }
+  catch (e) { $('#wfout').textContent = `That didn't work: ${e.message}`; }
+  btn.disabled = false;
+}
+async function showTrace(id) {
+  try {
+    const t = await api('/traces/' + id);
+    const t0 = t.spans[0]?.start ?? 0;
+    $('#trace').innerHTML = `<section class="sec"><h2>${esc(t.kind)} <span class="n">${t.ms} ms · ${esc(id.slice(0, 8))}</span></h2>
+      ${table([['+ms', s => s.start - t0, 'num'], ['Span', s => `<b>${esc(s.op)}</b> ${esc(s.name)}`], ['Took', s => `${s.ms} ms`, 'num'], ['Attributes', s => `<details><summary class="small">${plural(Object.keys(s.attrs).length, 'attribute')}</summary><pre class="small">${esc(JSON.stringify(s.attrs, null, 1))}</pre></details>`], ['Error', s => s.error ? st('heavy', s.error) : '']], t.spans)}
+      <p class="lede gap"><b>Final output:</b> ${esc(t.output)}</p></section>`;
+    go('trace');
+  } catch (e) { $('#trace').innerHTML = fail(e); }
+}
+
+// ---------- router ----------
+let first = true;
+async function route() {
+  const name = TITLES[location.hash.slice(1)] ? location.hash.slice(1) : 'dashboard';
+  document.querySelectorAll('.nav a, #more a').forEach(a => a.hash === '#' + name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  $(`#more a[href="#${name}"]`) ? $('.more').setAttribute('aria-current', 'page') : $('.more').removeAttribute('aria-current');
+  try { $('#more').hidePopover(); } catch {}
+  document.title = `${TITLES[name]} · Nivara`;
+  const note = flash; flash = '';
+  $('#view').innerHTML = '<p class="loading">Loading…</p>';
+  try {
+    $('#view').innerHTML = (note ? `<p class="flash" role="status">${st('light', 'Done')} ${esc(note)}</p>` : '') + await views[name]();
+    if (name === 'suppliers') loadMem().catch(e => $('#mem') && ($('#mem').innerHTML = fail(e)));
+    voiceNotice(elevenOn() ? 'Voice: ElevenLabs' : `Voice: browser speech (${health?.integrations?.elevenlabs?.detail ?? 'ElevenLabs not live'})`);
+  } catch (e) { $('#view').innerHTML = fail(e); }
+  if (!first) { scrollTo(0, 0); const h = $('#view h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
+  first = false;
+}
+addEventListener('hashchange', route);
+api('/health').then(h => (health = h)).catch(() => {}).finally(route);
