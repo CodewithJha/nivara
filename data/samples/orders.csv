@@ -1,0 +1,4 @@
+customer,product,quantity,delivery_date,status,source
+Rahul Verma,whey protein,1,tomorrow,pending,owner-csv
+Priya Singh,creatine,2,,pending,owner-csv
+Aman Khan,protein bar,6,2026-10-06,pending,owner-csv

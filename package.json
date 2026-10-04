@@ -10,9 +10,15 @@
     "start": "node --env-file-if-exists=.env --import ./src/instrument.ts src/server.ts",
     "dev": "node --env-file-if-exists=.env --import ./src/instrument.ts --watch src/server.ts",
     "seed": "node --env-file-if-exists=.env src/seed.ts",
+    "seed:demo": "node --env-file-if-exists=.env src/seed-demo.ts",
+    "data:catalog": "node --env-file-if-exists=.env scripts/fetch-catalog.ts",
+    "data:uci": "python3 scripts/refresh-uci.py",
+    "import:sales": "node --env-file-if-exists=.env scripts/import-sales.ts",
+    "import:orders": "node --env-file-if-exists=.env scripts/import-orders.ts",
     "worker": "node --env-file-if-exists=.env --import ./src/instrument.ts src/temporal/worker.ts",
     "services": "bash scripts/dev.sh",
     "temporal:dev": "temporal server start-dev --db-filename .temporal.db",
+    "temporal:resume-demo": "bash scripts/demo-temporal-resume.sh",
     "db": "docker run -d --name nivara-mongo -p 27017:27017 mongo:8",
     "test": "node --test test/*.test.ts",
     "forecast:setup": "uv venv -p 3.11 forecast/.venv && VIRTUAL_ENV=forecast/.venv uv pip install -r forecast/requirements.txt"
@@ -26,7 +32,11 @@
     "@temporalio/workflow": "^1.24.0",
     "express": "^5.2.1",
     "mongodb": "^7.7.0",
+    "pg": "^8.23.1",
     "pino": "^10.4.0",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
   }
 }

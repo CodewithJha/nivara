@@ -1,0 +1,695 @@
+{
+  "fetchedAt": "2026-10-04T14:49:29.979Z",
+  "source": "Open Food Facts",
+  "license": "Open Database License (ODbL)",
+  "url": "https://world.openfoodfacts.org",
+  "userAgent": "Nivara/0.1 (https://github.com; Hacktoberfest shop-ops; contact=nivara)",
+  "note": "Identity/nutrition from OFF. price/cost/stock/supplierId are Nivara shop fields for ops demos until the owner imports their catalogue.",
+  "products": [
+    {
+      "_id": "R01",
+      "name": "Whey Protein",
+      "aliases": [
+        "whey protein",
+        "xxl nutrition whey protein",
+        "protein"
+      ],
+      "category": "powder",
+      "price": 2549,
+      "cost": 1780,
+      "stock": 19,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "XXL Nutrition",
+        "quantity": "600 gram",
+        "sugarPer100g": 7.7,
+        "labels": [],
+        "categories": [
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Protein powders"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "8719881036429",
+        "url": "https://world.openfoodfacts.org/product/8719881036429/whey-protein-xxl-nutrition",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R02",
+      "name": "Whey protein neutre",
+      "aliases": [
+        "whey protein neutre",
+        "décathlon whey protein neutre",
+        "protein",
+        "neutre"
+      ],
+      "category": "powder",
+      "price": 2529,
+      "cost": 1804,
+      "stock": 27,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "DÉCATHLON",
+        "quantity": "900 g",
+        "sugarPer100g": 6.8,
+        "labels": [
+          "Made in France",
+          "Triman"
+        ],
+        "categories": [
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Protein powders",
+          "fr:Produits pour sportifs"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "3583787294765",
+        "url": "https://world.openfoodfacts.org/product/3583787294765/whey-proteine-decathlon",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R03",
+      "name": "Whey Protein",
+      "aliases": [
+        "whey protein",
+        "accelerate whey protein",
+        "protein"
+      ],
+      "category": "powder",
+      "price": 2499,
+      "cost": 1796,
+      "stock": 41,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "Accelerate",
+        "quantity": "18 x 30 g",
+        "sugarPer100g": 6.1,
+        "labels": [
+          "Rainforest Alliance"
+        ],
+        "categories": [
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Protein powders"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "8719979204457",
+        "url": "https://world.openfoodfacts.org/product/8719979204457/whey-protein-accelerate",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R04",
+      "name": "Whey protein chocolat",
+      "aliases": [
+        "whey protein chocolat",
+        "décathlon whey protein chocolat",
+        "protein",
+        "chocolat"
+      ],
+      "category": "powder",
+      "price": 2559,
+      "cost": 1788,
+      "stock": 5,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "DÉCATHLON",
+        "quantity": "900 g",
+        "sugarPer100g": 8,
+        "labels": [
+          "Fair trade",
+          "Fairtrade International",
+          "Fairtrade cocoa",
+          "Max Havelaar",
+          "No added sugar",
+          "Triman"
+        ],
+        "categories": [
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Protein powders",
+          "fr:Integratori per bodybuilding",
+          "fr:Produits pour sportifs",
+          "fr:Proteine in polvere",
+          "fr:Supplementi dietetici"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "3583787458693",
+        "url": "https://world.openfoodfacts.org/product/3583787458693/whey-protein-decathlon",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R05",
+      "name": "Whey Protein",
+      "aliases": [
+        "whey protein",
+        "accelerate whey protein",
+        "protein"
+      ],
+      "category": "powder",
+      "price": 2539,
+      "cost": 1796,
+      "stock": 21,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "Accelerate",
+        "quantity": "18 x 30 g",
+        "sugarPer100g": 7.1,
+        "labels": [],
+        "categories": [
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Protein powders"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "8719979204471",
+        "url": "https://world.openfoodfacts.org/product/8719979204471/whey-protein-accelerate",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R06",
+      "name": "Whey Protein cookies",
+      "aliases": [
+        "whey protein cookies",
+        "xxl nutrition whey protein cookies",
+        "protein",
+        "cookies"
+      ],
+      "category": "powder",
+      "price": 2499,
+      "cost": 1780,
+      "stock": 9,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "XXL Nutrition",
+        "quantity": "30 gram",
+        "sugarPer100g": 5.66666666666667,
+        "labels": [],
+        "categories": [
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Protein powders"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "8719881036436",
+        "url": "https://world.openfoodfacts.org/product/8719881036436/whey-protein-cookies-xxl-nutrition",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R07",
+      "name": "Creatine Monohydrate",
+      "aliases": [
+        "creatine monohydrate",
+        "trust labs creatine monohydrate",
+        "creatine",
+        "monohydrate"
+      ],
+      "category": "powder",
+      "price": 919,
+      "cost": 576,
+      "stock": 11,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "Trust Labs",
+        "quantity": "300g",
+        "sugarPer100g": 0,
+        "labels": [
+          "No preservatives",
+          "Carbon footprint"
+        ],
+        "categories": [
+          "Dietary supplements",
+          "Creatina",
+          "Suplementos"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "9780201379624",
+        "url": "https://world.openfoodfacts.org/product/9780201379624/josi-pastrama-oaie-trust-labs",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R08",
+      "name": "Pre workout bodymass",
+      "aliases": [
+        "pre workout bodymass",
+        "bodymass nutrition pre workout bodymass",
+        "workout",
+        "bodymass"
+      ],
+      "category": "powder",
+      "price": 1529,
+      "cost": 1004,
+      "stock": 7,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "BODYMASS NUTRITION",
+        "quantity": "300 g",
+        "sugarPer100g": null,
+        "labels": [
+          "Vegetarian",
+          "Vegan",
+          "Green Dot"
+        ],
+        "categories": [
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "BCAA"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "8718836394652",
+        "url": "https://world.openfoodfacts.org/product/8718836394652/pre-workout-bodymass-bodymass-nutrition",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R09",
+      "name": "Protein Bars Cocoa Hazelnut",
+      "aliases": [
+        "protein bars cocoa hazelnut",
+        "nakd. protein bars cocoa hazelnut",
+        "protein",
+        "cocoa",
+        "hazelnut"
+      ],
+      "category": "bars",
+      "price": 145,
+      "cost": 63,
+      "stock": 15,
+      "supplierId": "S1",
+      "leadTimeDays": 4,
+      "tags": {
+        "brands": "nakd.",
+        "quantity": "135 g",
+        "sugarPer100g": 28,
+        "labels": [
+          "Vegetarian",
+          "No gluten",
+          "Kosher",
+          "No milk",
+          "Vegan",
+          "FSC",
+          "FSC Mix",
+          "Kashrut division of the London Beth Din",
+          "No added sugar",
+          "No lactose",
+          "Triman"
+        ],
+        "categories": [
+          "Plant-based foods and beverages",
+          "Plant-based foods",
+          "Snacks",
+          "Sweet snacks",
+          "Nuts and their products",
+          "Bars",
+          "Cereal bars",
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Chocolate cereal bars",
+          "Nut bars",
+          "Cereal bar with chocolate fortified with vitamins and minerals",
+          "Energy bars",
+          "Protein bars",
+          "fr:Barres aux fruits",
+          "barres-de-cereales",
+          "barres-de-fruits-noix"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "5060088700112",
+        "url": "https://world.openfoodfacts.org/product/5060088700112/protein-bars-cocoa-hazelnut-nakd",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R10",
+      "name": "Protein Nut Bar Fruit & Chocolate",
+      "aliases": [
+        "protein nut bar fruit chocolate",
+        "nature valley protein nut bar fruit chocolate",
+        "protein",
+        "fruit",
+        "chocolate"
+      ],
+      "category": "bars",
+      "price": 135,
+      "cost": 79,
+      "stock": 37,
+      "supplierId": "S1",
+      "leadTimeDays": 4,
+      "tags": {
+        "brands": "Nature Valley",
+        "quantity": "160 g",
+        "sugarPer100g": 15.4,
+        "labels": [
+          "Contains milk",
+          "Contains palm oil",
+          "Triman"
+        ],
+        "categories": [
+          "Snacks",
+          "Sweet snacks",
+          "Bars",
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Energy bars",
+          "Protein bars",
+          "Protein Energy Bars"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "8410076901026",
+        "url": "https://world.openfoodfacts.org/product/8410076901026/protein-nut-bar-fruit-chocolate-nature-valley",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R11",
+      "name": "peanuts & dark chocolate protein fruit & nut bars",
+      "aliases": [
+        "peanuts dark chocolate protein fruit nut bars",
+        "eat natural peanuts dark chocolate protein fruit nut bars",
+        "peanuts",
+        "chocolate",
+        "protein"
+      ],
+      "category": "bars",
+      "price": 145,
+      "cost": 71,
+      "stock": 21,
+      "supplierId": "S1",
+      "leadTimeDays": 4,
+      "tags": {
+        "brands": "EAT NATURAL",
+        "quantity": "120 gram",
+        "sugarPer100g": 24.9,
+        "labels": [
+          "No gluten"
+        ],
+        "categories": [
+          "Snacks",
+          "Sweet snacks",
+          "Cocoa and its products",
+          "Confectioneries",
+          "Chocolate candies",
+          "Bars",
+          "Candy chocolate bars",
+          "Chocolate nuts cookie bars"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "8000500416938",
+        "url": "https://world.openfoodfacts.org/product/8000500416938/peanuts-amp-dark-chocolate-protein-fruit-amp-nut-ba-eat-natural",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R12",
+      "name": "Peanut Butter Protein Bars",
+      "aliases": [
+        "peanut butter protein bars",
+        "nākd peanut butter protein bars",
+        "peanut",
+        "butter",
+        "protein"
+      ],
+      "category": "bars",
+      "price": 105,
+      "cost": 79,
+      "stock": 37,
+      "supplierId": "S1",
+      "leadTimeDays": 4,
+      "tags": {
+        "brands": "nākd, Nakd",
+        "quantity": "45 g",
+        "sugarPer100g": 26.8,
+        "labels": [
+          "Vegetarian",
+          "No gluten",
+          "Kosher",
+          "Vegan",
+          "Kashrut division of the London Beth Din",
+          "No added sugar",
+          "No lactose"
+        ],
+        "categories": [
+          "Plant-based foods and beverages",
+          "Plant-based foods",
+          "Snacks",
+          "Sweet snacks",
+          "Nuts and their products",
+          "Bars",
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Nut bars",
+          "Energy bars",
+          "Peanut bars",
+          "Protein bars"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "5060088700082",
+        "url": "https://world.openfoodfacts.org/product/5060088700082/protein-peanut-butter-bar-nākd",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R13",
+      "name": "CRUNCHY PROTEIN BAR Caramel Crisp flavour",
+      "aliases": [
+        "crunchy protein bar caramel crisp flavour",
+        "sportyfeel crunchy protein bar caramel crisp flavour",
+        "crunchy",
+        "protein",
+        "caramel"
+      ],
+      "category": "bars",
+      "price": 135,
+      "cost": 55,
+      "stock": 9,
+      "supplierId": "S1",
+      "leadTimeDays": 4,
+      "tags": {
+        "brands": "SPORTYFEEL",
+        "quantity": "50g",
+        "sugarPer100g": 3.3,
+        "labels": [
+          "Rainforest Alliance",
+          "No added sugar",
+          "Triman"
+        ],
+        "categories": [
+          "Snacks",
+          "Sweet snacks",
+          "Bars",
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Protein bars"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "4056489997658",
+        "url": "https://world.openfoodfacts.org/product/4056489997658/crunchy-protein-bar-caramel-crisp-flavour-sportyfeel",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R14",
+      "name": "Tvarohová tyčinka Protein",
+      "aliases": [
+        "tvarohov ty inka protein",
+        "müller tvarohov ty inka protein",
+        "tvarohov",
+        "protein"
+      ],
+      "category": "bars",
+      "price": 135,
+      "cost": 55,
+      "stock": 19,
+      "supplierId": "S1",
+      "leadTimeDays": 4,
+      "tags": {
+        "brands": "Müller",
+        "quantity": "40g",
+        "sugarPer100g": 7,
+        "labels": [
+          "Source of proteins",
+          "Sustainable farming",
+          "High proteins",
+          "Nutriscore",
+          "Nutriscore Grade C",
+          "Nutriscore Grade D",
+          "Rainforest Alliance",
+          "Rainforest Alliance Cocoa",
+          "UTZ Certified"
+        ],
+        "categories": [
+          "Dairies",
+          "Fermented foods",
+          "Fermented milk products",
+          "Snacks",
+          "Sweet snacks",
+          "Bars",
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Quarks",
+          "Curd snacks",
+          "Energy bars",
+          "Protein bars",
+          "Protein Energy Bars",
+          "hu:Turodesszert",
+          "sk:protein"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "20955427",
+        "url": "https://world.openfoodfacts.org/product/20955427/high-protein-quarkriegel-muller",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R15",
+      "name": "BCAA",
+      "aliases": [
+        "bcaa",
+        "kong strong bcaa"
+      ],
+      "category": "powder",
+      "price": 1249,
+      "cost": 804,
+      "stock": 37,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "Kong Strong",
+        "quantity": "",
+        "sugarPer100g": 0.5,
+        "labels": [
+          "Nutriscore"
+        ],
+        "categories": []
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "4335619107311",
+        "url": "https://world.openfoodfacts.org/product/4335619107311/hydration-ice-pop-kong-strong",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R16",
+      "name": "mass gainer",
+      "aliases": [
+        "mass gainer",
+        "isostar mass gainer",
+        "gainer"
+      ],
+      "category": "powder",
+      "price": 3049,
+      "cost": 2182,
+      "stock": 43,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "Isostar",
+        "quantity": "700 g",
+        "sugarPer100g": 49,
+        "labels": [],
+        "categories": [
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "nl:Proteine eiwit poeders",
+          "nl:Sport",
+          "nl:Sportvoeding"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "3175681247239",
+        "url": "https://world.openfoodfacts.org/product/3175681247239/mass-gainer-isostar",
+        "license": "ODbL"
+      }
+    },
+    {
+      "_id": "R17",
+      "name": "Organic Protein",
+      "aliases": [
+        "organic protein",
+        "orgain organic protein",
+        "organic",
+        "protein"
+      ],
+      "category": "powder",
+      "price": 2349,
+      "cost": 1608,
+      "stock": 5,
+      "supplierId": "S3",
+      "leadTimeDays": 6,
+      "tags": {
+        "brands": "Orgain",
+        "quantity": "43.2 oz (2.7 lbs) 1.22kg",
+        "sugarPer100g": 1.96078431372549,
+        "labels": [
+          "Vegetarian",
+          "No gluten",
+          "Organic",
+          "Kosher",
+          "No GMOs",
+          "USDA Organic",
+          "Vegan",
+          "Certified B Corporation",
+          "Certified Plant Based",
+          "No soy"
+        ],
+        "categories": [
+          "Meat alternatives",
+          "Meat analogues",
+          "Dietary supplements",
+          "Bodybuilding supplements",
+          "Protein powders"
+        ]
+      },
+      "origin": {
+        "source": "openfoodfacts",
+        "code": "0851770007566",
+        "url": "https://world.openfoodfacts.org/product/0851770007566/organic-protein-orgain",
+        "license": "ODbL"
+      }
+    }
+  ]
+}
