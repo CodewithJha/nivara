@@ -6,22 +6,26 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { Client, Connection } from '@temporalio/client';
 import { client as mongo, col, today, TZ } from './db.ts';
-import { OrderInput, attention, tabpfnHealth } from './logic.ts';
+import { OrderInput, attention } from './logic.ts';
 import { ask, extractOrder, llmStatus } from './agent.ts';
-import { OLLAMA, backboardLive, elevenLive, elevenStatus, elevenSTT, elevenTTS, llmModel, llmProvider, log, serpLive, traced } from './integrations.ts';
+import { backboardLive, elevenLive, elevenStatus, elevenSTT, elevenTTS, log, serpLive, traced } from './integrations.ts';
+import { AppError, errorResponse, fail } from './errors.ts';
+import * as pub from './present.ts';
 import * as ops from './ops.ts';
 import * as acts from './temporal/activities.ts';
 import { seed } from './seed.ts';
 import { searchCatalog, tigerStatus } from './tiger.ts';
+import { displayName } from './copy.ts';
 import { startOrderChangeStream, syncDeliveredOrder } from './sync.ts';
 
 export const app = express();
 export default app;
 app.use(express.json({ limit: '100kb' }));
 app.use(express.static(fileURLToPath(new URL('../public', import.meta.url)), { setHeaders: s => s.setHeader('Cache-Control', 'no-cache') }));
-const body = <T extends z.ZodTypeAny>(s: T, b: unknown): z.infer<T> => {
+/** Validate input; the owner sees `message`, the log gets zod's detail. */
+const body = <T extends z.ZodTypeAny>(s: T, b: unknown, message = "That request didn't look right. Check it and try again."): z.infer<T> => {
   const r = s.safeParse(b);
-  if (!r.success) throw Object.assign(new Error(z.prettifyError(r.error)), { status: 400 });
+  if (!r.success) throw fail('invalid_input', message, 400, z.prettifyError(r.error));
   return r.data;
 };
 
@@ -36,7 +40,7 @@ async function getTemporal() {
   try {
     const connection = await Connection.connect({ address: TEMPORAL_ADDRESS, connectTimeout: 1500, ...(process.env.TEMPORAL_API_KEY && { tls: true, apiKey: process.env.TEMPORAL_API_KEY }) });
     temporal = { client: new Client({ connection, namespace: process.env.TEMPORAL_NAMESPACE ?? 'default' }), at: Date.now() };
-  } catch (e: any) { temporal.error = e.message; }
+  } catch (e: any) { temporal.error = e.message; log.warn({ err: e.message }, 'Temporal not reachable; jobs run in-process'); }
   return temporal.client;
 }
 // Phases run in order; the steps inside a phase are independent and run in parallel (mirrors temporal/workflows.ts).
@@ -77,25 +81,10 @@ r.get('/health', async (_q, s) => {
     elevenStatus(),
     tigerStatus(),
   ]);
-  const live = (on: boolean, detail: string) => ({ status: on ? 'live' : 'fallback', detail });
-  s.json({
-    ok: mongoOk,
-    date: today(),
-    integrations: {
-      mongodb: live(mongoOk, process.env.MONGODB_URI?.includes('mongodb.net') ? 'MongoDB Atlas' : 'local MongoDB'),
-      gemma: live(llm.reachable, llmProvider() === 'gemini'
-        ? (llm.reachable ? `${llmModel()} via Gemini API (caps: ${llm.capabilities?.join(',')})` : `${llmModel()} unavailable (Gemini API) — keyword router + templates`)
-        : (llm.reachable ? `${llmModel()} @ ${OLLAMA} (caps: ${llm.capabilities?.join(',')})` : `${llmModel()} unreachable at ${OLLAMA} — keyword router + templates`)),
-      mastra: live(llm.reachable && llm.nativeTools, !llm.reachable ? 'Gemma unreachable — tools run via keyword router' : llm.nativeTools ? 'Mastra agent native tool calling' : 'Mastra tools invoked via Gemma JSON router (model lacks native tool calling)'),
-      tabpfn: tabpfnHealth(lastForecast),
-      tiger: live(tiger.live, tiger.detail),
-      serpapi: live(serpLive(), serpLive() ? 'key set — Google Shopping via the Temporal supplierRefresh activity (results cached in supplierPrices)' : 'SERPAPI_API_KEY missing — stored supplier quotes only'),
-      backboard: live(backboardLive(), backboardLive() ? 'key set — memories saved to and searched in Backboard; Mongo stays source of truth' : 'BACKBOARD_API_KEY missing — memory stored in Mongo only'),
-      elevenlabs: live(voice.ok, voice.detail),
-      temporal: live(!!t, t ? `connected ${TEMPORAL_ADDRESS}` : TEMPORAL_ADDRESS ? `unreachable ${TEMPORAL_ADDRESS} — workflows run in-process` : 'TEMPORAL_ADDRESS unset — workflows run in-process'),
-      sentry: live(!!Sentry.getClient(), Sentry.getClient() ? `SDK initialised — gen_ai spans sent to Sentry (content ${process.env.SENTRY_SEND_CONTENT === '1' ? 'included' : 'redacted'})` : 'SENTRY_DSN missing — local traces only'),
-    },
-  });
+  s.json(pub.publicHealth({
+    date: today(), mongo: mongoOk, gemma: llm.reachable, mastra: llm.reachable && llm.nativeTools, forecast: lastForecast, tiger: tiger.live,
+    serpapi: serpLive(), backboard: backboardLive(), elevenlabs: voice.ok, temporal: !!t, sentry: !!Sentry.getClient(),
+  }));
 });
 
 /** Deterministic only (Mongo + latest cached forecast): never waits on Gemma or TabPFN. */
@@ -105,100 +94,113 @@ r.get('/dashboard', async (_q, s) => {
   s.json({
     date: today(), greeting: hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening',
     attention: attention(inv.items, pending.orders, opp, today()),
-    brief, forecast: { method: inv.method, model: inv.model, date: inv.forecastDate }, highPriority: inv.lowStock,
-    pending, opportunities: opp, supplierThreshold: ops.supplierThreshold, livePrices: live, serpConfigured: serpLive(), demo: !!demo,
+    brief: pub.publicBrief(brief), forecast: { date: inv.forecastDate }, highPriority: inv.lowStock.map(pub.publicStockItem),
+    pending: { today: pending.today, orders: pending.orders.map(pub.publicOrder) }, opportunities: opp.map(pub.publicOpportunity), supplierThreshold: ops.supplierThreshold,
+    livePrices: live.map(pub.publicLivePrice), onlinePrices: serpLive(), demo: !!demo,
   });
 });
 
-r.get('/inventory', async (_q, s) => s.json({ products: await col.products.find().sort({ _id: 1 }).toArray() }));
-r.get('/forecast', async (q, s) => s.json(await ops.forecastDemand({ force: q.query.force === '1' })));
-r.get('/orders', async (_q, s) => s.json({ orders: await col.orders.find().sort({ createdAt: -1 }).limit(100).toArray() }));
-r.get('/suppliers', async (_q, s) => s.json({ suppliers: await col.suppliers.find().toArray(), opportunities: await ops.supplierOpportunities() }));
-r.get('/suppliers/search', async (q, s) => s.json(await ops.searchSupplierPrices(body(z.string().trim().min(2).max(80), q.query.q))));
+r.get('/inventory', async (_q, s) => s.json({ products: (await col.products.find().sort({ _id: 1 }).toArray()).map(pub.publicProduct) }));
+r.get('/forecast', async (q, s) => s.json(pub.publicForecast(await ops.forecastDemand({ force: q.query.force === '1' }))));
+r.get('/orders', async (_q, s) => s.json({ orders: (await col.orders.find().sort({ createdAt: -1 }).limit(100).toArray()).map(pub.publicOrder) }));
+r.get('/suppliers', async (_q, s) => s.json({ suppliers: (await col.suppliers.find().toArray()).map(x => ({ _id: x._id, name: displayName(x.name) })), opportunities: (await ops.supplierOpportunities()).map(pub.publicOpportunity) }));
+r.get('/suppliers/search', async (q, s) => s.json(pub.publicSearch(await ops.searchSupplierPrices(body(z.string().trim().min(2).max(80), q.query.q, 'Type a product name to search, at least 2 letters.')))));
 
 r.post('/assistant', async (q, s) => {
   const b = body(z.object({
     message: z.string().trim().min(1).max(500),
     history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(4000) })).max(12).default([]),
     conversationId: z.string().trim().min(1).max(80).optional(),
-  }), q.body);
-  s.json(await ask(b.message, b.history, b.conversationId ?? q.get('x-conversation-id') ?? undefined));
+  }), q.body, 'Type a question first, up to 500 characters.');
+  s.json(pub.publicAnswer(await ask(b.message, b.history, b.conversationId ?? q.get('x-conversation-id') ?? undefined)));
 });
 
-r.get('/catalog/search', async (q, s) => s.json(await searchCatalog(body(z.string().trim().min(2).max(120), q.query.q))));
+r.get('/catalog/search', async (q, s) => s.json(pub.publicCatalog(await searchCatalog(body(z.string().trim().min(2).max(120), q.query.q, 'Type a product to search, at least 2 letters.')))));
 
-r.post('/orders/extract', async (q, s) => s.json(await extractOrder(body(z.object({ text: z.string().trim().min(3).max(500) }), q.body).text)));
+r.post('/orders/extract', async (q, s) => s.json(pub.publicDraft(await extractOrder(body(z.object({ text: z.string().trim().min(3).max(500) }), q.body, 'Paste the order message first, up to 500 characters.').text))));
 
 /** The ONLY order write path: deterministic, validated, every SKU must exist. */
 r.post('/orders', async (q, s) => {
-  const o = body(OrderInput, q.body);
+  const o = body(OrderInput, q.body, 'Some order details are missing. Check the customer and products, then try again.');
   const products = await col.products.find({ _id: { $in: o.items.map(i => i.sku) } }).toArray();
   const missing = o.items.filter(i => !products.some(p => p._id === i.sku));
-  if (missing.length) throw Object.assign(new Error(`Unknown SKU(s): ${missing.map(m => m.sku).join(', ')}`), { status: 400 });
+  if (missing.length) throw fail('unknown_product', "One of those products isn't in your stock list any more. Read the message again.", 400, `unknown sku ${missing.map(m => m.sku).join(',')}`);
   let customerId = o.customerId;
-  if (customerId && !(await col.customers.findOne({ _id: customerId }))) throw Object.assign(new Error('Unknown customerId'), { status: 400 });
+  if (customerId && !(await col.customers.findOne({ _id: customerId }))) throw fail('unknown_customer', "That customer isn't in your records any more. Read the message again.", 400);
   if (!customerId) { customerId = 'C' + randomUUID().slice(0, 8); await col.customers.insertOne({ _id: customerId, name: o.customerName, channel: 'whatsapp' }); }
   const items = o.items.map(i => { const p = products.find(p => p._id === i.sku)!; return { sku: p._id, name: p.name, quantity: i.quantity, price: p.price }; });
   const order = { _id: 'O' + Date.now().toString(36).toUpperCase(), customerId, customerName: o.customerName, items, total: items.reduce((a, i) => a + i.price * i.quantity, 0), status: 'pending' as const, deliveryDate: o.deliveryDate ?? null, createdAt: new Date(), source: 'assistant-extraction' };
   await col.orders.insertOne(order);
   await ops.invalidateDay(); // reserved stock changed → recompute plan and brief
-  s.status(201).json(order);
+  s.status(201).json(pub.publicOrder(order));
 });
 
 /** Deliver: decrement stock, record Atlas sale, upsert into Tiger analytics (idempotent by orderId). */
 r.post('/orders/:id/deliver', async (q, s) => {
   const o = await col.orders.findOneAndUpdate({ _id: q.params.id, status: 'pending' }, { $set: { status: 'delivered' } }, { returnDocument: 'after' });
-  if (!o) throw Object.assign(new Error('Order not found or not pending'), { status: 404 });
+  if (!o) throw fail('order_not_pending', 'That order is already delivered or no longer exists.', 404);
   for (const i of o.items) {
     await col.products.updateOne({ _id: i.sku }, { $inc: { stock: -i.quantity } });
     await col.sales.updateOne({ sku: i.sku, date: today() }, { $inc: { qty: i.quantity }, $set: { source: 'order' } }, { upsert: true });
   }
   await ops.invalidateDay();
-  const tiger = await syncDeliveredOrder({ ...o, deliveredAt: new Date() });
-  s.json({ ...o, tigerSync: tiger });
+  await syncDeliveredOrder({ ...o, deliveredAt: new Date() }).catch((e: any) => log.warn({ err: e.message }, 'delivered-order analytics sync failed'));
+  s.json(pub.publicOrder(o));
 });
 
-r.get('/memory', async (_q, s) => s.json(await ops.getMemory()));
-r.post('/memory', async (q, s) => s.json(await ops.saveMemory(body(z.object({ text: z.string().trim().min(3).max(300) }), q.body).text)));
+r.get('/memory', async (_q, s) => s.json(pub.publicMemory(await ops.getMemory())));
+r.post('/memory', async (q, s) => {
+  const m = await ops.saveMemory(body(z.object({ text: z.string().trim().min(3).max(300) }), q.body, 'Type what to remember, at least 3 letters.').text);
+  s.json({ saved: pub.publicMemory({ preferences: [m.saved] }).preferences[0], note: m.note });
+});
 
+// Voice failures are quiet: a short envelope plus a `fallback` hint, and the browser's own speech takes over.
+const VOICE_OFF = { code: 'voice_unavailable', message: "Voice isn't available right now. You can type instead." };
+const voiceFail = (s: express.Response, status: number, fallback: string, extra: object = {}) => s.status(status).json({ error: VOICE_OFF, fallback, ...extra });
+const audio = (q: express.Request) => {
+  if (!Buffer.isBuffer(q.body) || !q.body.length) throw fail('no_audio', "We didn't get any sound. Try recording again.", 400);
+  return q.body;
+};
 r.post('/voice/stt', express.raw({ type: 'audio/*', limit: '10mb' }), async (q, s) => {
-  if (!elevenLive()) return s.status(501).json({ error: 'ELEVENLABS_API_KEY not set', fallback: 'browser-web-speech' });
-  if (!Buffer.isBuffer(q.body) || !q.body.length) throw Object.assign(new Error('Send audio bytes with an audio/* content-type'), { status: 400 });
-  try { s.json({ text: await elevenSTT(q.body, q.get('content-type') ?? 'audio/webm') }); }
-  catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs STT failed'); s.status(502).json({ error: e.message, fallback: 'browser-web-speech' }); }
+  if (!elevenLive()) return voiceFail(s, 501, 'browser-web-speech');
+  const bytes = audio(q);
+  try { s.json({ text: await elevenSTT(bytes, q.get('content-type') ?? 'audio/webm') }); }
+  catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs STT failed'); voiceFail(s, 502, 'browser-web-speech'); }
 });
 
 /** WhatsApp voice note → ElevenLabs Scribe (Hindi/Hinglish) → Gemma order extraction → draft (not auto-written). */
 r.post('/voice/order', express.raw({ type: 'audio/*', limit: '10mb' }), async (q, s) => {
-  if (!elevenLive()) return s.status(501).json({ error: 'ELEVENLABS_API_KEY not set', fallback: 'browser-web-speech' });
-  if (!Buffer.isBuffer(q.body) || !q.body.length) throw Object.assign(new Error('Send audio bytes with an audio/* content-type'), { status: 400 });
+  if (!elevenLive()) return voiceFail(s, 501, 'browser-web-speech');
+  const bytes = audio(q);
   let text: string;
-  try { text = await elevenSTT(q.body, q.get('content-type') ?? 'audio/webm'); }
-  catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs STT failed'); return s.status(502).json({ error: e.message, fallback: 'browser-web-speech' }); }
-  if (!text.trim()) return s.status(422).json({ error: 'Empty transcript', text });
+  try { text = await elevenSTT(bytes, q.get('content-type') ?? 'audio/webm'); }
+  catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs STT failed'); return voiceFail(s, 502, 'browser-web-speech'); }
+  if (!text.trim()) return s.status(422).json({ error: { code: 'no_speech', message: "We couldn't hear any words. Try again a little closer to the mic." }, text });
   try {
-    const extracted = await extractOrder(text);
-    s.json({ text, ...extracted, note: 'Draft only — confirm via POST /api/orders' });
+    s.json({ text, ...pub.publicDraft(await extractOrder(text)), note: 'Draft only. Check it, then confirm to save.' });
   } catch (e: any) {
-    s.status(e.status ?? 422).json({ text, error: e.message });
+    log.warn({ err: e.message }, 'voice order extraction failed');
+    const { status, body } = errorResponse(e);
+    s.status(status).json({ text, ...body });
   }
 });
 r.post('/voice/tts', async (q, s) => {
-  if (!elevenLive()) return s.status(501).json({ error: 'ELEVENLABS_API_KEY not set', fallback: 'browser-speech-synthesis' });
-  const { text } = body(z.object({ text: z.string().trim().min(1).max(2500) }), q.body);
+  if (!elevenLive()) return voiceFail(s, 501, 'browser-speech-synthesis');
+  const { text } = body(z.object({ text: z.string().trim().min(1).max(2500) }), q.body, 'Nothing to read aloud.');
   try { s.type('audio/mpeg').send(Buffer.from(await elevenTTS(text))); }
-  catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs TTS failed'); s.status(502).json({ error: e.message, fallback: 'browser-speech-synthesis' }); }
+  catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs TTS failed'); voiceFail(s, 502, 'browser-speech-synthesis'); }
 });
 
 r.post('/workflows/:name/run', async (q, s) => {
-  const name = body(z.enum(Object.keys(WORKFLOWS) as [WF, ...WF[]]), q.params.name);
+  const name = body(z.enum(Object.keys(WORKFLOWS) as [WF, ...WF[]]), q.params.name, "That job doesn't exist.");
   const t = await getTemporal();
-  if (!t) return s.json(await traced(`workflow.${name}`, {}, () => runDirect(name)));
+  if (!t) return s.json(pub.publicRun(name, await traced(`workflow.${name}`, {}, () => runDirect(name))));
   const h = await t.workflow.start(name, { taskQueue: 'nivara', workflowId: `${name}-${Date.now()}` });
   const out = await Promise.race([h.result(), new Promise(res => setTimeout(() => res(null), WORKFLOW_WAIT_MS))]);
   const steps = WORKFLOWS[name].flat();
   const result = out && steps.length === 1 ? { [steps[0]]: out } : out; // same { step: output } shape as runDirect
-  s.json({ mode: 'temporal', runner: 'temporal', workflowId: h.workflowId, runId: h.firstExecutionRunId, result, note: result ? undefined : `Still running after ${WORKFLOW_WAIT_MS / 1000}s — is \`npm run worker\` up? Check the Temporal UI.` });
+  if (!result) log.warn({ workflowId: h.workflowId, waitMs: WORKFLOW_WAIT_MS }, 'workflow still running; is the worker up?');
+  s.json(pub.publicRun(name, { result }));
 });
 r.get('/workflows', async (_q, s) => {
   const t = await getTemporal();
@@ -207,18 +209,21 @@ r.get('/workflows', async (_q, s) => {
     for await (const w of t.workflow.list({ query: 'TaskQueue = "nivara"', pageSize: 10 })) { runs.push({ id: w.workflowId, type: w.type, status: w.status.name, start: w.startTime }); if (runs.length >= 10) break; }
     schedule = await t.schedule.getHandle('daily-brief').describe().then(d => ({ id: 'daily-brief', next: d.info.nextActionTimes?.[0], recent: d.info.recentActions?.length }), () => null);
   }
-  s.json({ temporal: !!t, uiUrl: t ? process.env.TEMPORAL_UI_URL ?? 'http://localhost:8233' : null, runs, schedule, briefs: await col.briefs.find().sort({ createdAt: -1 }).limit(5).toArray() });
+  s.json(pub.publicWorkflows({ runs, schedule, briefs: await col.briefs.find().sort({ createdAt: -1 }).limit(5).toArray() }));
 });
 
-r.get('/traces', async (_q, s) => s.json({ traces: await col.traces.find({}, { projection: { spans: 0 } }).sort({ at: -1 }).limit(50).toArray() }));
-r.get('/traces/:id', async (q, s) => s.json(await col.traces.findOne({ _id: q.params.id }) ?? {}));
+r.get('/traces', async (_q, s) => s.json({ activity: (await col.traces.find({}, { projection: { output: 0 } }).sort({ at: -1 }).limit(50).toArray()).map(pub.publicActivity) }));
+r.all('/{*any}', () => { throw fail('not_found', "We couldn't find that.", 404); });
 
 app.use('/api', r);
 Sentry.setupExpressErrorHandler(app); // captures 5xx; no-op without SENTRY_DSN
-app.use((e: any, _q: express.Request, s: express.Response, _n: express.NextFunction) => {
-  const status = e.status ?? 500;
-  if (status >= 500) log.error({ err: e.message, stack: e.stack }, 'request failed'); else log.warn({ err: e.message }, 'bad request');
-  s.status(status).json({ error: e.message });
+app.use((e: any, q: express.Request, s: express.Response, _n: express.NextFunction) => {
+  const { status, body } = errorResponse(e);
+  // full detail stays server-side (log + Sentry); the response carries only the friendly envelope
+  if (status >= 500) log.error({ err: e?.message, stack: e?.stack, path: q.path }, 'request failed');
+  else log.warn({ code: body.error.code, detail: e instanceof AppError ? e.detail : e?.message, path: q.path }, 'request rejected');
+  if (s.headersSent) return;
+  s.status(status).json(body);
 });
 
 if (import.meta.main) {
