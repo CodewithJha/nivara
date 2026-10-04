@@ -459,5 +459,7 @@ async function route() {
   first = false;
 }
 addEventListener('hashchange', route);
+const markScrolled = () => document.documentElement.classList.toggle('scrolled', scrollY > 4);
+addEventListener('scroll', markScrolled, { passive: true }); markScrolled();
 addEventListener('online', () => { if (document.querySelector('[data-err]')) route(); }); // back online: reload the page that failed
 api('/health').then(h => (health = h)).catch(() => {}).finally(route);
