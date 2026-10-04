@@ -40,7 +40,7 @@ test('most quotes sit within ±5% of current cost; deals stay within 8–15%', (
 test('opportunities: a small believable number, with varied savings', () => {
   const opp = opportunities(), sig = opp.filter(o => o.significant);
   assert.ok(sig.length >= 5 && sig.length <= 20, `${sig.length} significant opportunities`);
-  assert.ok(opp.length < products.length / 2, `${opp.length} cheaper quotes in total`);
+  assert.ok(opp.length <= 30, `${opp.length} cheaper quotes in total`);
   assert.ok(new Set(sig.map(o => o.savingPerUnit)).size >= Math.min(5, sig.length), 'savings are not one repeated amount');
   assert.ok(sig.every(o => o.savingPercent >= 5 && o.savingPercent <= 16));
 });
