@@ -258,7 +258,7 @@ export async function briefFacts() {
     pendingOrders: pending.orders.length,
     overdueOrders: pending.orders.filter(o => o.overdue).map(o => ({ id: o._id, customer: o.customerName, due: o.deliveryDate })),
     dueToday: pending.orders.filter(o => o.dueToday).map(o => ({ id: o._id, customer: o.customerName })),
-    savings: opp.filter(o => o.significant).slice(0, 2).map(o => `${o.name} from ${displayName(o.best.supplier)} at ${inr(o.best.unitCost)}, ${inr(o.savingPerUnit)} less a unit`),
+    savings: opp.filter(o => o.significant).slice(0, 2).map(o => `buy ${o.name} from ${displayName(o.best.supplier)} at ${inr(o.best.unitCost)}, ${inr(o.savingPerUnit)} less a unit`),
     topSeller7d: sales.top[0] ?? null,
   };
 }
@@ -270,7 +270,7 @@ export function templateBrief(f: Awaited<ReturnType<typeof briefFacts>>) {
   if (f.restockNow.length) l.push(`• Restock now: ${f.restockNow.slice(0, 4).map(r => `${r.name}, order ${whole(r.reorderQty)}`).join('; ')}${f.restockNow.length > 4 ? ` and ${plural(f.restockNow.length - 4, 'more')}` : ''}.`);
   if (f.watch.length) l.push(`• Runs out this week: ${f.watch.slice(0, 4).map(w => w.name).join(', ')}${f.watch.length > 4 ? ` and ${plural(f.watch.length - 4, 'more')}` : ''}.`);
   l.push(`• ${plural(f.pendingOrders, 'pending order')} in total.`);
-  if (f.savings.length) l.push(`• Pay less: ${(f.savings as string[]).map(cleanCopy).join('; ')}.`);
+  for (const saving of (f.savings as string[]).slice(0, 2)) l.push(`• Pay less: ${cleanCopy(saving)}.`);
   if (f.topSeller7d) l.push(`• Best seller this week: ${f.topSeller7d.name}, ${Math.max(1, whole(f.topSeller7d.qty))} sold.`);
   return l.join('\n');
 }
@@ -301,7 +301,8 @@ export async function generateDailyBrief({ store = true, fresh = false } = {}) {
     // a summary cut off by the token cap doesn't end a sentence
     if (g && g.length <= 400 && /[.!?]["')]?$/.test(g) && looksClean(g)) summary = g; else log.warn({ len: g.length }, 'brief: Gemma summary rejected (empty, cut off, too long or leaked field names)');
   } catch (e: any) { log.warn({ err: e.message }, 'brief: Gemma unavailable, template only'); }
-  const doc = { date: facts.date, text: summary ? `${summary}\n\n${brief}` : brief, summary, by: summary ? 'template+gemma' as const : 'template' as const, facts, createdAt: new Date() };
+  // with a summary, it replaces the "Your brief for …" header line
+  const doc = { date: facts.date, text: summary ? `${summary}\n${brief.split('\n').slice(1).join('\n')}` : brief, summary, by: summary ? 'template+gemma' as const : 'template' as const, facts, createdAt: new Date() };
   if (store) await col.briefs.insertOne(doc);
   return doc;
 }

@@ -193,7 +193,7 @@ function catalogAnswer(out: any) {
   const hits = (out.hits ?? []).filter((h: any) => !f.maxPrice || h.price <= f.maxPrice);
   if (!hits.length) return `No products match "${f.q ?? out.query}"${limits}.`;
   return [`${hits.length === 1 ? '1 product matches' : `${Math.min(hits.length, 6)} products match`}${limits}.`,
-    ...hits.slice(0, 6).map((h: any) => `• ${h.name} · ${inr(h.price)}${h.sugarPer100g != null ? ` · ${whole(h.sugarPer100g)} g sugar per 100 g` : ''}${sold(h.demand7) ? ` · about ${sold(h.demand7)} sold a week` : ''}`)].join('\n');
+    ...hits.slice(0, 6).map((h: any) => `• ${h.name} · ${inr(h.price)}${h.sugarPer100g != null ? ` · ${whole(h.sugarPer100g)} g sugar per 100 g` : ''}${whole(h.demand7) ? ` · about ${whole(h.demand7)} sold a week` : ''}`)].join('\n');
 }
 
 function supplierAnswer(out: any) {

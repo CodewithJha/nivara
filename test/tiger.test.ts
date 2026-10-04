@@ -29,7 +29,7 @@ test('catalog template lists hits without inventing SKUs beyond tool output', ()
   // hits over the price cap are never listed; tiny demand is not shown as "0.3 sold"
   const b = templateAnswer('search_catalog', { query: 'whey under 3000', mode: 'hybrid-fts+pgvector', filters: { q: 'whey', maxPrice: 3000 },
     hits: [{ sku: 'R1', name: 'Biozyme Whey', price: 4899, demand7: 0.3 }, { sku: 'R2', name: 'Whey', price: 2599, demand7: 0.3 }] });
-  assert.equal(b, '1 product matches under ₹3,000.\n• Whey · ₹2,599 · about 1 sold a week');
+  assert.equal(b, "1 product matches under ₹3,000.\n• Whey · ₹2,599");
 });
 
 test('shop_pulse template: plain overview by product name, no store names or proxy notes', () => {
