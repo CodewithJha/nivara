@@ -11,7 +11,15 @@ function pool(): pg.Pool | null {
   if (!tigerConfigured()) return null;
   if (g.__nivaraTiger !== undefined) return g.__nivaraTiger;
   try {
-    g.__nivaraTiger = new pg.Pool({ connectionString: process.env.TIGER_DATABASE_URL, max: 3, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 8_000 });
+    // Tiger Cloud TLS: pg v8 treats sslmode=require as verify-full; use libpq-compat + explicit ssl.
+    const u = new URL(process.env.TIGER_DATABASE_URL!);
+    u.searchParams.set('sslmode', 'require');
+    u.searchParams.set('uselibpqcompat', 'true');
+    g.__nivaraTiger = new pg.Pool({
+      connectionString: u.toString(),
+      max: 3, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 8_000,
+      ssl: { rejectUnauthorized: false },
+    });
   } catch {
     g.__nivaraTiger = null;
   }
@@ -70,9 +78,9 @@ async function migrate(client: pg.PoolClient) {
     EXCEPTION WHEN duplicate_table THEN NULL; END $$;
   `);
   // Refresh policies (ignore if already present)
-  for (const [view, start] of [['sales_demand_7d', '7 days'], ['sales_demand_28d', '28 days']] as const) {
-    try { await client.query(`SELECT add_continuous_aggregate_policy('${view}', start_offset => INTERVAL '${start}', end_offset => INTERVAL '1 hour', schedule_interval => INTERVAL '1 day');`); }
-    catch (e: any) { if (!/already exists/i.test(e.message)) log.warn({ err: e.message, view }, 'cagg policy'); }
+  for (const [view, start] of [['sales_demand_7d', '21 days'], ['sales_demand_28d', '84 days']] as const) {
+    try { await client.query(`SELECT add_continuous_aggregate_policy('${view}', start_offset => INTERVAL '${start}', end_offset => INTERVAL '1 day', schedule_interval => INTERVAL '1 day');`); }
+    catch (e: any) { if (!/already exists|too small/i.test(e.message)) log.warn({ err: e.message, view }, 'cagg policy'); }
   }
 }
 
@@ -86,15 +94,16 @@ export async function ensureTiger(): Promise<{ ok: boolean; detail: string }> {
   g.__nivaraTigerReady = (async () => {
     const p = pool();
     if (!p) return { ok: false, detail: 'TIGER_DATABASE_URL unset — Mongo sales only; catalog search is keyword-only' };
-    const c = await p.connect();
+    let c: pg.PoolClient | undefined;
     try {
+      c = await p.connect();
       await migrate(c);
       const v = await c.query(`SELECT extname FROM pg_extension WHERE extname IN ('timescaledb','vector') ORDER BY 1`);
       const exts = v.rows.map(r => r.extname).join('+');
       return { ok: true, detail: `Timescale/pgvector ready (${exts || 'extensions ok'})` };
     } catch (e: any) {
-      return { ok: false, detail: `Tiger migrate failed: ${e.message.slice(0, 160)}` };
-    } finally { c.release(); }
+      return { ok: false, detail: `Tiger unavailable: ${e.message.slice(0, 160)}` };
+    } finally { c?.release(); }
   })();
   return g.__nivaraTigerReady;
 }

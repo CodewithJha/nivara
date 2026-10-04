@@ -59,7 +59,8 @@ npm install
 cp .env.example .env              # all keys optional
 npm run db                        # local MongoDB in Docker (skip if MONGODB_URI points at Atlas)
 ollama pull gemma3:4b && ollama serve   # serve may already be running
-npm run seed                      # demo data (also auto-seeded on first start if DB is empty)
+npm run seed                      # real stand-in: Open Food Facts catalogue + UCI-mapped sales (+ Tiger sync)
+npm run seed:demo                 # old synthetic demo catalogue
 npm start                         # http://localhost:3000
 
 # optional, separate terminals:
@@ -112,10 +113,11 @@ its labelled fallbacks (keyword router + templated answers, in-process workflows
 | `MONGODB_URI` | data (default `mongodb://localhost:27017`) | health reports Mongo down; routes that read the DB fail |
 | `LLM_PROVIDER` | `ollama` (default) or `gemini` | — |
 | `OLLAMA_BASE_URL`, `GEMMA_MODEL` | Gemma via Ollama (default local `gemma3:4b`) | keyword router + templated answers; order extraction returns 503 |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Gemma via Google AI Studio (`gemma-4-26b-a4b-it` by default) | same keyword router + templates |
-| `SERPAPI_API_KEY` | live supplier prices (Temporal refresh, `SUPPLIER_REFRESH_MAX` products per run, default 3) | stored quotes, labelled |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Gemma via Google AI Studio (`gemma-4-26b-a4b-it`) + `gemini-embedding-001` for hybrid catalog search | keyword router / FTS-only search |
+| `TIGER_DATABASE_URL` | Timescale hypertables + pgvector hybrid `searchCatalog` | Mongo sales + keyword catalog search |
+| `SERPAPI_API_KEY` | live supplier prices (Temporal refresh, `SUPPLIER_REFRESH_MAX` products per run, default 5) | stored quotes, labelled |
 | `BACKBOARD_API_KEY` | memory saved/searched in Backboard | Mongo only, labelled |
-| `ELEVENLABS_API_KEY` | Scribe STT + TTS (live only once the key is verified) | browser Web Speech API |
+| `ELEVENLABS_API_KEY` | Scribe STT (voice notes → order draft) + TTS | browser Web Speech API |
 | `SENTRY_DSN` (`SENTRY_SEND_CONTENT=1` to include prompts/answers) | Sentry agent traces + errors | local traces only |
 | `MIN_SUPPLIER_SAVING_RUPEES` / `MIN_SUPPLIER_SAVING_PERCENT` | attention threshold (default ₹10 and 5%) | defaults |
 | `TEMPORAL_ADDRESS` (+`TEMPORAL_API_KEY` for Cloud) | Temporal | workflows run in-process, labelled `direct-fallback` |
@@ -172,9 +174,14 @@ Not verified (no keys): real SerpApi results, real Backboard API calls, real Ele
 Render deploy, Atlas (same driver; only the URI differs). Browser voice (Web Speech API) needs a real mic and
 wasn't exercised by automation.
 
+## Data
+
+See [DATA.md](DATA.md). `npm run seed` loads Open Food Facts products + UCI Online Retail demand shapes
+(real retail stand-in). Owner CSV/WhatsApp import: `npm run import:orders`.
+
 ## Limitations
 
-- Demo data is synthetic (seeded, `demo: true`); a real deployment needs his actual catalogue and history.
+- Seeded catalogue/sales are a real-data stand-in (OFF + UCI); import the owner's orders when available.
 - 4B model: decent JSON, occasionally weak routing (hence validation + fallbacks). Its free-text answers mixed up
   stock figures and leaked field names, so the standard questions are now answered by templates.
 - Supplier web prices are retail listings; pack sizes aren't normalised against wholesale unit cost.

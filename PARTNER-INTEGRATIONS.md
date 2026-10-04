@@ -17,7 +17,7 @@ Status legend: **verified live** = exercised end-to-end on the dev machine ·
 | **ElevenLabs** | Scribe speech-to-text + TTS for spoken answers | code complete, key-gated; "live" only after `GET /v1/user` accepts the key. **Real API not tested — needs `ELEVENLABS_API_KEY`.** Mock-fetch tests: 501 without key, Scribe call with correct file type, 502 on provider failure | browser Web Speech API / speechSynthesis, with a notice on runtime failure |
 | **Render** | `render.yaml` blueprint, single web service | prepared, **not deployed** (no credentials) | — |
 | **DigitalOcean** | Documented option for hosting Gemma (GPU droplet running Ollama) | docs only — **not claimed** | — |
-| **Tiger Data** | — | **skipped**: Mongo already holds the small time series; adding Timescale would be a second database for no product gain | — |
+| **Tiger Data** | `sales_daily` hypertable + 7d/28d continuous aggregates feeding forecasts; pgvector + FTS hybrid `searchCatalog` agent tool | **verified live** (Tiger Cloud Timescale + vector; seed sync + `/api/catalog/search`) | Mongo sales + in-process keyword catalog search |
 
 ## Details
 
@@ -103,7 +103,18 @@ version actually used is shown in the UI ("TabPFN v2").
 ### ElevenLabs
 - `POST /v1/speech-to-text` (`scribe_v1`) for mic input; the uploaded filename follows the recording's real MIME
   type (`audio.mp4` from Safari, `audio.webm` from Chrome). `POST /v1/text-to-speech/{voice}` for 🔊.
+- **Deep path**: `POST /api/voice/order` = Scribe STT (Hindi/Hinglish WhatsApp voice notes) → Gemma `extractOrder` → draft (not auto-written; confirm via `POST /api/orders`).
 - `/api/health` reports ElevenLabs `live` only when the key is present and `GET /v1/user` accepts it (cached
   10 min); only then does the UI say "Voice: ElevenLabs".
 - Provider errors return 502 with a `fallback` hint; the browser shows a small notice and uses Web Speech API /
   speechSynthesis. Voice never blocks the dashboard.
+
+### Tiger Data
+- `src/tiger.ts`. Requires `TIGER_DATABASE_URL`. Migrations create `sales_daily` hypertable, continuous aggregates
+  `sales_demand_7d` / `sales_demand_28d`, and `catalog_items` (`tsvector` + optional `vector(768)`).
+- Seed (`npm run seed`) syncs Mongo sales + OFF catalogue into Tiger. Forecast attaches Tiger 7d/28d realised demand;
+  TabPFN/moving-average still owns the forward `forecast7` used for stock plans.
+- Agent tool `search_catalog` / `GET /api/catalog/search?q=…`: hybrid FTS + `gemini-embedding-001` when
+  `GEMINI_API_KEY` is set; FTS-only or Mongo keyword fallback otherwise. Parses constraints like
+  `protein under 1500 no sugar`.
+- `/api/health` → `integrations.tiger` live/fallback + row counts.
