@@ -35,7 +35,7 @@
   --r-rubber: 3px; --hair: 1px; --rule: 2px; --focus: 3px;
   --plate-h: 9rem; --plate-heavy: 2.5rem; --plate-mid: 1.75rem; --plate-light: 1.25rem; --plate-min: .25rem; --plate-gap: var(--s-1);
   --edge-h: 1.75rem; --edge-heavy: .5rem; --edge-mid: .375rem; --edge-light: .25rem; --edge-slot: .75rem;
-  --shaft: .625rem; --collar-w: 1.25rem; --collar-h: 3.5rem; --clip-w: .75rem; --clip-h: 2.5rem; --sleeve-w: 2.5rem; --sleeve-h: 2rem;
+  --shaft: .625rem; --collar-w: 1.25rem; --collar-h: 3.5rem; --clip-w: .75rem; --clip-h: 2.5rem; --sleeve-w: 2.5rem; --sleeve-h: 2rem; --cap-w: .5rem; --cap-h: 2.75rem;
   --cover-h: .625rem; --cover-w: 10rem; --tick-w: 3px;
   --tab-h: 4rem; --menu-w: 12rem; --scroll-h: 20rem; --disabled: .5;
 
@@ -113,7 +113,10 @@ main > .bleed { max-width: none; padding-inline: max(var(--gut), calc((100% - va
 .collar { flex: none; width: var(--collar-w); height: var(--collar-h); background: var(--steel); }
 .clip { flex: none; width: var(--clip-w); height: var(--clip-h); background: var(--steel); margin-left: var(--plate-gap); }
 .sleeve { flex: none; width: var(--sleeve-w); height: var(--sleeve-h); background: var(--steel); }
-.plates { display: flex; gap: var(--plate-gap); padding-left: var(--plate-gap); min-width: 0; }
+/* plates shrink (never overflow) so the clip, sleeve and end cap always sit after the last plate */
+.plates { display: flex; flex: 0 1 auto; gap: var(--plate-gap); padding-left: var(--plate-gap); min-width: 0; }
+.cap { flex: none; width: var(--cap-w); height: var(--cap-h); background: var(--steel); border-radius: var(--r-rubber); }
+.barbell .extra { flex: none; margin-left: var(--s-2); color: var(--fog); font: 700 var(--t-0)/1 var(--display); font-stretch: var(--w-name); }
 .plate { all: unset; box-sizing: border-box; width: var(--w); flex: 0 1 auto; min-width: var(--plate-min); height: var(--plate-h); border-radius: var(--r-rubber); background: var(--c); animation: load var(--load) var(--ease) backwards; animation-delay: calc(var(--i) * var(--stagger)); transition: transform var(--fast) var(--ease); }
 button.plate { cursor: pointer; }
 button.plate:hover { transform: translateY(var(--lift)); }
@@ -262,7 +265,7 @@ textarea { font-size: var(--t-1); line-height: var(--lh-field); resize: vertical
 /* ---------- phone ---------- */
 @media (max-width: 899px) {
   :root { --gut: var(--s-4); --plate-h: 5rem; --plate-heavy: 1rem; --plate-mid: .75rem; --plate-light: .5rem; --plate-gap: var(--rule);
-    --collar-w: 1rem; --collar-h: 2.25rem; --clip-w: .5rem; --clip-h: 1.75rem; --sleeve-w: 1.25rem; --sleeve-h: 1.25rem; --shaft: .5rem; }
+    --collar-w: 1rem; --collar-h: 2.25rem; --clip-w: .5rem; --clip-h: 1.75rem; --sleeve-w: 1.25rem; --sleeve-h: 1.25rem; --cap-w: .375rem; --cap-h: 1.75rem; --shaft: .5rem; }
   .top { min-height: var(--s-8); }
   .nav { position: fixed; inset: auto 0 0 0; z-index: 2; background: var(--rubber); height: var(--tab-h); gap: 0; padding-bottom: env(safe-area-inset-bottom); border-top: var(--hair) solid var(--iron); }
   .nav :focus-visible { outline-color: var(--chalk); outline-offset: calc(var(--focus) * -1); }

@@ -106,15 +106,20 @@ const views = {
         acts: '<a class="btn primary" href="#suppliers">Compare suppliers</a>' })),
     ];
     const top = jobs[0], tapPlates = matchMedia('(min-width: 900px)').matches; // phone plates are too thin to tap; the rows carry the jump
+    const plates = loadPlates(jobs, matchMedia('(min-width: 600px)').matches ? MAX_PLATES.wide : MAX_PLATES.narrow), more = jobs.length - plates.length;
     const count = Object.entries(Object.groupBy(jobs, j => j.level));
     return `<section class="load bleed" aria-label="Today's load">
       <div class="words"><p class="date">${esc(new Date(d.date + 'T00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
       <p class="tally">${count.length ? count.map(([lvl, js]) => `<span>${js.length} <span class="k">${WEIGHT[lvl]}</span></span>`).join('') : 'Empty bar. Nothing to lift today.'}</p></div>
       <div class="barbell"><span class="shaft" aria-hidden="true"></span><span class="collar" aria-hidden="true"></span>
-        <div class="plates">${jobs.map((j, i) => tapPlates
-          ? `<button class="plate ${j.level}" style="--i:${i}" aria-label="${esc(j.title)}, ${WEIGHT[j.level]}" title="${esc(j.title)}" onclick="go('${esc(j.to)}')"></button>`
-          : `<span class="plate ${j.level}" style="--i:${i}" aria-hidden="true"></span>`).join('')}</div>
-        <span class="clip" aria-hidden="true"></span><span class="sleeve" aria-hidden="true"></span></div>
+        <div class="plates">${plates.map(({ level, job, count }, i) => {
+          const label = `${job.title}${count > 1 ? ` and ${plural(count - 1, 'more job')}` : ''}`;
+          return tapPlates
+            ? `<button class="plate ${level}" style="--i:${i}" aria-label="${esc(label)}, ${WEIGHT[level]}" title="${esc(label)}" onclick="go('${esc(job.to)}')"></button>`
+            : `<span class="plate ${level}" style="--i:${i}" aria-hidden="true"></span>`;
+        }).join('')}</div>
+        <span class="clip" aria-hidden="true"></span><span class="sleeve" aria-hidden="true"></span><span class="cap" aria-hidden="true"></span>
+        ${more > 0 ? `<span class="extra" title="${plural(jobs.length, 'job')} on ${plates.length} plates">+${more}</span>` : ''}</div>
       ${d.demo ? '<p class="demo">Sample shop data (seeded, marked demo). Your real products and orders in MongoDB replace it.</p>' : ''}
     </section>
     ${top ? `<section class="first bleed ${top.level}" aria-labelledby="job">
