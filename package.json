@@ -23,7 +23,8 @@
     "temporal:resume-demo": "bash scripts/demo-temporal-resume.sh",
     "db": "docker run -d --name nivara-mongo -p 27017:27017 mongo:8",
     "test": "node --test test/*.test.ts",
-    "forecast:setup": "uv venv -p 3.11 forecast/.venv && VIRTUAL_ENV=forecast/.venv uv pip install -r forecast/requirements.txt"
+    "forecast:setup": "uv venv -p 3.11 forecast/.venv && VIRTUAL_ENV=forecast/.venv uv pip install -r forecast/requirements.txt",
+    "forecast:publish": "node --env-file-if-exists=.env scripts/forecast-publish.ts"
   },
   "dependencies": {
     "@mastra/core": "^1.74.0",
