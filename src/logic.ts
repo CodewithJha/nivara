@@ -130,3 +130,51 @@ export const shortDate = (iso: string) => new Date(iso + 'T00:00:00Z').toLocaleD
 export const methodLabel = (m: string) => m === 'tabpfn' ? 'TabPFN forecast' : 'moving-average forecast (TabPFN unavailable)';
 /** Rejects model text that leaks field names / ids: camelCase, snake_case, "Demand7"/"P01", "sku", JSON brackets. */
 export const looksClean = (s: string) => !/\b[a-z]+[A-Z]\w*\b|\b\w+_\w+\b|\b[A-Za-z]+\d+\b|\bsku\b|[{}[\]]/.test(s);
+
+// ---------- supplier savings ----------
+
+// Seeded alternative quotes run 82–110% of cost; costs span ₹52 (bars) to ₹2,150 (gainer).
+// ₹10 alone would flag a 0.8% saving on whey; 5% alone would flag ₹5 on a ₹56 bar. Require both.
+export const MIN_SUPPLIER_SAVING_RUPEES = Number(process.env.MIN_SUPPLIER_SAVING_RUPEES ?? 10);
+export const MIN_SUPPLIER_SAVING_PERCENT = Number(process.env.MIN_SUPPLIER_SAVING_PERCENT ?? 5);
+
+/**
+ * Cheapest valid, unblocked quote below current cost. significant = saving ≥ ₹MIN per unit AND ≥ MIN% of current cost.
+ * Blocked suppliers and zero/negative/non-numeric prices are ignored. null = no cheaper valid quote.
+ */
+export function bestQuote<Q extends { unitCost: number; blocked: boolean }>(currentCost: number, quotes: Q[]) {
+  if (!(Number.isFinite(currentCost) && currentCost > 0)) return null;
+  const best = quotes.filter(q => !q.blocked && Number.isFinite(q.unitCost) && q.unitCost > 0 && q.unitCost < currentCost).sort((a, b) => a.unitCost - b.unitCost)[0];
+  if (!best) return null;
+  const savingPerUnit = currentCost - best.unitCost, pct = (savingPerUnit / currentCost) * 100;
+  return { best, savingPerUnit, savingPercent: Math.round(pct * 10) / 10, significant: savingPerUnit >= MIN_SUPPLIER_SAVING_RUPEES && pct >= MIN_SUPPLIER_SAVING_PERCENT };
+}
+
+/** "I don't buy from Supplier C" → target words + the real supplier they match (if any). */
+export function blockTarget<S extends { _id: string; name: string }>(text: string, suppliers: S[]) {
+  const m = text.match(/(?:don'?t|do not|never|stop)\s+(?:buy|order|purchase)\w*\s+from\s+(.+?)(?:[.!,]|$)|avoid\s+(.+?)(?:[.!,]|$)|block\s+(.+?)(?:[.!,]|$)/i);
+  const target = m?.slice(1).find(Boolean)?.trim();
+  if (!target) return null;
+  const t = target.toLowerCase(), bare = t.replace(/^supplier\s+/, '');
+  const word = new RegExp(`\\b${bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+  return { target, supplier: suppliers.find(s => s.name.toLowerCase().includes(t)) ?? suppliers.find(s => s._id.toLowerCase() === bare || word.test(s.name.toLowerCase())) ?? null };
+}
+
+/** Turn validated extraction into a draft the user confirms. Flags every unresolved piece. */
+export function buildDraft<Pr extends P & { price: number; stock: number }, C extends { _id: string; name: string }>(
+  ex: Extraction, products: Pr[], customers: C[], today: string,
+) {
+  const problems: string[] = [];
+  const cust = matchCustomer(ex.customer, customers);
+  if (!cust) problems.push(`"${ex.customer}" is not an existing customer — will be created on confirm.`);
+  const items = ex.items.map(i => {
+    const p = matchProduct(i.product, products);
+    if (!p) problems.push(`No product matches "${i.product}".`);
+    else if (p.stock < i.quantity) problems.push(`Only ${p.stock} × ${p.name} in stock (asked ${i.quantity}).`);
+    return { requested: i.product, quantity: i.quantity, product: p && { sku: p._id, name: p.name, price: p.price, stock: p.stock } };
+  });
+  const deliveryDate = resolveDate(ex.delivery_text, today);
+  if (ex.delivery_text && !deliveryDate) problems.push(`Could not resolve delivery date "${ex.delivery_text}".`);
+  const total = items.reduce((s, i) => s + (i.product ? i.product.price * i.quantity : 0), 0);
+  return { customer: { name: cust?.name ?? ex.customer, id: cust?._id ?? null, isNew: !cust }, items, deliveryText: ex.delivery_text ?? null, deliveryDate, total, problems };
+}
