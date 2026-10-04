@@ -7,7 +7,7 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { col, today } from './db.ts';
 import { Extraction, buildDraft, inr, looksClean, matchProduct, methodLabel, shortDate, units } from './logic.ts';
-import { MODEL, OLLAMA, annotate, gemma, gemmaCapabilities, log, parseJson, span, traced } from './integrations.ts';
+import { MODEL, OLLAMA, annotate, gemma, gemmaCapabilities, llmDownNote, llmModel, llmProvider, log, parseJson, span, traced } from './integrations.ts';
 import * as ops from './ops.ts';
 
 const none = z.object({});
@@ -47,7 +47,8 @@ let caps: { at: number; v: string[] | null } = { at: 0, v: null };
 export async function llmStatus() {
   if (Date.now() - caps.at > 30_000) caps = { at: Date.now(), v: await gemmaCapabilities() };
   const forced = process.env.AGENT_MODE;
-  return { reachable: !!caps.v, capabilities: caps.v, nativeTools: forced === 'mastra' || (forced !== 'router' && !!caps.v?.includes('tools')) };
+  const nativeTools = llmProvider() === 'ollama' && (forced === 'mastra' || (forced !== 'router' && !!caps.v?.includes('tools')));
+  return { reachable: !!caps.v, capabilities: caps.v, nativeTools };
 }
 
 // ---------- routing ----------
@@ -190,7 +191,9 @@ export async function ask(message: string, history: Msg[] = []) {
         if (tr && r.text) { route = 'mastra-tools'; pick = { tool: (tr.toolName ?? tr.payload?.toolName) as ToolName, args: tr.args ?? tr.payload?.args }; data = tr.result ?? tr.payload?.result; answer = r.text; }
         else notes.push('Mastra agent returned no tool call; fell back to JSON router.');
       } catch (e: any) { notes.push(`Mastra tool calling failed (${e.message.slice(0, 120)}); fell back to JSON router.`); }
-    } else if (status.reachable) notes.push(`${MODEL} does not advertise native tool calling in Ollama; Gemma selects tools via validated JSON instead.`);
+    } else if (status.reachable) notes.push(llmProvider() === 'gemini'
+      ? `${llmModel()} via Gemini API; Gemma selects tools via validated JSON instead.`
+      : `${llmModel()} does not advertise native tool calling in Ollama; Gemma selects tools via validated JSON instead.`);
 
     if (!pick && status.reachable) {
       try {
@@ -203,7 +206,7 @@ export async function ask(message: string, history: Msg[] = []) {
         route = 'gemma-json-router';
       } catch (e: any) { pick = undefined; notes.push(`Gemma routing output rejected (${e.message.slice(0, 100)}); used keyword router.`); }
     }
-    if (!pick) { pick = keywordRoute(message); if (!status.reachable) notes.push(`Gemma (${MODEL}) unreachable at ${OLLAMA}; keyword router + templated answer.`); }
+    if (!pick) { pick = keywordRoute(message); if (!status.reachable) notes.push(llmDownNote()); }
     if (pick.tool === 'search_supplier_prices') {
       const products = await col.products.find().toArray(), arg = String(pick.args?.product ?? message);
       pick.args = { product: matchProduct(arg, products) ? arg : await focusProduct(arg, history, true) ?? arg };
@@ -223,7 +226,7 @@ export async function ask(message: string, history: Msg[] = []) {
     }
     annotate({ 'nivara.route': route, 'gen_ai.tool.name': pick.tool, 'nivara.answer_mode': answerMode, 'nivara.message_chars': message.length });
     log.info({ route, tool: pick.tool, answerMode }, 'assistant answered');
-    return { answer, answerMode, route, tool: pick.tool, args: pick.args, focus, data, model: status.reachable ? MODEL : null, notes };
+    return { answer, answerMode, route, tool: pick.tool, args: pick.args, focus, data, model: status.reachable ? llmModel() : null, notes };
   });
 }
 
@@ -244,7 +247,7 @@ export async function extractOrder(text: string) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       const raw = await gemma(attempt === 1 ? msgs : [...msgs, { role: 'user', content: `Your previous JSON was invalid (${lastErr}). Return valid JSON only.` }], { json: true, timeoutMs: 60_000 });
       const parsed = (() => { try { return Extraction.safeParse(parseJson(raw)); } catch (e: any) { return { success: false as const, error: { message: e.message } }; } })();
-      if (parsed.success) return { extraction: parsed.data, draft: buildDraft(parsed.data, products, customers, today()), attempts: attempt, model: MODEL };
+      if (parsed.success) return { extraction: parsed.data, draft: buildDraft(parsed.data, products, customers, today()), attempts: attempt, model: llmModel() };
       lastErr = parsed.error.message.slice(0, 200);
     }
     throw Object.assign(new Error(`Gemma did not return a valid order after 2 attempts: ${lastErr}`), { status: 422 });

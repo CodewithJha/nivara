@@ -2,6 +2,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as Sentry from '@sentry/node';
 import pino from 'pino';
@@ -13,6 +14,15 @@ const env = process.env;
 
 export const OLLAMA = (env.OLLAMA_BASE_URL ?? 'http://localhost:11434').replace(/\/+$/, '').replace(/\/v1$/, '');
 export const MODEL = env.GEMMA_MODEL ?? 'gemma3:4b';
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta';
+
+/** `ollama` (default) or `gemini`. Anything else stays on Ollama. Read at call time so env wins over import order. */
+export const llmProvider = (): 'ollama' | 'gemini' => env.LLM_PROVIDER === 'gemini' ? 'gemini' : 'ollama';
+export const llmModel = () => llmProvider() === 'gemini' ? (env.GEMINI_MODEL || 'gemma-4-31b-it') : (env.GEMMA_MODEL || 'gemma3:4b');
+/** Assistant note when the model can't be used. Same fallback the keyword router already shows. */
+export const llmDownNote = () => llmProvider() === 'gemini'
+  ? `Gemma (${llmModel()}) unavailable (Gemini API); keyword router + templated answer.`
+  : `Gemma (${llmModel()}) unreachable at ${OLLAMA}; keyword router + templated answer.`;
 
 // ---------- tracing: Sentry gen_ai spans + local span store (works without a DSN) ----------
 // Sentry.init lives in instrument.ts (preloaded with --import so express/http get auto-instrumented).
@@ -42,7 +52,7 @@ export async function traced<T extends object>(kind: string, input: any, fn: () 
   const t0 = Date.now();
   let out: any, error: string | undefined;
   try {
-    out = await run.run(ctx, () => span('gen_ai.invoke_agent', `invoke_agent ${kind}`, { 'gen_ai.operation.name': 'invoke_agent', 'gen_ai.agent.name': `nivara.${kind}`, 'gen_ai.request.model': MODEL }, fn));
+    out = await run.run(ctx, () => span('gen_ai.invoke_agent', `invoke_agent ${kind}`, { 'gen_ai.operation.name': 'invoke_agent', 'gen_ai.agent.name': `nivara.${kind}`, 'gen_ai.request.model': llmModel() }, fn));
     return { ...out, traceId: ctx.id };
   } catch (e: any) { error = e.message; Sentry.captureException(e, { tags: { 'nivara.kind': kind } }); throw e; }
   finally {
@@ -57,34 +67,73 @@ export function annotate(attrs: Record<string, string | number | boolean>) {
   Sentry.getActiveSpan()?.setAttributes(attrs);
 }
 
-// ---------- Gemma via Ollama's OpenAI-compatible API ----------
+// ---------- Gemma: Ollama (default) or Gemini API (Google AI Studio). Same return: the assistant text. ----------
 
-export async function gemma(messages: { role: string; content: string }[], opts: { json?: boolean; timeoutMs?: number } = {}): Promise<string> {
-  return span('gen_ai.chat', `chat ${MODEL}`, { 'gen_ai.operation.name': 'chat', 'gen_ai.system': 'ollama', 'gen_ai.request.model': MODEL, 'gen_ai.request.messages': clip(messages) }, async set => {
-    const unavailable = (why: string) => Object.assign(new Error(`Gemma (${MODEL}) unavailable at ${OLLAMA}: ${why}`), { status: 503 });
-    const r = await fetch(`${OLLAMA}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', ...(env.OLLAMA_API_KEY && { authorization: `Bearer ${env.OLLAMA_API_KEY}` }) },
-      body: JSON.stringify({ model: MODEL, messages, temperature: 0.2, ...(opts.json && { response_format: { type: 'json_object' } }) }),
-      signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
-    }).catch(e => { throw unavailable(e.message); });
-    if (!r.ok) throw unavailable(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
-    const j: any = await r.json();
-    const text = j.choices?.[0]?.message?.content ?? '';
-    set('gen_ai.response.text', text);
-    set('gen_ai.usage.input_tokens', j.usage?.prompt_tokens);
-    set('gen_ai.usage.output_tokens', j.usage?.completion_tokens);
-    return text;
-  });
+type ChatMsg = { role: string; content: string };
+type ChatOpts = { json?: boolean; timeoutMs?: number };
+
+async function ollamaChat(messages: ChatMsg[], opts: ChatOpts, model: string, set: (k: string, v: any) => void): Promise<string> {
+  const unavailable = (why: string) => Object.assign(new Error(`Gemma (${model}) unavailable at ${OLLAMA}: ${why}`), { status: 503 });
+  const r = await fetch(`${OLLAMA}/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(env.OLLAMA_API_KEY && { authorization: `Bearer ${env.OLLAMA_API_KEY}` }) },
+    body: JSON.stringify({ model, messages, temperature: 0.2, ...(opts.json && { response_format: { type: 'json_object' } }) }),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
+  }).catch(e => { throw unavailable(e.message); });
+  if (!r.ok) throw unavailable(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
+  const j: any = await r.json();
+  const text = j.choices?.[0]?.message?.content ?? '';
+  set('gen_ai.response.text', text);
+  set('gen_ai.usage.input_tokens', j.usage?.prompt_tokens);
+  set('gen_ai.usage.output_tokens', j.usage?.completion_tokens);
+  return text;
+}
+
+async function geminiChat(messages: ChatMsg[], opts: ChatOpts, model: string, set: (k: string, v: any) => void): Promise<string> {
+  const unavailable = (why: string) => Object.assign(new Error(`Gemma (${model}) unavailable (Gemini API): ${why}`), { status: 503 });
+  if (!env.GEMINI_API_KEY) throw unavailable('GEMINI_API_KEY missing');
+  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+  const contents = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+  const r = await fetch(`${GEMINI_API}/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+    body: JSON.stringify({
+      ...(system && { systemInstruction: { parts: [{ text: system }] } }),
+      contents,
+      generationConfig: { temperature: 0.2, ...(opts.json && { responseMimeType: 'application/json' }) },
+    }),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
+  }).catch(e => { throw unavailable(e.message); });
+  if (!r.ok) throw unavailable(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
+  const j: any = await r.json();
+  const text = (j.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? '').join('');
+  set('gen_ai.response.text', text);
+  set('gen_ai.usage.input_tokens', j.usageMetadata?.promptTokenCount);
+  set('gen_ai.usage.output_tokens', j.usageMetadata?.candidatesTokenCount);
+  return text;
+}
+
+export async function gemma(messages: ChatMsg[], opts: ChatOpts = {}): Promise<string> {
+  const provider = llmProvider();
+  const model = llmModel();
+  return span('gen_ai.chat', `chat ${model}`, { 'gen_ai.operation.name': 'chat', 'gen_ai.system': provider, 'gen_ai.request.model': model, 'gen_ai.request.messages': clip(messages) }, set =>
+    provider === 'gemini' ? geminiChat(messages, opts, model, set) : ollamaChat(messages, opts, model, set));
 }
 
 /** Parse model JSON leniently (strip ```fences```), then the caller validates with zod. */
 export const parseJson = (s: string) => JSON.parse(s.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, ''));
 
-/** Ollama model capabilities, e.g. ['completion','vision','tools']; null if Ollama unreachable. */
+/** Model capabilities, e.g. ['completion','tools']; null if the selected provider is unusable. Gemini has no tools probe: a live key means completion. */
 export async function gemmaCapabilities(): Promise<string[] | null> {
+  if (llmProvider() === 'gemini') {
+    if (!env.GEMINI_API_KEY) return null;
+    try {
+      const r = await fetch(`${GEMINI_API}/models/${encodeURIComponent(llmModel())}`, { headers: { 'x-goog-api-key': env.GEMINI_API_KEY }, signal: AbortSignal.timeout(3000) });
+      return r.ok ? ['completion'] : null;
+    } catch { return null; }
+  }
   try {
-    const r = await fetch(`${OLLAMA}/api/show`, { method: 'POST', body: JSON.stringify({ model: MODEL }), signal: AbortSignal.timeout(3000) });
+    const r = await fetch(`${OLLAMA}/api/show`, { method: 'POST', body: JSON.stringify({ model: llmModel() }), signal: AbortSignal.timeout(3000) });
     return r.ok ? ((await r.json()) as any).capabilities ?? ['completion'] : null;
   } catch { return null; }
 }
@@ -98,6 +147,7 @@ const PY_SCRIPT = fileURLToPath(new URL('../forecast/forecast.py', import.meta.u
 export function tabpfnForecast(series: Record<string, number[]>, timeoutMs = Number(env.TABPFN_TIMEOUT_MS ?? 180_000)): Promise<{ model: string; pred: Record<string, number> }> {
   return span('forecast.tabpfn', 'tabpfn regressor', { skus: Object.keys(series).length }, () => new Promise((resolve, reject) => {
     if (env.FORECAST_MODE === 'fallback') return reject(new Error('FORECAST_MODE=fallback'));
+    if (!existsSync(PY)) return reject(new Error(`TabPFN python not found at ${PY}`));
     const p = spawn(PY, [PY_SCRIPT], { timeout: timeoutMs });
     let out = '', err = '';
     p.stdout.on('data', d => (out += d));
