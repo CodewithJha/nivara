@@ -59,7 +59,7 @@ npm install
 cp .env.example .env              # all keys optional
 npm run db                        # local MongoDB in Docker (skip if MONGODB_URI points at Atlas)
 ollama pull gemma3:4b && ollama serve   # serve may already be running
-npm run seed                      # real stand-in: Open Food Facts catalogue + UCI-mapped sales (+ Tiger sync)
+npm run seed                      # OFF India + Open Prices + Trends proxy demand → Atlas + Tiger
 npm run seed:demo                 # old synthetic demo catalogue
 npm start                         # http://localhost:3000
 
@@ -176,12 +176,12 @@ wasn't exercised by automation.
 
 ## Data
 
-See [DATA.md](DATA.md). `npm run seed` loads Open Food Facts products + UCI Online Retail demand shapes
-(real retail stand-in). Owner CSV/WhatsApp import: `npm run import:orders`.
+See [DATA.md](DATA.md). `npm run seed` loads Open Food Facts India catalogue, Open Prices (INR), and
+Google Trends→proxy weekly demand into Atlas (ops) + Tiger (analytics). Owner CSV/WhatsApp: `npm run import:orders`.
 
 ## Limitations
 
-- Seeded catalogue/sales are a real-data stand-in (OFF + UCI); import the owner's orders when available.
+- Seeded demand is a search-interest proxy (not POS sales); import the owner's orders when available.
 - 4B model: decent JSON, occasionally weak routing (hence validation + fallbacks). Its free-text answers mixed up
   stock figures and leaked field names, so the standard questions are now answered by templates.
 - Supplier web prices are retail listings; pack sizes aren't normalised against wholesale unit cost.

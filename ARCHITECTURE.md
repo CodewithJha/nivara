@@ -46,14 +46,38 @@ forecast/forecast.py      TabPFN regressor (py3.11 venv), JSON stdin → JSON st
 | Workflows      | Temporal (worker + schedule) | activities run in-process (`direct`)   |
 | Tracing        | Sentry gen_ai spans + local  | local trace store only                 |
 
+## Why two databases (Atlas + Tiger)
+
+Atlas and Tiger are **complementary**, not overlapping copies of the same rows.
+
+| Store | Owns | Why |
+|---|---|---|
+| **MongoDB Atlas** | Orders, customers, chats/voice extractions, agent memory, product ops fields (stock, supplier) | Document model + change streams; source of truth for **writes** |
+| **Tiger Data** | `sales_daily` hypertable, 7d/28d continuous aggregates, pgvector + FTS catalog search | Time-series + vector search; source of truth for **analytics / demand / catalog retrieval** |
+
+```mermaid
+flowchart LR
+  UI[Browser] --> API[Express API]
+  API --> Atlas[(MongoDB Atlas<br/>ops writes)]
+  API --> Tiger[(Tiger Data<br/>Timescale + pgvector)]
+  Atlas -->|change stream / backfill<br/>delivered orders| Tiger
+  Seed[npm run seed] --> Atlas
+  Seed --> Tiger
+  Agent[Assistant tools] -->|atlas_ops| Atlas
+  Agent -->|tiger_analytics / searchCatalog| Tiger
+  Agent -->|Promise.all shop_pulse| Agent
+```
+
+Sync: when an order becomes `delivered`, Atlas change stream (or periodic backfill) upserts lines into Tiger `order_sales` keyed by `(orderId, sku)` and bumps `sales_daily`. Proxy demand series also live in `sales_daily` with `source:"proxy"`.
+
 ## Data (Mongo collections)
 
-`products` (sku, name, aliases, price, cost, stock, supplierId, leadTimeDays),
+`products` (sku, name, aliases, price, cost, stock, supplierId, leadTimeDays, productType, priceSource),
 `customers`, `orders` (status pending/delivered, items, deliveryDate),
-`sales` (daily history per product), `suppliers` (name, quotes per sku),
+`sales` (daily history; `source: proxy|order`), `suppliers` (name, quotes per sku),
 `preferences` (memory), `briefs` (workflow output), `traces` (local spans),
 `supplierPrices` (latest SerpApi result per SKU, written only by the Temporal refresh).
-All seed docs carry `demo: true`.
+Real seed docs are not `demo: true`; `npm run seed:demo` still marks demo.
 
 ## Checklist
 

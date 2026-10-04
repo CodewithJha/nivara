@@ -46,6 +46,8 @@
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--chalk); color: var(--rubber); font: 400 var(--t-0)/var(--lh-body) var(--text); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; overflow-x: clip; }
+.data-credit { margin: var(--s-8) var(--gut) var(--s-6); padding-top: var(--s-4); border-top: 1px solid color-mix(in oklab, var(--rubber) 12%, transparent); color: var(--fog); font-size: var(--t-sm); line-height: 1.45; max-width: 52rem; }
+.data-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 a { color: inherit; text-decoration-thickness: var(--rule); text-underline-offset: var(--underline); }
 a:hover { text-decoration-color: var(--steel); }
 :focus-visible { outline: var(--focus) solid var(--rubber); outline-offset: var(--rule); }

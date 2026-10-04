@@ -152,6 +152,7 @@ const views = {
     const COVER_DAYS = 21, frac = n => Math.min(n / COVER_DAYS, 1);
     return head('Forecast', 'What sells in the next 7 days, and how long your stock lasts against how long a new delivery takes.') +
     `<section><p>${methodNote(f.method)} <span class="quiet">${esc(f.model ?? '')} · learned from ${f.historyDays} days of sales · worked out ${esc(when(f.createdAt))}</span></p>
+      ${f.demandNote ? `<p class="warn">${esc(f.demandNote)}</p>` : ''}
       ${f.fallbackReason ? `<p class="warn">Why the fallback: ${esc(f.fallbackReason)}</p>` : ''}
       <div class="acts gap"><button class="btn" onclick="this.disabled=true;api('/forecast?force=1').then(route, e => this.insertAdjacentHTML('afterend', fail(e)))">Work it out again</button></div></section>
     <section class="sec">${table([
@@ -206,7 +207,7 @@ const views = {
   },
 };
 const WF = { dailyBriefWorkflow: 'Morning brief', lowStockWorkflow: 'Low-stock check', forecastWorkflow: 'Forecast', supplierRefreshWorkflow: 'Online prices' };
-const HEALTH = { mongodb: 'MongoDB', gemma: 'Gemma', mastra: 'Mastra tools', tabpfn: 'TabPFN forecast', serpapi: 'SerpApi prices', backboard: 'Backboard memory', elevenlabs: 'ElevenLabs voice', temporal: 'Temporal', sentry: 'Sentry' };
+const HEALTH = { mongodb: 'MongoDB Atlas', gemma: 'Gemma', mastra: 'Mastra tools', tabpfn: 'TabPFN forecast', tiger: 'Tiger Data', serpapi: 'SerpApi prices', backboard: 'Backboard memory', elevenlabs: 'ElevenLabs voice', temporal: 'Temporal', sentry: 'Sentry' };
 const TITLES = { dashboard: 'Today', assistant: 'Ask', orders: 'Orders', inventory: 'Stock', forecast: 'Forecast', suppliers: 'Suppliers', workflows: 'Workflows', activity: 'Activity', health: 'Health' };
 
 function go(id) {
