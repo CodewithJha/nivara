@@ -102,3 +102,108 @@ async function blockedSuppliers(recall = false) {
   } catch (e: any) { return { blocked, memorySource: `mongo only (Backboard unavailable: ${e.message.slice(0, 120)})`, recalled: [] as string[] }; }
 }
 const isBlocked = (name: string, blocked: string[]) => blocked.some(b => name.toLowerCase().includes(b) || b.includes(name.toLowerCase()));
+
+// ---------- suppliers ----------
+
+export const supplierThreshold = { rupees: MIN_SUPPLIER_SAVING_RUPEES, percent: MIN_SUPPLIER_SAVING_PERCENT };
+
+/** Cheaper stored quotes vs current cost, skipping blocked suppliers. Significant ones first; only those count for attention. */
+export async function supplierOpportunities(blockedList?: string[]) {
+  const [products, suppliers] = await Promise.all([col.products.find().toArray(), col.suppliers.find().toArray()]);
+  const blocked = blockedList ?? (await blockedSuppliers()).blocked;
+  const out = [];
+  for (const p of products) {
+    const quotes = suppliers.filter(s => s._id !== p.supplierId).flatMap(s => s.quotes.filter(q => q.sku === p._id).map(q => ({ supplier: s.name, supplierId: s._id, unitCost: q.unitCost, blocked: isBlocked(s.name, blocked) })));
+    const q = bestQuote(p.cost, quotes);
+    if (q) out.push({ sku: p._id, name: p.name, currentCost: p.cost, currentSupplier: suppliers.find(s => s._id === p.supplierId)?.name, ...q, skippedBlocked: quotes.filter(x => x.blocked).map(x => x.supplier) });
+  }
+  return out.sort((a, b) => Number(b.significant) - Number(a.significant) || b.savingPerUnit - a.savingPerUnit);
+}
+
+/** Live web search (SerpApi) + DB quotes for one product. Never fabricates: no key → says so. */
+export async function searchSupplierPrices(query: string) {
+  const products = await col.products.find().toArray();
+  const product = matchProduct(query, products);
+  const q = product?.name ?? query;
+  const mem = await blockedSuppliers(true);
+  const web = await serpShopping(q).catch((e: any) => ({ available: false, reason: `Live supplier search failed: ${e.message}`, offers: [], query: q }));
+  const offers = web.offers.filter(o => !isBlocked(o.source, mem.blocked));
+  const dbQuotes = product ? (await supplierOpportunities(mem.blocked)).find(o => o.sku === product._id) ?? null : null;
+  return { product: product && { sku: product._id, name: product.name, cost: product.cost, price: product.price, currentSupplier: (await col.suppliers.findOne({ _id: product.supplierId }))?.name }, query: q, web: { ...web, offers, hiddenBlocked: web.offers.length - offers.length }, cheapestWeb: offers.slice().sort((a, b) => a.price - b.price)[0] ?? null, dbOpportunity: dbQuotes, threshold: supplierThreshold, memory: { source: mem.memorySource, recalled: mem.recalled } };
+}
+
+/**
+ * Temporal activity: live prices for the at-risk products with the biggest reorder spend, cached in supplierPrices
+ * (the dashboard reads that cache; it never calls SerpApi). No key → stored quotes stay, nothing written.
+ * SUPPLIER_FAIL_FIRST_N simulates an outage to demo Temporal retries.
+ */
+export async function supplierPriceRefresh(attempt = 1) {
+  const failN = Number(process.env.SUPPLIER_FAIL_FIRST_N ?? 0);
+  if (attempt <= failN) throw new Error(`Simulated supplier API outage (attempt ${attempt}/${failN} configured to fail)`);
+  if (!serpLive()) return { attempt, source: 'stored', reason: 'SERPAPI_API_KEY not set — no live search run; dashboard keeps showing stored supplier quotes.', refreshed: [] };
+  const [inv, products, { blocked }] = await Promise.all([getInventory(), col.products.find().toArray(), blockedSuppliers()]);
+  const cost = Object.fromEntries(products.map(p => [p._id, p.cost]));
+  // ponytail: top-N at-risk SKUs per run to save SerpApi quota; rotate through all SKUs if the plan allows more searches
+  const targets = inv.lowStock.toSorted((a: any, b: any) => cost[b.sku] * b.reorderQty - cost[a.sku] * a.reorderQty).slice(0, Number(process.env.SUPPLIER_REFRESH_MAX ?? 3));
+  const refreshed = [];
+  for (const t of targets) {
+    try {
+      const web = await serpShopping(t.name);
+      const offers = web.offers.filter(o => !isBlocked(o.source, blocked)).sort((a, b) => a.price - b.price);
+      const cheapest = offers[0] ?? null;
+      await col.supplierPrices.replaceOne({ _id: t.sku }, { sku: t.sku, name: t.name, query: web.query, offers, cheapest, sourceDomain: cheapest?.sourceDomain ?? null, link: cheapest?.link ?? null, hiddenBlocked: web.offers.length - offers.length, rejected: web.rejected ?? 0, checkedAt: new Date() }, { upsert: true });
+      refreshed.push({ product: t.name, offers: offers.length, cheapest });
+    } catch (e: any) { refreshed.push({ product: t.name, error: e.message }); }
+  }
+  if (refreshed.length && refreshed.every(r => 'error' in r)) throw new Error(`SerpApi failed for all ${refreshed.length} products: ${(refreshed[0] as any).error}`);
+  return { attempt, source: 'serpapi', refreshed };
+}
+
+/** Latest cached live results (written by supplierPriceRefresh). */
+export const livePrices = () => col.supplierPrices.find().sort({ checkedAt: -1 }).toArray();
+
+// ---------- daily brief ----------
+
+export async function briefFacts() {
+  const [inv, pending, opp, sales] = await Promise.all([getInventory(), getPendingOrders(), supplierOpportunities(), salesSummary(7)]);
+  return {
+    date: today(),
+    forecastMethod: inv.method,
+    restockNow: inv.items.filter((i: any) => i.risk === 'high').map((i: any) => ({ name: i.name, available: i.available, demand7: i.demand7, daysOfCover: i.daysOfCover, leadTimeDays: i.leadTimeDays, reorderQty: i.reorderQty })),
+    watch: inv.items.filter((i: any) => i.risk === 'medium').map((i: any) => ({ name: i.name, daysOfCover: i.daysOfCover, reorderQty: i.reorderQty })),
+    pendingOrders: pending.orders.length,
+    overdueOrders: pending.orders.filter(o => o.overdue).map(o => ({ id: o._id, customer: o.customerName, due: o.deliveryDate })),
+    dueToday: pending.orders.filter(o => o.dueToday).map(o => ({ id: o._id, customer: o.customerName })),
+    savings: opp.filter(o => o.significant).slice(0, 3).map(o => `${o.name}: switch to ${o.best.supplier} at ${inr(o.best.unitCost)} instead of ${inr(o.currentCost)} (${o.currentSupplier}), saving ${inr(o.savingPerUnit)} per unit (${o.savingPercent}%)`),
+    topSeller7d: sales.top[0] ?? null,
+  };
+}
+
+export function templateBrief(f: Awaited<ReturnType<typeof briefFacts>>) {
+  const l = [`Business brief for ${shortDate(f.date)} (${methodLabel(f.forecastMethod)})`];
+  if (f.overdueOrders.length) l.push(`• Overdue: ${f.overdueOrders.map(o => `${o.customer}'s order (was due ${o.due ? shortDate(o.due) : 'unknown'})`).join('; ')} — deliver or update the customer today.`);
+  if (f.dueToday.length) l.push(`• Deliver today: ${f.dueToday.map(o => `${o.customer}'s order`).join('; ')}.`);
+  if (f.restockNow.length) l.push(`• Restock now: ${f.restockNow.map(r => `${r.name} (order ${r.reorderQty})`).join(', ')} — these run out before a new delivery can arrive.`);
+  if (f.watch.length) l.push(`• Watch: ${f.watch.map(w => w.name).join(', ')} — likely to run out within a week.`);
+  l.push(`• ${f.pendingOrders} pending order${f.pendingOrders === 1 ? '' : 's'} in total.`);
+  if (f.savings.length) l.push(`• Save money: ${f.savings.join('; ')}.`);
+  if (f.topSeller7d) l.push(`• Top seller this week: ${f.topSeller7d.name} (${f.topSeller7d.qty} sold).`);
+  return l.join('\n');
+}
+
+/** Deterministic brief; Gemma adds a 1–2 sentence summary on top, kept only if it doesn't leak field names. */
+export async function generateDailyBrief({ store = true } = {}) {
+  const facts = await briefFacts();
+  const brief = templateBrief(facts);
+  let summary: string | null = null;
+  try {
+    const g = (await gemma([
+      { role: 'system', content: 'You help a small online fitness-supplements shop owner in India. In one or two short sentences, say what matters most today, using only the brief below. Do not add any number, name or product that is not in the brief. Plain text.' },
+      { role: 'user', content: brief },
+    ])).trim();
+    if (g && g.length <= 400 && looksClean(g)) summary = g; else log.warn({ len: g.length }, 'brief: Gemma summary rejected (empty, too long or leaked field names)');
+  } catch (e: any) { log.warn({ err: e.message }, 'brief: Gemma unavailable, template only'); }
+  const doc = { date: facts.date, text: summary ? `${summary}\n\n${brief}` : brief, summary, by: summary ? 'template+gemma' as const : 'template' as const, facts, createdAt: new Date() };
+  if (store) await col.briefs.insertOne(doc);
+  return doc;
+}
