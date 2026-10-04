@@ -266,7 +266,7 @@ function renderTurn(t) {
   if (!r) return `<article class="turn" aria-busy="true"><p class="q">${esc(t.q)}</p><p class="thinking" role="status"><span class="st">Thinking</span> Checking your orders, stock and suppliers. This can take a few seconds.</p></article>`;
   const mode = r.answerMode === 'gemma' ? `written by ${r.model}` : MODE[r.answerMode] ?? r.answerMode;
   return `<article class="turn"><p class="q">${esc(t.q)}</p><pre class="a">${esc(r.answer)}</pre>
-    <p class="meta">${[mode && `<span>${esc(cap(mode))}</span>`, r.traceId && `<a href="#activity">Trace ${esc(r.traceId.slice(0, 8))}</a>`, `<button class="link" onclick="speak(${turns.indexOf(t)})">Read aloud</button>`].filter(Boolean).join('')}</p>
+    <p class="meta">${[mode && `<span>${esc(cap(mode))}</span>`, r.traceId && traceLink(r.traceId), `<button class="link" onclick="speak(${turns.indexOf(t)})">Read aloud</button>`].filter(Boolean).join('')}</p>
     <details><summary>How this was answered</summary><p>Tool ${esc(r.tool)} · route ${esc(r.route)}</p>${r.notes?.length ? `<p>${r.notes.map(esc).join('<br>')}</p>` : ''}
       ${r.data ? `<pre>${esc(JSON.stringify(r.data, null, 1).slice(0, 4000))}</pre>` : ''}</details></article>`;
 }
@@ -395,13 +395,38 @@ async function saveMem(btn) {
 }
 
 // ---------- workflows / traces ----------
+const STEP = {
+  forecast: { title: 'Forecast', view: s => `<p>${methodNote(s.method)} ${s.highRisk ? `${plural(s.highRisk, 'product')} run out before new stock can arrive.` : 'Nothing runs out before new stock can arrive.'}</p>` },
+  lowStockCheck: { title: 'Low stock', view: s => s.lowStock.length
+    ? `<ul class="rows">${s.lowStock.map(i => row({ level: LEVEL[i.risk], name: esc(i.name), why: RISK_WHY[i.risk] ?? '', fig: i.reorderQty ? `<b>${i.reorderQty}</b><span>to order</span>` : '' })).join('')}</ul>`
+    : '<p class="empty">Nothing runs out this week.</p>' },
+  supplierRefresh: { title: 'Online prices', view: s => s.error ? '<p class="note">Skipped this time: the price search kept failing. Stored quotes still apply.</p>'
+    : s.source === 'stored' ? '<p class="note">Online prices are off (no SerpApi key). Stored quotes still apply.</p>'
+    : `<ul class="rows">${s.refreshed.map(p => row({ level: null, name: esc(p.product), why: p.error ? 'No price this time' : p.cheapest ? `${esc(p.cheapest.source)} · ${plural(p.offers, 'listing')}` : 'No usable listings',
+      fig: p.cheapest ? `<b>${inr(p.cheapest.price)}</b><span>cheapest</span>` : '' })).join('')}</ul>` },
+  dailyBrief: { title: 'Brief', view: s => `<pre>${esc(s.text)}</pre>` },
+};
+const RISK_WHY = { high: 'Runs out before new stock can arrive', medium: 'Runs out this week' };
+const traceLink = id => `<a href="#activity/${esc(id)}">Trace ${esc(id.slice(0, 8))}</a>`;
+function runResult(name, r) {
+  const steps = Object.keys(STEP).filter(k => r.result?.[k]).map(k => [k, r.result[k]]);
+  const trace = r.traceId ?? steps.map(([, s]) => s.traceId).find(Boolean);
+  return `<article class="run" aria-labelledby="run-h">
+    <h3 id="run-h">${esc(WF[name] ?? name)}</h3>
+    <p class="meta"><span>${r.result ? st('light', 'Done') : st('mid', 'Still running')}</span><span>${st('', r.mode === 'temporal' ? 'Temporal' : 'Direct')}</span>${trace ? traceLink(trace) : ''}</p>
+    ${r.mode === 'direct' ? '<p class="note">Ran directly (Temporal worker offline on this host).</p>' : ''}
+    ${r.result ? '' : '<p class="note">The worker has not finished yet. It keeps going; check Recent runs or the Temporal UI.</p>'}
+    ${steps.map(([k, s]) => `<section class="step"><h4>${STEP[k].title}</h4>${STEP[k].view(s)}</section>`).join('')}
+    ${r.retries?.length ? `<p class="note">Needed ${plural(r.retries.length, 'retry', 'retries')} to finish.</p>` : ''}
+    <details class="note"><summary>Details</summary><pre>${esc(JSON.stringify(r, null, 1))}</pre></details></article>`;
+}
 async function runWf(name, btn) {
   const out = $('#wfout');
   out.innerHTML = `<p class="note" role="status">Running ${esc(WF[name] ?? name)}…</p>`;
   try {
     const r = await busy(btn, 'Running…', () => api(`/workflows/${name}/run`, { method: 'POST', timeoutMs: API.longTimeoutMs }));
-    out.innerHTML = `<details class="note"><summary>Details</summary><pre>${esc(JSON.stringify(r, null, 1))}</pre></details>`;
-    if (location.hash === '#dashboard' || !location.hash) { flash = `${WF[name]} done.`; route(); }
+    if (location.hash === '#dashboard' || !location.hash) { flash = `${WF[name]} done.`; return route(); }
+    out.innerHTML = runResult(name, r);
   } catch (e) { out.innerHTML = errorBox(e, `run ${(WF[name] ?? name).toLowerCase()}`, () => runWf(name, btn)); }
 }
 async function showTrace(id) {
@@ -418,7 +443,8 @@ async function showTrace(id) {
 // ---------- router ----------
 let first = true;
 async function route() {
-  const name = TITLES[location.hash.slice(1)] ? location.hash.slice(1) : 'dashboard';
+  const [view, param] = location.hash.slice(1).split('/'); // #activity/<traceId> opens that trace
+  const name = TITLES[view] ? view : 'dashboard';
   document.querySelectorAll('.nav a, #more a').forEach(a => a.hash === '#' + name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   $(`#more a[href="#${name}"]`) ? $('.more').setAttribute('aria-current', 'page') : $('.more').removeAttribute('aria-current');
   try { $('#more').hidePopover(); } catch {}
@@ -429,6 +455,7 @@ async function route() {
   try {
     $('#view').innerHTML = (note ? `<p class="flash" role="status">${st('light', 'Done')} ${esc(note)}</p>` : '') + await views[name]();
     if (name === 'suppliers') loadMem();
+    if (name === 'activity' && param) showTrace(decodeURIComponent(param));
     voiceNotice(elevenOn() ? 'Voice: ElevenLabs' : 'Voice: browser speech');
   } catch (e) { $('#view').innerHTML = `<div class="sec">${errorBox(e, `load ${TITLES[name]}`, route)}</div>`; }
   if (!first) { scrollTo(0, 0); const h = $('#view h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }

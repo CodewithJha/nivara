@@ -242,8 +242,8 @@ textarea { font-size: var(--t-1); line-height: var(--lh-field); resize: vertical
 .thinking .st { color: var(--rubber); margin-right: var(--s-2); }
 .thinking .st::before { background: var(--steel); animation: think calc(var(--load) * 2) var(--ease) infinite alternate; }
 @keyframes think { to { opacity: .2; } }
-.turn .meta { font-size: var(--t-sm); color: var(--iron); margin-top: var(--s-3); }
-.turn .meta > * + *::before { content: "·"; display: inline-block; margin-inline: var(--s-2); }
+.turn .meta, .run .meta { font-size: var(--t-sm); color: var(--iron); margin-top: var(--s-3); }
+.turn .meta > * + *::before, .run .meta > * + *::before { content: "·"; display: inline-block; margin-inline: var(--s-2); }
 .turn details { margin-top: var(--s-2); font-size: var(--t-sm); color: var(--iron); }
 .turn details pre, .turn details p { margin-top: var(--s-2); }
 .turn details pre { max-height: var(--scroll-h); overflow: auto; }
@@ -252,6 +252,12 @@ textarea { font-size: var(--t-1); line-height: var(--lh-field); resize: vertical
 .brief pre { max-width: var(--measure); }
 .brief .acts { margin-top: var(--s-4); }
 #wfout:empty { display: none; }
+.run { margin-top: var(--s-5); padding-top: var(--s-4); border-top: var(--rule) solid var(--rubber); }
+.run h3 { font-size: var(--t-1); font-weight: 800; font-stretch: var(--w-head); line-height: var(--lh-head); letter-spacing: var(--track-name); }
+.run .meta { margin-top: var(--s-2); }
+.step { margin-top: var(--s-5); }
+.step h4 { margin: 0 0 var(--s-2); font: 700 var(--t-0)/var(--lh-ui) var(--text); }
+.step pre { max-width: var(--measure); }
 
 /* ---------- phone ---------- */
 @media (max-width: 899px) {
