@@ -69,3 +69,64 @@ export function matchCustomer<T extends { _id: string; name: string }>(name: str
   const q = norm(name);
   return customers.find(c => norm(c.name).join(' ') === q.join(' ')) ?? customers.find(c => q.length === 1 && norm(c.name)[0] === q[0]) ?? null;
 }
+
+// ---------- dates ----------
+
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const addDays = (iso: string, n: number) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+
+/** Resolve a delivery phrase against `today` (YYYY-MM-DD). Returns null when unsure — never guesses. */
+export function resolveDate(text: string | null | undefined, today: string): string | null {
+  if (!text) return null;
+  const t = text.toLowerCase();
+  let m;
+  if ((m = t.match(/\b(\d{4})-(\d{2})-(\d{2})\b/))) return m[0];
+  if (/day after tomorrow/.test(t)) return addDays(today, 2);
+  if (/\b(tomorrow|tmrw|kal)\b/.test(t)) return addDays(today, 1);
+  if (/\b(today|tonight|aaj)\b/.test(t)) return today;
+  if ((m = t.match(/\bin (\d{1,2}) days?\b/))) return addDays(today, +m[1]);
+  const dow = DAYS.findIndex(d => new RegExp(`\\b${d}\\b`).test(t));
+  if (dow >= 0) {
+    const cur = new Date(today + 'T00:00:00Z').getUTCDay();
+    return addDays(today, ((dow - cur + 7) % 7) || 7);
+  }
+  // "5 oct" / "oct 5" / "5/10" (day first, Indian convention); rolls to next year if already past
+  let day: number | undefined, mon: number | undefined;
+  if ((m = t.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3})/)) && MONTHS.includes(m[2])) [day, mon] = [+m[1], MONTHS.indexOf(m[2])];
+  else if ((m = t.match(/\b([a-z]{3})[a-z]*\s+(\d{1,2})\b/)) && MONTHS.includes(m[1])) [day, mon] = [+m[2], MONTHS.indexOf(m[1])];
+  else if ((m = t.match(/\b(\d{1,2})\/(\d{1,2})\b/))) [day, mon] = [+m[1], +m[2] - 1];
+  if (day === undefined || mon === undefined || mon < 0 || mon > 11 || day < 1 || day > 31) return null;
+  let y = +today.slice(0, 4);
+  let iso = `${y}-${String(mon + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  if (iso < today) iso = `${++y}${iso.slice(4)}`;
+  return Number.isNaN(Date.parse(iso)) || new Date(iso).getUTCDate() !== day ? null : iso;
+}
+
+// ---------- daily attention ----------
+
+export type OrderFlag = 'overdue' | 'due today' | 'due tomorrow' | 'no delivery date';
+/** Why a pending order needs action now; null = due later, nothing to do yet. */
+export function orderFlag(deliveryDate: string | null, today: string): OrderFlag | null {
+  if (!deliveryDate) return 'no delivery date';
+  if (deliveryDate < today) return 'overdue';
+  if (deliveryDate === today) return 'due today';
+  return deliveryDate === addDays(today, 1) ? 'due tomorrow' : null;
+}
+
+/** "N things need your attention" = high-risk products + pending orders with a flag + significant supplier savings. */
+export function attention(products: { risk: Risk }[], pendingOrders: { deliveryDate: string | null }[], opportunities: { significant: boolean }[], today: string) {
+  const highRisk = products.filter(p => p.risk === 'high').length;
+  const orders = pendingOrders.filter(o => orderFlag(o.deliveryDate, today)).length;
+  const suppliers = opportunities.filter(o => o.significant).length;
+  return { total: highRisk + orders + suppliers, highRisk, orders, suppliers };
+}
+
+// ---------- user-facing formatting ----------
+
+export const inr = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN');
+export const units = (n: number) => { const r = Math.round(n); return `${r} unit${r === 1 ? '' : 's'}`; };
+export const shortDate = (iso: string) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+export const methodLabel = (m: string) => m === 'tabpfn' ? 'TabPFN forecast' : 'moving-average forecast (TabPFN unavailable)';
+/** Rejects model text that leaks field names / ids: camelCase, snake_case, "Demand7"/"P01", "sku", JSON brackets. */
+export const looksClean = (s: string) => !/\b[a-z]+[A-Z]\w*\b|\b\w+_\w+\b|\b[A-Za-z]+\d+\b|\bsku\b|[{}[\]]/.test(s);
