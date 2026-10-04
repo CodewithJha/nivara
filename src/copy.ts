@@ -11,7 +11,7 @@ export const pct = (n: number) => `${whole(n)}%`;
 export const displayName = (s: string | null | undefined) => String(s ?? '').replace(/\s*\(([^()]+)\)\s*$/, ', $1').trim();
 
 /** Words and patterns that must never reach a seller screen or a public API response. */
-export const INTERNAL = /\b(trace ?id|traceId|fallback|proxy|tabpfn|hybrid-fts|pgvector|mastra|keyword[- ]router|json[- ]router|gemma-json|route error|accessDate|fetchedAt|data as of|stack trace|api[_ ]?key|mongodb(\+srv)?:\/\/|postgres(ql)?:\/\/|localhost|127\.0\.0\.1|ECONNREFUSED|undefined|NaN|\[object Object\])\b|\bat [\w.<>]+ \(.*:\d+:\d+\)/i;
+export const INTERNAL = /\b(trace ?id|traceId|fallback|proxy|tabpfn|hybrid-fts|pgvector|mastra|keyword[- ]router|json[- ]router|gemma-json|route error|accessDate|fetchedAt|data as of|stack trace|api[_ ]?key|mongodb(\+srv)?:\/\/|postgres(ql)?:\/\/|localhost|127\.0\.0\.1|ECONNREFUSED|undefined|NaN)\b|\[object Object\]|\bat [\w.<>]+ \(.*:\d+:\d+\)/i;
 export const leaks = (s: string) => INTERNAL.test(s);
 
 /**
