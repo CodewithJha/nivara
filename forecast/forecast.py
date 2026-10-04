@@ -44,4 +44,5 @@ if __name__ == "__main__":
     # Newer TabPFN weights need a license token; v2 weights are downloadable without one.
     version = os.environ.get("TABPFN_MODEL_VERSION") or ("latest" if os.environ.get("TABPFN_TOKEN") else "v2")
     model = TabPFNRegressor(**kw) if version == "latest" else TabPFNRegressor.create_default_for_version(ModelVersion(version), **kw)
-    print(json.dumps({"model": version, "pred": forecast(series, model)}))
+    from importlib.metadata import version as pkg_version
+    print(json.dumps({"model": version, "package": f"tabpfn {pkg_version('tabpfn')}", "pred": forecast(series, model)}))

@@ -143,8 +143,8 @@ export async function gemmaCapabilities(): Promise<string[] | null> {
 const PY = env.TABPFN_PYTHON ?? fileURLToPath(new URL('../forecast/.venv/bin/python', import.meta.url));
 const PY_SCRIPT = fileURLToPath(new URL('../forecast/forecast.py', import.meta.url));
 
-/** series: { sku: daily qty[] (oldest→newest) } → { model, pred: { sku: next-7-day total } }. Throws on any failure. */
-export function tabpfnForecast(series: Record<string, number[]>, timeoutMs = Number(env.TABPFN_TIMEOUT_MS ?? 180_000)): Promise<{ model: string; pred: Record<string, number> }> {
+/** series: { sku: daily qty[] (oldest→newest) } → { model, package, pred: { sku: next-7-day total } }. Throws on any failure. */
+export function tabpfnForecast(series: Record<string, number[]>, timeoutMs = Number(env.TABPFN_TIMEOUT_MS ?? 180_000)): Promise<{ model: string; package?: string; pred: Record<string, number> }> {
   return span('forecast.tabpfn', 'tabpfn regressor', { skus: Object.keys(series).length }, () => new Promise((resolve, reject) => {
     if (env.FORECAST_MODE === 'fallback') return reject(new Error('FORECAST_MODE=fallback'));
     if (!existsSync(PY)) return reject(new Error(`TabPFN python not found at ${PY}`));
@@ -158,7 +158,7 @@ export function tabpfnForecast(series: Record<string, number[]>, timeoutMs = Num
       try {
         const r = JSON.parse(out);
         if (typeof r?.pred !== 'object' || !Object.keys(series).every(k => typeof r.pred[k] === 'number' && Number.isFinite(r.pred[k]) && r.pred[k] >= 0)) throw new Error('bad output');
-        resolve({ model: String(r.model), pred: r.pred });
+        resolve({ model: String(r.model), package: typeof r.package === 'string' ? r.package : undefined, pred: r.pred });
       } catch (e: any) { reject(new Error('tabpfn invalid output: ' + e.message)); }
     });
     p.stdin.end(JSON.stringify(series));
