@@ -1,0 +1,45 @@
+# Render Blueprint. One web service; Mongo = Atlas, Gemma = a hosted Ollama/OpenAI-compatible endpoint.
+# Without a reachable Gemma endpoint the app still runs (keyword router + templated answers, labelled).
+services:
+  - type: web
+    name: nivara
+    runtime: node
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: MONGODB_URI
+        sync: false
+      - key: OLLAMA_BASE_URL          # e.g. http://<digitalocean-gpu-droplet-ip>:11434
+        sync: false
+      - key: OLLAMA_API_KEY           # if the endpoint sits behind a bearer-token proxy
+        sync: false
+      - key: GEMMA_MODEL
+        value: gemma3:4b
+      - key: FORECAST_MODE            # TabPFN needs torch (~1GB); on Render default to the labelled fallback
+        value: fallback
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: BACKBOARD_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: TEMPORAL_ADDRESS         # Temporal Cloud endpoint; leave unset to run workflows in-process
+        sync: false
+      - key: TEMPORAL_NAMESPACE
+        sync: false
+      - key: TEMPORAL_API_KEY
+        sync: false
+
+  # Enable together with Temporal Cloud credentials above:
+  # - type: worker
+  #   name: nivara-worker
+  #   runtime: node
+  #   buildCommand: npm ci
+  #   startCommand: npm run worker
+  #   envVars: copy the web service's envVars (MONGODB_URI, OLLAMA_*, TEMPORAL_*, partner keys)
