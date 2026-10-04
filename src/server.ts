@@ -1,3 +1,4 @@
+import './instrument.ts'; // same init as `node --import`; no-op if that preload already ran or SENTRY_DSN is unset
 import * as Sentry from '@sentry/node';
 import express from 'express';
 import { fileURLToPath } from 'node:url';
@@ -7,12 +8,13 @@ import { Client, Connection } from '@temporalio/client';
 import { client as mongo, col, today, TZ } from './db.ts';
 import { OrderInput, attention } from './logic.ts';
 import { ask, extractOrder, llmStatus } from './agent.ts';
-import { MODEL, OLLAMA, backboardLive, elevenLive, elevenStatus, elevenSTT, elevenTTS, log, serpLive, traced } from './integrations.ts';
+import { OLLAMA, backboardLive, elevenLive, elevenStatus, elevenSTT, elevenTTS, llmModel, llmProvider, log, serpLive, traced } from './integrations.ts';
 import * as ops from './ops.ts';
 import * as acts from './temporal/activities.ts';
 import { seed } from './seed.ts';
 
 export const app = express();
+export default app;
 app.use(express.json({ limit: '100kb' }));
 app.use(express.static(fileURLToPath(new URL('../public', import.meta.url)), { setHeaders: s => s.setHeader('Cache-Control', 'no-cache') }));
 const body = <T extends z.ZodTypeAny>(s: T, b: unknown): z.infer<T> => {
@@ -22,9 +24,11 @@ const body = <T extends z.ZodTypeAny>(s: T, b: unknown): z.infer<T> => {
 };
 
 // ---------- Temporal (optional) ----------
-const TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS ?? 'localhost:7233';
+// Unset TEMPORAL_ADDRESS = don't dial. Set it to connect, including localhost:7233.
+const TEMPORAL_ADDRESS = process.env.TEMPORAL_ADDRESS;
 let temporal: { client?: Client; at: number; error?: string } = { at: 0 };
 async function getTemporal() {
+  if (!TEMPORAL_ADDRESS) return undefined;
   if (temporal.client || Date.now() - temporal.at < 15_000) return temporal.client;
   temporal.at = Date.now();
   try {
@@ -68,13 +72,15 @@ r.get('/health', async (_q, s) => {
     date: today(),
     integrations: {
       mongodb: live(mongoOk, process.env.MONGODB_URI?.includes('mongodb.net') ? 'MongoDB Atlas' : 'local MongoDB'),
-      gemma: live(llm.reachable, llm.reachable ? `${MODEL} @ ${OLLAMA} (caps: ${llm.capabilities?.join(',')})` : `${MODEL} unreachable at ${OLLAMA} — keyword router + templates`),
+      gemma: live(llm.reachable, llmProvider() === 'gemini'
+        ? (llm.reachable ? `${llmModel()} via Gemini API (caps: ${llm.capabilities?.join(',')})` : `${llmModel()} unavailable (Gemini API) — keyword router + templates`)
+        : (llm.reachable ? `${llmModel()} @ ${OLLAMA} (caps: ${llm.capabilities?.join(',')})` : `${llmModel()} unreachable at ${OLLAMA} — keyword router + templates`)),
       mastra: live(llm.reachable && llm.nativeTools, !llm.reachable ? 'Gemma unreachable — tools run via keyword router' : llm.nativeTools ? 'Mastra agent native tool calling' : 'Mastra tools invoked via Gemma JSON router (model lacks native tool calling)'),
       tabpfn: live(lastForecast?.method === 'tabpfn', lastForecast ? `last forecast: ${lastForecast.method}${lastForecast.fallbackReason ? ` (${lastForecast.fallbackReason.slice(0, 120)})` : ''}` : 'no forecast yet'),
       serpapi: live(serpLive(), serpLive() ? 'key set — Google Shopping via the Temporal supplierRefresh activity (results cached in supplierPrices)' : 'SERPAPI_API_KEY missing — stored supplier quotes only'),
       backboard: live(backboardLive(), backboardLive() ? 'key set — memories saved to and searched in Backboard; Mongo stays source of truth' : 'BACKBOARD_API_KEY missing — memory stored in Mongo only'),
       elevenlabs: live(voice.ok, voice.detail),
-      temporal: live(!!t, t ? `connected ${TEMPORAL_ADDRESS}` : `unreachable ${TEMPORAL_ADDRESS} — workflows run in-process`),
+      temporal: live(!!t, t ? `connected ${TEMPORAL_ADDRESS}` : TEMPORAL_ADDRESS ? `unreachable ${TEMPORAL_ADDRESS} — workflows run in-process` : 'TEMPORAL_ADDRESS unset — workflows run in-process'),
       sentry: live(!!Sentry.getClient(), Sentry.getClient() ? `SDK initialised — gen_ai spans sent to Sentry (content ${process.env.SENTRY_SEND_CONTENT === '1' ? 'included' : 'redacted'})` : 'SENTRY_DSN missing — local traces only'),
     },
   });
