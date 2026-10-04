@@ -1,0 +1,10 @@
+preScript: ""
+postScript: ""
+appCommand: ""
+template: {}
+metadata:
+    description: happy bad-input and empty-db for every route
+    name: api-routes
+mockRegistry:
+    mock: 9b30dd6a6d51a294be57c7959d660a4f20db84504a2fbaa0fb895171d075a51b
+    app: nivara
