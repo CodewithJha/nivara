@@ -170,7 +170,7 @@ export const looksClean = (s: string) => !/\b[a-z]+[A-Z]\w*\b|\b\w+_\w+\b|\b[A-Z
 
 // ---------- supplier savings ----------
 
-// Seeded alternative quotes run 82–110% of cost; costs span ₹52 (bars) to ₹2,150 (gainer).
+// Seeded quotes mostly run 95–105% of cost with a few 8–15% deals (scripts/import/suppliers.config.ts); costs span ~₹30 (bars) to ~₹5,000 (2.5 kg whey).
 // ₹10 alone would flag a 0.8% saving on whey; 5% alone would flag ₹5 on a ₹56 bar. Require both.
 export const MIN_SUPPLIER_SAVING_RUPEES = Number(process.env.MIN_SUPPLIER_SAVING_RUPEES ?? 10);
 export const MIN_SUPPLIER_SAVING_PERCENT = Number(process.env.MIN_SUPPLIER_SAVING_PERCENT ?? 5);

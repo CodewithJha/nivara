@@ -9,15 +9,9 @@ import { fileURLToPath } from 'node:url';
 import { ensureTiger, syncCatalogToTiger, syncSalesToTiger, embedCatalog } from './tiger.ts';
 import { backfillDeliveredOrders } from './sync.ts';
 import { importOrders } from '../scripts/import-orders.ts';
+import { buildSuppliers } from '../scripts/import/supplier-quotes.ts';
 
 const SAMPLE_ORDERS = fileURLToPath(new URL('../data/samples/orders.csv', import.meta.url));
-
-const suppliers = [
-  { _id: 'S1', name: 'FitFuel Distributors', contact: 'Lucknow wholesale market', quotes: [] as { sku: string; unitCost: number }[] },
-  { _id: 'S2', name: 'GymGear Wholesale', contact: 'Delhi, ships in 3 days', quotes: [] as { sku: string; unitCost: number }[] },
-  { _id: 'S3', name: 'NutriHub India', contact: 'Authorised supplements distributor', quotes: [] as { sku: string; unitCost: number }[] },
-  { _id: 'S4', name: 'Supplier C (Sports Mart)', contact: 'Kanpur, cheap but delays', quotes: [] as { sku: string; unitCost: number }[] },
-];
 
 const customers = ['Rahul Verma', 'Priya Singh', 'Aman Khan', 'Sneha Gupta', 'Vikram Rao', 'Neha Sharma', 'Arjun Mehta', 'Kavya Iyer']
   .map((name, i) => ({ _id: `C0${i + 1}`, name, channel: (i % 3 ? 'whatsapp' : 'instagram') as 'whatsapp' | 'instagram', demo: false }));
@@ -30,11 +24,7 @@ export async function seed({ online = process.argv.includes('--online') } = {}) 
   const demand = buildDemand(catalogDoc.products, trendRes.points);
   const products = toShopProducts(catalogDoc.products, priceRes.byCode) as Product[];
 
-  for (const s of suppliers) {
-    s.quotes = products.filter((_, i) => (i + s._id.charCodeAt(1)) % 3 !== 0).map(p => ({
-      sku: p._id, unitCost: Math.round(p.cost * (s._id === 'S4' ? 0.85 : 0.92)),
-    }));
-  }
+  const suppliers = buildSuppliers(products); // subset per supplier, deterministic ratios (suppliers.config.ts)
 
   for (const c of Object.values(col)) if (!['traces', 'meta'].includes(c.collectionName)) await c.deleteMany({});
   await col.products.insertMany(products);

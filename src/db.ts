@@ -13,7 +13,7 @@ export type Product = {
 export type Customer = { _id: string; name: string; phone?: string; channel: 'whatsapp' | 'instagram'; demo?: boolean };
 export type Order = { _id: string; customerId: string; customerName: string; items: { sku: string; name: string; quantity: number; price: number }[]; total: number; status: 'pending' | 'delivered' | 'cancelled'; deliveryDate: string | null; createdAt: Date; source: string; demo?: boolean };
 export type Sale = { sku: string; date: string; qty: number; source?: 'proxy' | 'order' | string; demo?: boolean };
-export type Supplier = { _id: string; name: string; contact?: string; quotes: { sku: string; unitCost: number }[]; demo?: boolean };
+export type Supplier = { _id: string; name: string; contact?: string; quotes: { sku: string; unitCost: number; leadTimeDays?: number }[]; demo?: boolean };
 export type Preference = { _id?: any; text: string; kind: 'block_supplier' | 'note'; supplier?: string; createdAt: Date; mirror: 'backboard' | 'local-only'; backboardId?: string };
 
 const g = globalThis as typeof globalThis & { __nivaraMongo?: MongoClient };
