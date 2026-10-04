@@ -92,15 +92,18 @@ the service in `screen` (logs `/tmp/nivara-<svc>.log`), and fails loudly unless 
 
 ## Deploy to Render
 
-The app is host-agnostic: `npm start` binds `process.env.PORT`, and `src/server.ts` only listens when it is the
-process entry. Missing Temporal / TabPFN / LLM hosts or keys use the existing labelled fallbacks.
+`render.yaml` is a Blueprint for one **free** web service (Singapore, Node 24): `npm ci`, `npm start`, health check
+`/api/health`. `npm start` binds `process.env.PORT`; `src/server.ts` exports `app` and only listens when run as the entry.
 
-`render.yaml` is a free web service (`npm ci` / `npm start`, health `/api/health`). In the Render dashboard (or
-via Blueprint): set `MONGODB_URI` (Atlas). For Gemma on the free instance, set `LLM_PROVIDER=gemini` and
-`GEMINI_API_KEY` (`GEMINI_MODEL` defaults to `gemma-4-31b-it`; alt `gemma-4-26b-a4b-it`). Or point
-`OLLAMA_BASE_URL` at any OpenAI-compatible host. Leave `TEMPORAL_ADDRESS` unset (in-process workflows).
-`FORECAST_MODE=fallback` is already in the blueprint (torch is too large for free). Optional: `SERPAPI_API_KEY`,
-`BACKBOARD_API_KEY`, `ELEVENLABS_API_KEY`, `SENTRY_DSN`. Seed once with `MONGODB_URI='…' npm run seed`. No auth.
+1. Render → **New → Blueprint** → pick this repo/branch.
+2. Fill the `sync: false` vars: `MONGODB_URI` (Atlas; allow `0.0.0.0/0` in Atlas Network Access, free Render has no
+   static IP) and `GEMINI_API_KEY` (Google AI Studio). The blueprint already sets `LLM_PROVIDER=gemini`,
+   `GEMINI_MODEL=gemma-4-31b-it` (alt `gemma-4-26b-a4b-it`), `MONGODB_DB=nivara`, `FORECAST_MODE=fallback`.
+3. Optional: `SERPAPI_API_KEY`, `BACKBOARD_API_KEY`, `ELEVENLABS_API_KEY`, `SENTRY_DSN`; leave `TEMPORAL_*` and
+   `OLLAMA_*` empty.
+
+An empty database is seeded with demo data on first boot. Without a Gemini key, Temporal, or TabPFN the app uses
+its labelled fallbacks (keyword router + templated answers, in-process workflows, moving-average forecast). No auth.
 
 ## Environment variables
 

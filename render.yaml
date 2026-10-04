@@ -5,6 +5,7 @@ services:
     name: nivara
     runtime: node
     plan: free
+    region: singapore
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/health
