@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { Client, Connection } from '@temporalio/client';
 import { client as mongo, col, today, TZ } from './db.ts';
-import { OrderInput, attention } from './logic.ts';
+import { OrderInput, attention, tabpfnHealth } from './logic.ts';
 import { ask, extractOrder, llmStatus } from './agent.ts';
 import { OLLAMA, backboardLive, elevenLive, elevenStatus, elevenSTT, elevenTTS, llmModel, llmProvider, log, serpLive, traced } from './integrations.ts';
 import * as ops from './ops.ts';
@@ -79,7 +79,7 @@ r.get('/health', async (_q, s) => {
         ? (llm.reachable ? `${llmModel()} via Gemini API (caps: ${llm.capabilities?.join(',')})` : `${llmModel()} unavailable (Gemini API) — keyword router + templates`)
         : (llm.reachable ? `${llmModel()} @ ${OLLAMA} (caps: ${llm.capabilities?.join(',')})` : `${llmModel()} unreachable at ${OLLAMA} — keyword router + templates`)),
       mastra: live(llm.reachable && llm.nativeTools, !llm.reachable ? 'Gemma unreachable — tools run via keyword router' : llm.nativeTools ? 'Mastra agent native tool calling' : 'Mastra tools invoked via Gemma JSON router (model lacks native tool calling)'),
-      tabpfn: live(lastForecast?.method === 'tabpfn', lastForecast ? `last forecast: ${lastForecast.method}${lastForecast.fallbackReason ? ` (${lastForecast.fallbackReason.slice(0, 120)})` : ''}` : 'no forecast yet'),
+      tabpfn: tabpfnHealth(lastForecast),
       tiger: live(tiger.live, tiger.detail),
       serpapi: live(serpLive(), serpLive() ? 'key set — Google Shopping via the Temporal supplierRefresh activity (results cached in supplierPrices)' : 'SERPAPI_API_KEY missing — stored supplier quotes only'),
       backboard: live(backboardLive(), backboardLive() ? 'key set — memories saved to and searched in Backboard; Mongo stays source of truth' : 'BACKBOARD_API_KEY missing — memory stored in Mongo only'),
