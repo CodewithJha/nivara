@@ -26,6 +26,16 @@ function pool(): pg.Pool | null {
   return g.__nivaraTiger;
 }
 
+/** Exposed for Atlas→Tiger sync module (same cached pool). */
+export const poolForSync = () => pool();
+
+export async function refreshDemandAggregates() {
+  const p = pool();
+  if (!p) return;
+  try { await p.query(`CALL refresh_continuous_aggregate('sales_demand_7d', NULL, NULL)`); } catch { /* empty ok */ }
+  try { await p.query(`CALL refresh_continuous_aggregate('sales_demand_28d', NULL, NULL)`); } catch { /* empty ok */ }
+}
+
 const MIGRATE = `
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -48,6 +58,13 @@ CREATE TABLE IF NOT EXISTS catalog_items (
 );
 CREATE INDEX IF NOT EXISTS catalog_items_tsv_idx ON catalog_items USING GIN (search_tsv);
 CREATE INDEX IF NOT EXISTS catalog_items_cat_price_idx ON catalog_items (category, price);
+CREATE TABLE IF NOT EXISTS order_sales (
+  order_id TEXT NOT NULL,
+  sku TEXT NOT NULL,
+  day TIMESTAMPTZ NOT NULL,
+  qty DOUBLE PRECISION NOT NULL DEFAULT 0,
+  PRIMARY KEY (order_id, sku)
+);
 `;
 
 async function migrate(client: pg.PoolClient) {
@@ -140,8 +157,7 @@ export async function syncSalesToTiger(sales: Sale[]) {
       await c.query(`INSERT INTO sales_daily (day, sku, qty) VALUES ${ph.join(',')} ON CONFLICT (day, sku) DO UPDATE SET qty = EXCLUDED.qty`, vals);
     }
     await c.query('COMMIT');
-    try { await c.query(`CALL refresh_continuous_aggregate('sales_demand_7d', NULL, NULL)`); } catch { /* empty ok */ }
-    try { await c.query(`CALL refresh_continuous_aggregate('sales_demand_28d', NULL, NULL)`); } catch { /* empty ok */ }
+    await refreshDemandAggregates();
     return { synced: sales.length };
   } catch (e) {
     await c.query('ROLLBACK');

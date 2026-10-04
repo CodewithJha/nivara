@@ -13,6 +13,7 @@ import * as ops from './ops.ts';
 import * as acts from './temporal/activities.ts';
 import { seed } from './seed.ts';
 import { searchCatalog, tigerStatus } from './tiger.ts';
+import { startOrderChangeStream, syncDeliveredOrder } from './sync.ts';
 
 export const app = express();
 export default app;
@@ -136,16 +137,17 @@ r.post('/orders', async (q, s) => {
   s.status(201).json(order);
 });
 
-/** Deliver: decrement stock and record the sale (feeds future forecasts). */
+/** Deliver: decrement stock, record Atlas sale, upsert into Tiger analytics (idempotent by orderId). */
 r.post('/orders/:id/deliver', async (q, s) => {
   const o = await col.orders.findOneAndUpdate({ _id: q.params.id, status: 'pending' }, { $set: { status: 'delivered' } }, { returnDocument: 'after' });
   if (!o) throw Object.assign(new Error('Order not found or not pending'), { status: 404 });
   for (const i of o.items) {
     await col.products.updateOne({ _id: i.sku }, { $inc: { stock: -i.quantity } });
-    await col.sales.updateOne({ sku: i.sku, date: today() }, { $inc: { qty: i.quantity } }, { upsert: true });
+    await col.sales.updateOne({ sku: i.sku, date: today() }, { $inc: { qty: i.quantity }, $set: { source: 'order' } }, { upsert: true });
   }
   await col.forecasts.deleteMany({ date: today() });
-  s.json(o);
+  const tiger = await syncDeliveredOrder({ ...o, deliveredAt: new Date() });
+  s.json({ ...o, tigerSync: tiger });
 });
 
 r.get('/memory', async (_q, s) => s.json(await ops.getMemory()));
@@ -213,7 +215,8 @@ if (import.meta.main) {
   // Mongo down at boot: keep serving so /api/health reports it; the driver reconnects on the next query.
   try {
     await mongo.connect();
-    if (!(await col.products.countDocuments())) log.info({ seeded: await seed() }, 'empty database → demo data seeded');
+    if (!(await col.products.countDocuments())) log.info({ seeded: await seed({ online: false }) }, 'empty database → real stand-in seeded');
+    log.info(await startOrderChangeStream(), 'Atlas→Tiger order sync');
   } catch (e: any) { log.error({ err: e.message }, 'MongoDB unavailable at boot; check MONGODB_URI'); }
   const port = Number(process.env.PORT || 3000);
   const server = app.listen(port, () => log.info(`Nivara on http://localhost:${port}`));

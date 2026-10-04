@@ -4,13 +4,14 @@ import { MongoClient } from 'mongodb';
 
 export type Product = {
   _id: string; name: string; aliases: string[]; category: string; price: number; cost: number; stock: number; supplierId: string; leadTimeDays: number;
-  tags?: { brands?: string; quantity?: string; sugarPer100g?: number | null; labels?: string[]; categories?: string[] };
+  productType?: string; priceSource?: 'open-prices' | 'manual' | string;
+  tags?: { brands?: string; quantity?: string; sugarPer100g?: number | null; labels?: string[]; categories?: string[]; productType?: string; priceSource?: string };
   origin?: { source: string; code?: string; url?: string; license?: string };
   demo?: boolean;
 };
 export type Customer = { _id: string; name: string; phone?: string; channel: 'whatsapp' | 'instagram'; demo?: boolean };
 export type Order = { _id: string; customerId: string; customerName: string; items: { sku: string; name: string; quantity: number; price: number }[]; total: number; status: 'pending' | 'delivered' | 'cancelled'; deliveryDate: string | null; createdAt: Date; source: string; demo?: boolean };
-export type Sale = { sku: string; date: string; qty: number; demo?: boolean };
+export type Sale = { sku: string; date: string; qty: number; source?: 'proxy' | 'order' | string; demo?: boolean };
 export type Supplier = { _id: string; name: string; contact?: string; quotes: { sku: string; unitCost: number }[]; demo?: boolean };
 export type Preference = { _id?: any; text: string; kind: 'block_supplier' | 'note'; supplier?: string; createdAt: Date; mirror: 'backboard' | 'local-only'; backboardId?: string };
 
