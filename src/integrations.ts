@@ -175,3 +175,40 @@ export async function backboardList(): Promise<string[]> {
 export async function backboardSearch(query: string, limit = 10): Promise<string[]> {
   return span('memory.backboard', 'backboard search memories', { limit }, async () => contents(await bb(`/assistants/${await bbAssistant()}/memories/search`, { method: 'POST', body: JSON.stringify({ query, limit }) })));
 }
+
+// ---------- ElevenLabs voice ----------
+
+export const elevenLive = () => !!env.ELEVENLABS_API_KEY;
+let elevenCheck = { at: 0, key: '', ok: false, detail: '' };
+/** Key present AND accepted by ElevenLabs (GET /v1/user, cached 10 min). Only then does the UI say "Voice: ElevenLabs". */
+export async function elevenStatus() {
+  const key = env.ELEVENLABS_API_KEY;
+  if (!key) return { ok: false, detail: 'ELEVENLABS_API_KEY missing — browser Web Speech API' };
+  if (elevenCheck.key !== key || Date.now() - elevenCheck.at > 600_000) {
+    const r = await fetch('https://api.elevenlabs.io/v1/user', { headers: { 'xi-api-key': key }, signal: AbortSignal.timeout(5000) }).catch((e: Error) => e);
+    elevenCheck = { at: Date.now(), key, ok: r instanceof Response && r.ok, detail: r instanceof Response ? (r.ok ? 'key verified (GET /v1/user) — Scribe STT + TTS' : `key rejected (HTTP ${r.status}) — browser speech`) : `unreachable (${r.message}) — browser speech` };
+  }
+  return { ok: elevenCheck.ok, detail: elevenCheck.detail };
+}
+const AUDIO_EXT: Record<string, string> = { 'audio/mp4': 'mp4', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/mpeg': 'mp3', 'audio/ogg': 'ogg', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/webm': 'webm' };
+export const audioFilename = (mime: string) => `audio.${AUDIO_EXT[mime.split(';')[0].trim().toLowerCase()] ?? 'webm'}`;
+export async function elevenSTT(audio: Buffer, mime: string): Promise<string> {
+  return span('voice.stt', 'elevenlabs scribe', { bytes: audio.length, mime }, async () => {
+    const fd = new FormData();
+    fd.append('model_id', env.ELEVENLABS_STT_MODEL ?? 'scribe_v1');
+    fd.append('file', new Blob([new Uint8Array(audio)], { type: mime.split(';')[0] }), audioFilename(mime));
+    const r = await fetch('https://api.elevenlabs.io/v1/speech-to-text', { method: 'POST', headers: { 'xi-api-key': env.ELEVENLABS_API_KEY! }, body: fd, signal: AbortSignal.timeout(30_000) });
+    if (!r.ok) throw new Error(`ElevenLabs STT HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    return ((await r.json()) as any).text ?? '';
+  });
+}
+export async function elevenTTS(text: string): Promise<ArrayBuffer> {
+  return span('voice.tts', 'elevenlabs tts', { chars: text.length }, async () => {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${env.ELEVENLABS_VOICE_ID ?? 'JBFqnCBsd6RMkjVDRZzb'}?output_format=mp3_44100_128`, {
+      method: 'POST', headers: { 'xi-api-key': env.ELEVENLABS_API_KEY!, 'content-type': 'application/json' },
+      body: JSON.stringify({ text: text.slice(0, 2500), model_id: env.ELEVENLABS_TTS_MODEL ?? 'eleven_flash_v2_5' }), signal: AbortSignal.timeout(30_000),
+    });
+    if (!r.ok) throw new Error(`ElevenLabs TTS HTTP ${r.status}`);
+    return r.arrayBuffer();
+  });
+}
