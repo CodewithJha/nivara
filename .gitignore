@@ -1,0 +1,6 @@
+node_modules/
+forecast/.venv/
+.env
+.temporal.db*
+.DS_Store
+__pycache__/

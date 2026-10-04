@@ -1,0 +1,32 @@
+{
+  "name": "nivara-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --import ./src/instrument.ts src/server.ts",
+    "dev": "node --env-file-if-exists=.env --import ./src/instrument.ts --watch src/server.ts",
+    "seed": "node --env-file-if-exists=.env src/seed.ts",
+    "worker": "node --env-file-if-exists=.env --import ./src/instrument.ts src/temporal/worker.ts",
+    "services": "bash scripts/dev.sh",
+    "temporal:dev": "temporal server start-dev --db-filename .temporal.db",
+    "db": "docker run -d --name nivara-mongo -p 27017:27017 mongo:8",
+    "test": "node --test test/*.test.ts",
+    "forecast:setup": "uv venv -p 3.11 forecast/.venv && VIRTUAL_ENV=forecast/.venv uv pip install -r forecast/requirements.txt"
+  },
+  "dependencies": {
+    "@mastra/core": "^1.74.0",
+    "@sentry/node": "^11.4.0",
+    "@temporalio/activity": "^1.24.0",
+    "@temporalio/client": "^1.24.0",
+    "@temporalio/worker": "^1.24.0",
+    "@temporalio/workflow": "^1.24.0",
+    "express": "^5.2.1",
+    "mongodb": "^7.7.0",
+    "pino": "^10.4.0",
+    "zod": "^4.6.5"
+  }
+}
