@@ -1,695 +1,4140 @@
 {
-  "fetchedAt": "2026-10-04T14:49:29.979Z",
-  "source": "Open Food Facts",
+  "fetchedAt": "2026-10-04T15:16:45.249Z",
+  "accessDate": "2026-10-04",
+  "source": "Open Food Facts (India)",
   "license": "Open Database License (ODbL)",
   "url": "https://world.openfoodfacts.org",
   "userAgent": "Nivara/0.1 (https://github.com; Hacktoberfest shop-ops; contact=nivara)",
-  "note": "Identity/nutrition from OFF. price/cost/stock/supplierId are Nivara shop fields for ops demos until the owner imports their catalogue.",
+  "note": "Identity from OFF. Prices from Open Prices when available, else manual estimate by productType.",
   "products": [
     {
       "_id": "R01",
-      "name": "Whey Protein",
+      "code": "8901207006241",
+      "name": "Dabur Chyawanprash",
+      "brands": "Dabur",
+      "quantity": "",
+      "productType": "ayurvedic",
+      "category": "food",
       "aliases": [
-        "whey protein",
-        "xxl nutrition whey protein",
-        "protein"
+        "dabur chyawanprash",
+        "dabur"
       ],
-      "category": "powder",
-      "price": 2549,
-      "cost": 1780,
-      "stock": 19,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "XXL Nutrition",
-        "quantity": "600 gram",
-        "sugarPer100g": 7.7,
-        "labels": [],
-        "categories": [
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Protein powders"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "8719881036429",
-        "url": "https://world.openfoodfacts.org/product/8719881036429/whey-protein-xxl-nutrition",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/120/700/6241/front_en.5.400.jpg",
+      "categories": [
+        "en:sweeteners",
+        "en:dietary-supplements",
+        "en:Ayurvedic",
+        "en:Pro"
+      ]
     },
     {
       "_id": "R02",
-      "name": "Whey protein neutre",
+      "code": "8901207040337",
+      "name": "Chyawanprash Awaleha",
+      "brands": "Dabur",
+      "quantity": "950 g",
+      "productType": "ayurvedic",
+      "category": "food",
       "aliases": [
-        "whey protein neutre",
-        "décathlon whey protein neutre",
-        "protein",
-        "neutre"
+        "chyawanprash awaleha",
+        "dabur"
       ],
-      "category": "powder",
-      "price": 2529,
-      "cost": 1804,
-      "stock": 27,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "DÉCATHLON",
-        "quantity": "900 g",
-        "sugarPer100g": 6.8,
-        "labels": [
-          "Made in France",
-          "Triman"
-        ],
-        "categories": [
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Protein powders",
-          "fr:Produits pour sportifs"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "3583787294765",
-        "url": "https://world.openfoodfacts.org/product/3583787294765/whey-proteine-decathlon",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/120/704/0337/front_en.42.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:ayurvedic-supplements",
+        "en:chyawanprash"
+      ]
     },
     {
       "_id": "R03",
-      "name": "Whey Protein",
-      "aliases": [
-        "whey protein",
-        "accelerate whey protein",
-        "protein"
-      ],
+      "code": "8904335602392",
+      "name": "Daily 10g Protein Bar",
+      "brands": "Yoga Bar",
+      "quantity": "50g",
+      "productType": "whey",
       "category": "powder",
-      "price": 2499,
-      "cost": 1796,
-      "stock": 41,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "Accelerate",
-        "quantity": "18 x 30 g",
-        "sugarPer100g": 6.1,
-        "labels": [
-          "Rainforest Alliance"
-        ],
-        "categories": [
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Protein powders"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "8719979204457",
-        "url": "https://world.openfoodfacts.org/product/8719979204457/whey-protein-accelerate",
-        "license": "ODbL"
-      }
+      "aliases": [
+        "daily 10g protein bar",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/2392/front_en.19.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
     },
     {
       "_id": "R04",
-      "name": "Whey protein chocolat",
+      "code": "8901207036989",
+      "name": "Chyawanprash",
+      "brands": "Dabur",
+      "quantity": "550 g",
+      "productType": "ayurvedic",
+      "category": "food",
       "aliases": [
-        "whey protein chocolat",
-        "décathlon whey protein chocolat",
-        "protein",
-        "chocolat"
+        "chyawanprash",
+        "dabur"
       ],
-      "category": "powder",
-      "price": 2559,
-      "cost": 1788,
-      "stock": 5,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "DÉCATHLON",
-        "quantity": "900 g",
-        "sugarPer100g": 8,
-        "labels": [
-          "Fair trade",
-          "Fairtrade International",
-          "Fairtrade cocoa",
-          "Max Havelaar",
-          "No added sugar",
-          "Triman"
-        ],
-        "categories": [
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Protein powders",
-          "fr:Integratori per bodybuilding",
-          "fr:Produits pour sportifs",
-          "fr:Proteine in polvere",
-          "fr:Supplementi dietetici"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "3583787458693",
-        "url": "https://world.openfoodfacts.org/product/3583787458693/whey-protein-decathlon",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/120/703/6989/front_en.9.400.jpg",
+      "categories": [
+        "en:sweeteners",
+        "en:dietary-supplements"
+      ]
     },
     {
       "_id": "R05",
-      "name": "Whey Protein",
-      "aliases": [
-        "whey protein",
-        "accelerate whey protein",
-        "protein"
-      ],
+      "code": "00001569",
+      "name": "Personalized Protein Powder",
+      "brands": "Herbalife",
+      "quantity": "",
+      "productType": "whey",
       "category": "powder",
-      "price": 2539,
-      "cost": 1796,
-      "stock": 21,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "Accelerate",
-        "quantity": "18 x 30 g",
-        "sugarPer100g": 7.1,
-        "labels": [],
-        "categories": [
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Protein powders"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "8719979204471",
-        "url": "https://world.openfoodfacts.org/product/8719979204471/whey-protein-accelerate",
-        "license": "ODbL"
-      }
+      "aliases": [
+        "personalized protein powder",
+        "herbalife"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/000/000/000/1569/front_en.15.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
     },
     {
       "_id": "R06",
-      "name": "Whey Protein cookies",
-      "aliases": [
-        "whey protein cookies",
-        "xxl nutrition whey protein cookies",
-        "protein",
-        "cookies"
-      ],
+      "code": "8906009532363",
+      "name": "MAX protein bar",
+      "brands": "Ritebite",
+      "quantity": "50g",
+      "productType": "whey",
       "category": "powder",
-      "price": 2499,
-      "cost": 1780,
-      "stock": 9,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "XXL Nutrition",
-        "quantity": "30 gram",
-        "sugarPer100g": 5.66666666666667,
-        "labels": [],
-        "categories": [
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Protein powders"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "8719881036436",
-        "url": "https://world.openfoodfacts.org/product/8719881036436/whey-protein-cookies-xxl-nutrition",
-        "license": "ODbL"
-      }
+      "aliases": [
+        "max protein bar",
+        "ritebite"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/953/2363/front_en.26.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars",
+        "en:Choco berry bar"
+      ]
     },
     {
       "_id": "R07",
-      "name": "Creatine Monohydrate",
-      "aliases": [
-        "creatine monohydrate",
-        "trust labs creatine monohydrate",
-        "creatine",
-        "monohydrate"
-      ],
+      "code": "8908005144359",
+      "name": "Breakfast protein bar",
+      "brands": "Yoga Bar",
+      "quantity": "45g",
+      "productType": "whey",
       "category": "powder",
-      "price": 919,
-      "cost": 576,
-      "stock": 11,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "Trust Labs",
-        "quantity": "300g",
-        "sugarPer100g": 0,
-        "labels": [
-          "No preservatives",
-          "Carbon footprint"
-        ],
-        "categories": [
-          "Dietary supplements",
-          "Creatina",
-          "Suplementos"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "9780201379624",
-        "url": "https://world.openfoodfacts.org/product/9780201379624/josi-pastrama-oaie-trust-labs",
-        "license": "ODbL"
-      }
+      "aliases": [
+        "breakfast protein bar",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/514/4359/front_en.20.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:cereal-bars",
+        "en:energy-bars",
+        "en:protein-bars",
+        "en:protein-energy-bars"
+      ]
     },
     {
       "_id": "R08",
-      "name": "Pre workout bodymass",
+      "code": "8901207900631",
+      "name": "Chyawanprash",
+      "brands": "Dabur",
+      "quantity": "575g",
+      "productType": "ayurvedic",
+      "category": "food",
       "aliases": [
-        "pre workout bodymass",
-        "bodymass nutrition pre workout bodymass",
-        "workout",
-        "bodymass"
+        "chyawanprash",
+        "dabur"
       ],
-      "category": "powder",
-      "price": 1529,
-      "cost": 1004,
-      "stock": 7,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "BODYMASS NUTRITION",
-        "quantity": "300 g",
-        "sugarPer100g": null,
-        "labels": [
-          "Vegetarian",
-          "Vegan",
-          "Green Dot"
-        ],
-        "categories": [
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "BCAA"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "8718836394652",
-        "url": "https://world.openfoodfacts.org/product/8718836394652/pre-workout-bodymass-bodymass-nutrition",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/120/790/0631/front_en.10.400.jpg",
+      "categories": [
+        "en:food-additives",
+        "en:dietary-supplements",
+        "en:citric-acids",
+        "en:Immunity-booster"
+      ]
     },
     {
       "_id": "R09",
-      "name": "Protein Bars Cocoa Hazelnut",
+      "code": "8904335601890",
+      "name": "Yoga bar High Protein Muesli+",
+      "brands": "Yoga bar",
+      "quantity": "850g",
+      "productType": "whey",
+      "category": "powder",
       "aliases": [
-        "protein bars cocoa hazelnut",
-        "nakd. protein bars cocoa hazelnut",
-        "protein",
-        "cocoa",
-        "hazelnut"
+        "yoga bar high protein muesli+",
+        "yoga bar"
       ],
-      "category": "bars",
-      "price": 145,
-      "cost": 63,
-      "stock": 15,
-      "supplierId": "S1",
-      "leadTimeDays": 4,
-      "tags": {
-        "brands": "nakd.",
-        "quantity": "135 g",
-        "sugarPer100g": 28,
-        "labels": [
-          "Vegetarian",
-          "No gluten",
-          "Kosher",
-          "No milk",
-          "Vegan",
-          "FSC",
-          "FSC Mix",
-          "Kashrut division of the London Beth Din",
-          "No added sugar",
-          "No lactose",
-          "Triman"
-        ],
-        "categories": [
-          "Plant-based foods and beverages",
-          "Plant-based foods",
-          "Snacks",
-          "Sweet snacks",
-          "Nuts and their products",
-          "Bars",
-          "Cereal bars",
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Chocolate cereal bars",
-          "Nut bars",
-          "Cereal bar with chocolate fortified with vitamins and minerals",
-          "Energy bars",
-          "Protein bars",
-          "fr:Barres aux fruits",
-          "barres-de-cereales",
-          "barres-de-fruits-noix"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "5060088700112",
-        "url": "https://world.openfoodfacts.org/product/5060088700112/protein-bars-cocoa-hazelnut-nakd",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/1890/front_en.22.400.jpg",
+      "categories": [
+        "en:plant-based-foods-and-beverages",
+        "en:plant-based-foods",
+        "en:breakfasts",
+        "en:seeds",
+        "en:cereals-and-potatoes",
+        "en:cereals-and-their-products",
+        "en:breakfast-cereals",
+        "en:cereal-grains",
+        "en:dietary-supplements",
+        "en:mueslis",
+        "en:oat"
+      ]
     },
     {
       "_id": "R10",
-      "name": "Protein Nut Bar Fruit & Chocolate",
+      "code": "8906011145049",
+      "name": "B protein",
+      "brands": "british biologicals",
+      "quantity": "500g",
+      "productType": "whey",
+      "category": "powder",
       "aliases": [
-        "protein nut bar fruit chocolate",
-        "nature valley protein nut bar fruit chocolate",
-        "protein",
-        "fruit",
-        "chocolate"
+        "b protein",
+        "british biologicals"
       ],
-      "category": "bars",
-      "price": 135,
-      "cost": 79,
-      "stock": 37,
-      "supplierId": "S1",
-      "leadTimeDays": 4,
-      "tags": {
-        "brands": "Nature Valley",
-        "quantity": "160 g",
-        "sugarPer100g": 15.4,
-        "labels": [
-          "Contains milk",
-          "Contains palm oil",
-          "Triman"
-        ],
-        "categories": [
-          "Snacks",
-          "Sweet snacks",
-          "Bars",
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Energy bars",
-          "Protein bars",
-          "Protein Energy Bars"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "8410076901026",
-        "url": "https://world.openfoodfacts.org/product/8410076901026/protein-nut-bar-fruit-chocolate-nature-valley",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/601/114/5049/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
     },
     {
       "_id": "R11",
-      "name": "peanuts & dark chocolate protein fruit & nut bars",
+      "code": "8904335602385",
+      "name": "Yoga Bar Protein Bar",
+      "brands": "Yoga Bar",
+      "quantity": "50g",
+      "productType": "whey",
+      "category": "powder",
       "aliases": [
-        "peanuts dark chocolate protein fruit nut bars",
-        "eat natural peanuts dark chocolate protein fruit nut bars",
-        "peanuts",
-        "chocolate",
-        "protein"
+        "yoga bar protein bar",
+        "yoga bar"
       ],
-      "category": "bars",
-      "price": 145,
-      "cost": 71,
-      "stock": 21,
-      "supplierId": "S1",
-      "leadTimeDays": 4,
-      "tags": {
-        "brands": "EAT NATURAL",
-        "quantity": "120 gram",
-        "sugarPer100g": 24.9,
-        "labels": [
-          "No gluten"
-        ],
-        "categories": [
-          "Snacks",
-          "Sweet snacks",
-          "Cocoa and its products",
-          "Confectioneries",
-          "Chocolate candies",
-          "Bars",
-          "Candy chocolate bars",
-          "Chocolate nuts cookie bars"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "8000500416938",
-        "url": "https://world.openfoodfacts.org/product/8000500416938/peanuts-amp-dark-chocolate-protein-fruit-amp-nut-ba-eat-natural",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/2385/front_en.20.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:energy-bars",
+        "en:protein-bars",
+        "en:protein-energy-bars"
+      ]
     },
     {
       "_id": "R12",
-      "name": "Peanut Butter Protein Bars",
+      "code": "8906136651951",
+      "name": "Pintola High Protein Oats Dark Chocolate",
+      "brands": "Pintola",
+      "quantity": "400g",
+      "productType": "whey",
+      "category": "powder",
       "aliases": [
-        "peanut butter protein bars",
-        "nākd peanut butter protein bars",
-        "peanut",
-        "butter",
-        "protein"
+        "pintola high protein oats dark chocolate",
+        "pintola"
       ],
-      "category": "bars",
-      "price": 105,
-      "cost": 79,
-      "stock": 37,
-      "supplierId": "S1",
-      "leadTimeDays": 4,
-      "tags": {
-        "brands": "nākd, Nakd",
-        "quantity": "45 g",
-        "sugarPer100g": 26.8,
-        "labels": [
-          "Vegetarian",
-          "No gluten",
-          "Kosher",
-          "Vegan",
-          "Kashrut division of the London Beth Din",
-          "No added sugar",
-          "No lactose"
-        ],
-        "categories": [
-          "Plant-based foods and beverages",
-          "Plant-based foods",
-          "Snacks",
-          "Sweet snacks",
-          "Nuts and their products",
-          "Bars",
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Nut bars",
-          "Energy bars",
-          "Peanut bars",
-          "Protein bars"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "5060088700082",
-        "url": "https://world.openfoodfacts.org/product/5060088700082/protein-peanut-butter-bar-nākd",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/613/665/1951/front_en.10.400.jpg",
+      "categories": [
+        "en:plant-based-foods-and-beverages",
+        "en:plant-based-foods",
+        "en:breakfasts",
+        "en:cereals-and-potatoes",
+        "en:cereals-and-their-products",
+        "en:breakfast-cereals",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
     },
     {
       "_id": "R13",
-      "name": "CRUNCHY PROTEIN BAR Caramel Crisp flavour",
+      "code": "8904335602408",
+      "name": "Coffe Rush 10g Protein Bar",
+      "brands": "Yoga Bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
       "aliases": [
-        "crunchy protein bar caramel crisp flavour",
-        "sportyfeel crunchy protein bar caramel crisp flavour",
-        "crunchy",
-        "protein",
-        "caramel"
+        "coffe rush 10g protein bar",
+        "yoga bar"
       ],
-      "category": "bars",
-      "price": 135,
-      "cost": 55,
-      "stock": 9,
-      "supplierId": "S1",
-      "leadTimeDays": 4,
-      "tags": {
-        "brands": "SPORTYFEEL",
-        "quantity": "50g",
-        "sugarPer100g": 3.3,
-        "labels": [
-          "Rainforest Alliance",
-          "No added sugar",
-          "Triman"
-        ],
-        "categories": [
-          "Snacks",
-          "Sweet snacks",
-          "Bars",
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Protein bars"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "4056489997658",
-        "url": "https://world.openfoodfacts.org/product/4056489997658/crunchy-protein-bar-caramel-crisp-flavour-sportyfeel",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/2408/front_en.16.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
     },
     {
       "_id": "R14",
-      "name": "Tvarohová tyčinka Protein",
+      "code": "8904463100111",
+      "name": "Creatine Monohydrate",
+      "brands": "Wellcore",
+      "quantity": "250g",
+      "productType": "creatine",
+      "category": "powder",
       "aliases": [
-        "tvarohov ty inka protein",
-        "müller tvarohov ty inka protein",
-        "tvarohov",
-        "protein"
+        "creatine monohydrate",
+        "wellcore"
       ],
-      "category": "bars",
-      "price": 135,
-      "cost": 55,
-      "stock": 19,
-      "supplierId": "S1",
-      "leadTimeDays": 4,
-      "tags": {
-        "brands": "Müller",
-        "quantity": "40g",
-        "sugarPer100g": 7,
-        "labels": [
-          "Source of proteins",
-          "Sustainable farming",
-          "High proteins",
-          "Nutriscore",
-          "Nutriscore Grade C",
-          "Nutriscore Grade D",
-          "Rainforest Alliance",
-          "Rainforest Alliance Cocoa",
-          "UTZ Certified"
-        ],
-        "categories": [
-          "Dairies",
-          "Fermented foods",
-          "Fermented milk products",
-          "Snacks",
-          "Sweet snacks",
-          "Bars",
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Quarks",
-          "Curd snacks",
-          "Energy bars",
-          "Protein bars",
-          "Protein Energy Bars",
-          "hu:Turodesszert",
-          "sk:protein"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "20955427",
-        "url": "https://world.openfoodfacts.org/product/20955427/high-protein-quarkriegel-muller",
-        "license": "ODbL"
-      }
+      "image": "https://images.openfoodfacts.org/images/products/890/446/310/0111/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:creatine"
+      ]
     },
     {
       "_id": "R15",
-      "name": "BCAA",
-      "aliases": [
-        "bcaa",
-        "kong strong bcaa"
-      ],
+      "code": "8908005144366",
+      "name": "Breakfast Protein Bar Apricot Fig",
+      "brands": "Yoga Bar",
+      "quantity": "50g",
+      "productType": "whey",
       "category": "powder",
-      "price": 1249,
-      "cost": 804,
-      "stock": 37,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "Kong Strong",
-        "quantity": "",
-        "sugarPer100g": 0.5,
-        "labels": [
-          "Nutriscore"
-        ],
-        "categories": []
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "4335619107311",
-        "url": "https://world.openfoodfacts.org/product/4335619107311/hydration-ice-pop-kong-strong",
-        "license": "ODbL"
-      }
+      "aliases": [
+        "breakfast protein bar apricot fig",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/514/4366/front_en.25.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:cereal-bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:energy-bars",
+        "en:protein-bars",
+        "en:protein-energy-bars"
+      ]
     },
     {
       "_id": "R16",
-      "name": "mass gainer",
-      "aliases": [
-        "mass gainer",
-        "isostar mass gainer",
-        "gainer"
-      ],
+      "code": "0748927066623",
+      "name": "Micronized Creatine Powder",
+      "brands": "Optimum Nutrition",
+      "quantity": "250g",
+      "productType": "creatine",
       "category": "powder",
-      "price": 3049,
-      "cost": 2182,
-      "stock": 43,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "Isostar",
-        "quantity": "700 g",
-        "sugarPer100g": 49,
-        "labels": [],
-        "categories": [
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "nl:Proteine eiwit poeders",
-          "nl:Sport",
-          "nl:Sportvoeding"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "3175681247239",
-        "url": "https://world.openfoodfacts.org/product/3175681247239/mass-gainer-isostar",
-        "license": "ODbL"
-      }
+      "aliases": [
+        "micronized creatine powder",
+        "optimum nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/706/6623/front_en.23.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
     },
     {
       "_id": "R17",
-      "name": "Organic Protein",
-      "aliases": [
-        "organic protein",
-        "orgain organic protein",
-        "organic",
-        "protein"
-      ],
+      "code": "8906116953310",
+      "name": "MB biozyme whey",
+      "brands": "Muscle blaze",
+      "quantity": "",
+      "productType": "whey",
       "category": "powder",
-      "price": 2349,
-      "cost": 1608,
-      "stock": 5,
-      "supplierId": "S3",
-      "leadTimeDays": 6,
-      "tags": {
-        "brands": "Orgain",
-        "quantity": "43.2 oz (2.7 lbs) 1.22kg",
-        "sugarPer100g": 1.96078431372549,
-        "labels": [
-          "Vegetarian",
-          "No gluten",
-          "Organic",
-          "Kosher",
-          "No GMOs",
-          "USDA Organic",
-          "Vegan",
-          "Certified B Corporation",
-          "Certified Plant Based",
-          "No soy"
-        ],
-        "categories": [
-          "Meat alternatives",
-          "Meat analogues",
-          "Dietary supplements",
-          "Bodybuilding supplements",
-          "Protein powders"
-        ]
-      },
-      "origin": {
-        "source": "openfoodfacts",
-        "code": "0851770007566",
-        "url": "https://world.openfoodfacts.org/product/0851770007566/organic-protein-orgain",
-        "license": "ODbL"
-      }
+      "aliases": [
+        "mb biozyme whey",
+        "muscle blaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/611/695/3310/front_en.7.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R18",
+      "code": "8904335601937",
+      "name": "Yoga bar 20g protein oats+",
+      "brands": "Yoga bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "yoga bar 20g protein oats+",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/1937/front_en.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R19",
+      "code": "8908024977020",
+      "name": "Superyou Protein Wafer",
+      "brands": "Superyou",
+      "quantity": "10 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "superyou protein wafer",
+        "superyou"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/802/497/7020/front_en.3.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:biscuits-and-cakes",
+        "en:biscuits-and-crackers",
+        "en:biscuits",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:wafers",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R20",
+      "code": "0048107238940",
+      "name": "Creatine monohydrate",
+      "brands": "GNC",
+      "quantity": "",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "creatine monohydrate",
+        "gnc"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/004/810/723/8940/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R21",
+      "code": "8904463100241",
+      "name": "Wellcore Creatine Monohydrate",
+      "brands": "Wellcore",
+      "quantity": "122g",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "wellcore creatine monohydrate",
+        "wellcore"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/446/310/0241/front_en.11.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:creatine"
+      ]
+    },
+    {
+      "_id": "R22",
+      "code": "8939111430166",
+      "name": "Creatine Monohydrate",
+      "brands": "wellcore",
+      "quantity": "250 g",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "creatine monohydrate",
+        "wellcore"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/893/911/143/0166/front_en.11.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R23",
+      "code": "8904221697860",
+      "name": "As It Is Whey Protein",
+      "brands": "Atom",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "as it is whey protein",
+        "atom"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/422/169/7860/front_en.12.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:Supplement",
+        "en:Whey protein"
+      ]
+    },
+    {
+      "_id": "R24",
+      "code": "8906067021427",
+      "name": "Mulivitamin",
+      "brands": "HK Vitals",
+      "quantity": "",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "mulivitamin",
+        "hk vitals"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/606/702/1427/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R25",
+      "code": "0748927065725",
+      "name": "Optimum nutrition whey protein",
+      "brands": "Optimum nutrition",
+      "quantity": "907g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "optimum nutrition whey protein",
+        "optimum nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/706/5725/front_en.6.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:Whey protein"
+      ]
+    },
+    {
+      "_id": "R26",
+      "code": "8906116958995",
+      "name": "Whey",
+      "brands": "Muscleblaze",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey",
+        "muscleblaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/611/695/8995/front_en.11.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R27",
+      "code": "8904335603894",
+      "name": "Protein shake cold coffee",
+      "brands": "Yoga bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein shake cold coffee",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/3894/front_en.18.400.jpg",
+      "categories": [
+        "en:beverages-and-beverages-preparations",
+        "en:beverages",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-shakes"
+      ]
+    },
+    {
+      "_id": "R28",
+      "code": "3948207040337",
+      "name": "Dabur chyawanprash",
+      "brands": "",
+      "quantity": "950",
+      "productType": "ayurvedic",
+      "category": "food",
+      "aliases": [
+        "dabur chyawanprash"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/394/820/704/0337/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:ayurvedic-supplements"
+      ]
+    },
+    {
+      "_id": "R29",
+      "code": "8906009532158",
+      "name": "Max Protein Ultimate",
+      "brands": "Rite bite",
+      "quantity": "100gm",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "max protein ultimate",
+        "rite bite"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/953/2158/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R30",
+      "code": "8906165781995",
+      "name": "FuelOne Whey Max",
+      "brands": "FuelOne",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "fuelone whey max",
+        "fuelone"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/616/578/1995/front_en.21.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R31",
+      "code": "8906143891661",
+      "name": "Whey Protein Concentrate Unflavoured",
+      "brands": "The Whole Truth",
+      "quantity": "1KG",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein concentrate unflavoured",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/1661/front_en.49.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:Whey protein"
+      ]
+    },
+    {
+      "_id": "R32",
+      "code": "8906009531335",
+      "name": "Max protein active choco fudge bar",
+      "brands": "MAX PROTEIN ACTIVE",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "max protein active choco fudge bar",
+        "max protein active"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/953/1335/front_en.12.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:energy-bars"
+      ]
+    },
+    {
+      "_id": "R33",
+      "code": "8906059636639",
+      "name": "Epigamia turbo protein shake",
+      "brands": "Epigamia",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "epigamia turbo protein shake",
+        "epigamia"
+      ],
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R34",
+      "code": "8906009532141",
+      "name": "ULTIMATE PROTEIN.",
+      "brands": "",
+      "quantity": "100",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "ultimate protein."
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/953/2141/front_en.6.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R35",
+      "code": "8906143891654",
+      "name": "Cocoa Whey Protein",
+      "brands": "The Whole Truth",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "cocoa whey protein",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/1654/front_en.4.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R36",
+      "code": "8906059637285",
+      "name": "Turbo Protein Milkshake",
+      "brands": "Epigamia",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "turbo protein milkshake",
+        "epigamia"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/605/963/7285/front_en.3.400.jpg",
+      "categories": [
+        "en:beverages-and-beverages-preparations",
+        "en:beverages",
+        "en:dairies",
+        "en:dairy-drinks",
+        "en:flavoured-milks",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:milkshakes",
+        "en:protein-shakes"
+      ]
+    },
+    {
+      "_id": "R37",
+      "code": "8904463100128",
+      "name": "Creatine",
+      "brands": "Well core",
+      "quantity": "300gms",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "creatine",
+        "well core"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/446/310/0128/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:Food"
+      ]
+    },
+    {
+      "_id": "R38",
+      "code": "8906161540251",
+      "name": "Protein bar",
+      "brands": "Stroom",
+      "quantity": "10 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein bar",
+        "stroom"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/616/154/0251/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R39",
+      "code": "8939999780988",
+      "name": "Whey Protein Concentrate Chocolate Flavour",
+      "brands": "Naturaltein",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein concentrate chocolate flavour",
+        "naturaltein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/893/999/978/0988/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R40",
+      "code": "8906127551437",
+      "name": "high protein super oats",
+      "brands": "Alpino",
+      "quantity": "2.5 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "high protein super oats",
+        "alpino"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/612/755/1437/front_en.9.400.jpg",
+      "categories": [
+        "en:plant-based-foods-and-beverages",
+        "en:plant-based-foods",
+        "en:breakfasts",
+        "en:cereals-and-potatoes",
+        "en:seeds",
+        "en:cereals-and-their-products",
+        "en:breakfast-cereals",
+        "en:cereal-grains",
+        "en:dietary-supplements",
+        "en:oat"
+      ]
+    },
+    {
+      "_id": "R41",
+      "code": "8901248703291",
+      "name": "Zandu Chyawanprash",
+      "brands": "Zandu",
+      "quantity": "",
+      "productType": "ayurvedic",
+      "category": "food",
+      "aliases": [
+        "zandu chyawanprash",
+        "zandu"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/124/870/3291/front_en.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:ayurvedic-supplements"
+      ]
+    },
+    {
+      "_id": "R42",
+      "code": "0051111407592",
+      "name": "Birthday Cake Protein Oats",
+      "brands": "Freaking Protein Oats",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "birthday cake protein oats",
+        "freaking protein oats"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/005/111/140/7592/front_en.10.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R43",
+      "code": "8901207045035",
+      "name": "Chyawanprash",
+      "brands": "Dabur",
+      "quantity": "900 g",
+      "productType": "ayurvedic",
+      "category": "food",
+      "aliases": [
+        "chyawanprash",
+        "dabur"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/120/704/5035/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:ayurvedic-supplements",
+        "en:chyawanprash"
+      ]
+    },
+    {
+      "_id": "R44",
+      "code": "0748927066012",
+      "name": "performance whey",
+      "brands": "Optimum nutrition",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "performance whey",
+        "optimum nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/706/6012/front_en.19.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R45",
+      "code": "0748927068818",
+      "name": "Micronised Creatine Powder",
+      "brands": "Optimum Nutrition",
+      "quantity": "100 g",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "micronised creatine powder",
+        "optimum nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/706/8818/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R46",
+      "code": "8908005144441",
+      "name": "Breakfast protein Bar",
+      "brands": "Yoga Bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "breakfast protein bar",
+        "yoga bar"
+      ],
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:cereal-bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R47",
+      "code": "8906001022848",
+      "name": "Protein powder",
+      "brands": "Avvatar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein powder",
+        "avvatar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/102/2848/front_en.6.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R48",
+      "code": "8906013890695",
+      "name": "Protein powder",
+      "brands": "Pedia Gold plus",
+      "quantity": "400g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein powder",
+        "pedia gold plus"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/601/389/0695/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R49",
+      "code": "8904335602064",
+      "name": "Yoga bar Breakfast Protein Bar",
+      "brands": "Yogabar",
+      "quantity": "50g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "yoga bar breakfast protein bar",
+        "yogabar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/2064/front_en.3.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:cereal-bars",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R50",
+      "code": "8908009477019",
+      "name": "Triple strength Omega 3 fish oil",
+      "brands": "Healthy Hey",
+      "quantity": "60 capsules",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "triple strength omega 3 fish oil",
+        "healthy hey"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/947/7019/front_en.3.400.jpg",
+      "categories": [
+        "en:fats",
+        "en:animal-fats",
+        "en:dietary-supplements",
+        "en:fish-oils",
+        "en:vitamin-supplements",
+        "en:Supplement"
+      ]
+    },
+    {
+      "_id": "R51",
+      "code": "8909106065468",
+      "name": "Protein Boost",
+      "brands": "Unilever",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein boost",
+        "unilever"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/910/606/5468/front_en.13.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R52",
+      "code": "8904422700765",
+      "name": "Patanjali Chyawanprash",
+      "brands": "Patanjali",
+      "quantity": "Net Quantityt: 1kg",
+      "productType": "ayurvedic",
+      "category": "food",
+      "aliases": [
+        "patanjali chyawanprash",
+        "patanjali"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/442/270/0765/front_en.13.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:ayurvedic-supplements",
+        "en:chyawanprash",
+        "en:Ayurvedic-preparations",
+        "en:Healthy",
+        "en:Herbal-supplements"
+      ]
+    },
+    {
+      "_id": "R53",
+      "code": "8904335605218",
+      "name": "Coffee Flavour Plant Protein",
+      "brands": "Yogabar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "coffee flavour plant protein",
+        "yogabar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/5218/front_en.6.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R54",
+      "code": "0754083605446",
+      "name": "Essential Whey Protein",
+      "brands": "Big Muscle",
+      "quantity": "1000gm",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "essential whey protein",
+        "big muscle"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/075/408/360/5446/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:Whey protein"
+      ]
+    },
+    {
+      "_id": "R55",
+      "code": "8906009532509",
+      "name": "Max protein",
+      "brands": "RiteBite",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "max protein",
+        "ritebite"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/953/2509/front_fr.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R56",
+      "code": "8906143891647",
+      "name": "Cold Coffee Whey Protein Isolate + Concentrate",
+      "brands": "The Whole Truth",
+      "quantity": "1kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "cold coffee whey protein isolate + concentrate",
+        "the whole truth"
+      ],
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R57",
+      "code": "8908005144311",
+      "name": "yoga bar 20g protein hazelnut",
+      "brands": "Yoga bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "yoga bar 20g protein hazelnut",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/514/4311/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R58",
+      "code": "8908013172207",
+      "name": "Mocha Nut Fudge Protein bar by Phab",
+      "brands": "Phab",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "mocha nut fudge protein bar by phab",
+        "phab"
+      ],
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R59",
+      "code": "8904355402859",
+      "name": "Apollo Life Vitamin B-12 Tablets",
+      "brands": "Apollo Life",
+      "quantity": "",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "apollo life vitamin b-12 tablets",
+        "apollo life"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/435/540/2859/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R60",
+      "code": "8906001025252",
+      "name": "Whey Protein",
+      "brands": "Avatar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein",
+        "avatar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/102/5252/front_en.16.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R61",
+      "code": "8908011479117",
+      "name": "Calcium + Vitamin D3",
+      "brands": "Tata 1mg",
+      "quantity": "",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "calcium + vitamin d3",
+        "tata 1mg"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/801/147/9117/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R62",
+      "code": "8904335604518",
+      "name": "Power Up 20g Protein Bar Coffee Crush",
+      "brands": "Yoga Bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "power up 20g protein bar coffee crush",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/4518/front_en.22.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R63",
+      "code": "8906143891630",
+      "name": "Protein Bar",
+      "brands": "The Whole Truth",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein bar",
+        "the whole truth"
+      ],
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R64",
+      "code": "0031603555598",
+      "name": "Creatine",
+      "brands": "Creatine",
+      "quantity": "125 ml",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "creatine"
+      ],
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R65",
+      "code": "8904221695873",
+      "name": "Atom Creatine Monohydrate",
+      "brands": "Atom",
+      "quantity": "100 g",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "atom creatine monohydrate",
+        "atom"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/422/169/5873/front_en.11.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:creatine"
+      ]
+    },
+    {
+      "_id": "R66",
+      "code": "8904335604280",
+      "name": "Protein Minis",
+      "brands": "Yoga Bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein minis",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/4280/front_en.10.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R67",
+      "code": "8906133024888",
+      "name": "Perform Whey Protein Concentrate",
+      "brands": "Nakpro",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "perform whey protein concentrate",
+        "nakpro"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/302/4888/front_en.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R68",
+      "code": "0048107255930",
+      "name": "Coffee flavour Protein Wafer Bar",
+      "brands": "GNC",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "coffee flavour protein wafer bar",
+        "gnc"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/004/810/725/5930/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R69",
+      "code": "8906081923646",
+      "name": "Carbamide Forte Chewable Vitamin D3",
+      "brands": "Carbamide Forte",
+      "quantity": "",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "carbamide forte chewable vitamin d3",
+        "carbamide forte"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/608/192/3646/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins",
+        "en:Supplement"
+      ]
+    },
+    {
+      "_id": "R70",
+      "code": "8908009918048",
+      "name": "Protein & Herbs",
+      "brands": "Oziva",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein & herbs",
+        "oziva"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/991/8048/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R71",
+      "code": "4897091281304",
+      "name": "Alaska Deep Sea Fish Oil Omega 3",
+      "brands": "Sunline",
+      "quantity": "",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "alaska deep sea fish oil omega 3",
+        "sunline"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/489/709/128/1304/front_en.3.400.jpg",
+      "categories": [
+        "en:fats",
+        "en:animal-fats",
+        "en:dietary-supplements",
+        "en:fish-oils",
+        "en:vitamin-supplements"
+      ]
+    },
+    {
+      "_id": "R72",
+      "code": "8906133026240",
+      "name": "Impact Why Protein Isolate & Concentrate",
+      "brands": "Nakpro",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "impact why protein isolate & concentrate",
+        "nakpro"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/302/6240/front_en.13.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:Food"
+      ]
+    },
+    {
+      "_id": "R73",
+      "code": "0748927066692",
+      "name": "Whey",
+      "brands": "Gold Standard",
+      "quantity": "2.5kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey",
+        "gold standard"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/706/6692/front_en.16.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R74",
+      "code": "8908009918635",
+      "name": "Oziva Plant Protein",
+      "brands": "Oziva",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "oziva plant protein",
+        "oziva"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/991/8635/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R75",
+      "code": "4906409532363",
+      "name": "Max Protein by RiteBite",
+      "brands": "RiteBite",
+      "quantity": "50g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "max protein by ritebite",
+        "ritebite"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/490/640/953/2363/front_en.3.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R76",
+      "code": "8908013479122",
+      "name": "Peanut Butter Protein Bar",
+      "brands": "The Whole Truth",
+      "quantity": "52g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "peanut butter protein bar",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/801/347/9122/front_en.24.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R77",
+      "code": "8906170520008",
+      "name": "Active Multivitamin Men",
+      "brands": "Nutrabay Pro",
+      "quantity": "30 Tablets",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "active multivitamin men",
+        "nutrabay pro"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/617/052/0008/front_en.9.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R78",
+      "code": "8908005144335",
+      "name": "Almond Coconut Breakfast Protein Bar",
+      "brands": "Yoga Bar",
+      "quantity": "50g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "almond coconut breakfast protein bar",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/514/4335/front_en.3.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:energy-bars",
+        "en:protein-bars",
+        "en:protein-energy-bars"
+      ]
+    },
+    {
+      "_id": "R79",
+      "code": "8903236680003",
+      "name": "Cosmix Plant Protein",
+      "brands": "Cosmix",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "cosmix plant protein",
+        "cosmix"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/323/668/0003/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R80",
+      "code": "8908009918055",
+      "name": "Oziva Protein & Herbs",
+      "brands": "Oziva",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "oziva protein & herbs",
+        "oziva"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/991/8055/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R81",
+      "code": "8904355403559",
+      "name": "Whey Protein Chocolate Flavour",
+      "brands": "Apollo Life",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein chocolate flavour",
+        "apollo life"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/435/540/3559/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R82",
+      "code": "8906143891302",
+      "name": "The Whole Truth High Protein Peanut Cocoa",
+      "brands": "The Whole Truth",
+      "quantity": "67g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "the whole truth high protein peanut cocoa",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/1302/front_en.11.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars",
+        "en:protein"
+      ]
+    },
+    {
+      "_id": "R83",
+      "code": "8908009918284",
+      "name": "oziva protein and herbs",
+      "brands": "oziva",
+      "quantity": "500g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "oziva protein and herbs",
+        "oziva"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/991/8284/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R84",
+      "code": "5059883417059",
+      "name": "Impact Whey Protein",
+      "brands": "My Protein",
+      "quantity": "2.5kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "impact whey protein",
+        "my protein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/505/988/341/7059/front_en.3.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R85",
+      "code": "8906081920706",
+      "name": "Vitamin C + Amla Extract 1000mg + Zinc",
+      "brands": "Carbamide Forte",
+      "quantity": "",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "vitamin c + amla extract 1000mg + zinc",
+        "carbamide forte"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/608/192/0706/front_en.8.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R86",
+      "code": "0834266007202",
+      "name": "SYNTHA-6 Ultra Premium Protein Matrix, Chocolate Milkshake",
+      "brands": "Bio-Engineered Supplements & Nutrition, Inc.",
+      "quantity": "2.27 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "syntha-6 ultra premium protein matrix, chocolate milkshake",
+        "bio-engineered supplements & nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/083/426/600/7202/front_en.34.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R87",
+      "code": "0733739016614",
+      "name": "Ultra Omega-3 Fish Oil",
+      "brands": "NOW FOODS",
+      "quantity": "90 Softgel",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "ultra omega-3 fish oil",
+        "now foods"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/073/373/901/6614/front_en.39.400.jpg",
+      "categories": [
+        "en:fats",
+        "en:animal-fats",
+        "en:dietary-supplements",
+        "en:fish-oils"
+      ]
+    },
+    {
+      "_id": "R88",
+      "code": "8906143891753",
+      "name": "Whey Protein Cold Coffee",
+      "brands": "The Whole Truth",
+      "quantity": "210 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein cold coffee",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/1753/front_en.14.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R89",
+      "code": "8906143891678",
+      "name": "Whey Protein Isolate",
+      "brands": "The Wholetruth",
+      "quantity": "1Kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein isolate",
+        "the wholetruth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/1678/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R90",
+      "code": "8906143891784",
+      "name": "Pista Badaam Whey Protein",
+      "brands": "The Whole Truth",
+      "quantity": "1kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "pista badaam whey protein",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/1784/front_en.9.400.jpg",
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R91",
+      "code": "8901262110266",
+      "name": "Whey Protein",
+      "brands": "Amul",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein",
+        "amul"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/126/211/0266/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R92",
+      "code": "8906170520688",
+      "name": "micronized creatine monohydrate",
+      "brands": "nutrabay",
+      "quantity": "400g",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "micronized creatine monohydrate",
+        "nutrabay"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/617/052/0688/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:creatine"
+      ]
+    },
+    {
+      "_id": "R93",
+      "code": "8906151141345",
+      "name": "Tata 1mg Omega 3 Capsules",
+      "brands": "Tata 1mg",
+      "quantity": "",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "tata 1mg omega 3 capsules",
+        "tata 1mg"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/615/114/1345/front_en.42.400.jpg",
+      "categories": [
+        "en:fats",
+        "en:animal-fats",
+        "en:dietary-supplements",
+        "en:fish-oils"
+      ]
+    },
+    {
+      "_id": "R94",
+      "code": "8906133401399",
+      "name": "Little Joys Protein Mix",
+      "brands": "Little Joys",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "little joys protein mix",
+        "little joys"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/340/1399/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R95",
+      "code": "8906001026600",
+      "name": "Performance Whey Unflavoured",
+      "brands": "Avvatar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "performance whey unflavoured",
+        "avvatar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/102/6600/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R96",
+      "code": "8904221694784",
+      "name": "Atom Whey Protein Creamy Strawberry",
+      "brands": "As It Is",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "atom whey protein creamy strawberry",
+        "as it is"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/422/169/4784/front_en.4.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey"
+      ]
+    },
+    {
+      "_id": "R97",
+      "code": "8906081922090",
+      "name": "Plant protein +",
+      "brands": "Carbamide forte",
+      "quantity": "500g 14 servings",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "plant protein +",
+        "carbamide forte"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/608/192/2090/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-shakes"
+      ]
+    },
+    {
+      "_id": "R98",
+      "code": "8906108762418",
+      "name": "JBPS Nutra Omega 3 6 9",
+      "brands": "JBPS Nutra",
+      "quantity": "",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "jbps nutra omega 3 6 9",
+        "jbps nutra"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/610/876/2418/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R99",
+      "code": "8983202752453",
+      "name": "Bioton Soy Protein Isolate",
+      "brands": "Bioton",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "bioton soy protein isolate",
+        "bioton"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/898/320/275/2453/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:Soy protein isolate"
+      ]
+    },
+    {
+      "_id": "R100",
+      "code": "8906165744655",
+      "name": "Muscleblaze Micronised Creatine Monohydrate",
+      "brands": "Muscleblaze",
+      "quantity": "320g",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "muscleblaze micronised creatine monohydrate",
+        "muscleblaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/616/574/4655/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:creatine"
+      ]
+    },
+    {
+      "_id": "R101",
+      "code": "8900740227120",
+      "name": "ISO Gold Whey Protein Isolate",
+      "brands": "One Science Nutrition",
+      "quantity": "30g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "iso gold whey protein isolate",
+        "one science nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/074/022/7120/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R102",
+      "code": "0048107251123",
+      "name": "100% Whey Protein Pro Performance",
+      "brands": "GNC, Guardian Healthcare Services Pvt. Ltd.",
+      "quantity": "907g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "100% whey protein pro performance",
+        "gnc"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/004/810/725/1123/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R103",
+      "code": "8904463100357",
+      "name": "YouWeFit Omega 3 1250 Fish Oil Capsule (Triple Strength)",
+      "brands": "YouWeFit is sold by Wellversed",
+      "quantity": "165 g",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "youwefit omega 3 1250 fish oil capsule (triple strength)",
+        "youwefit is sold by wellversed"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/446/310/0357/front_en.3.400.jpg",
+      "categories": [
+        "en:fats",
+        "en:animal-fats",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:fish-oils"
+      ]
+    },
+    {
+      "_id": "R104",
+      "code": "8906009534008",
+      "name": "Protein bar",
+      "brands": "Max Protein",
+      "quantity": "6 bars, 50g each",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein bar",
+        "max protein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/953/4008/front_en.3.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:energy-bars",
+        "en:protein-bars",
+        "en:protein-energy-bars"
+      ]
+    },
+    {
+      "_id": "R105",
+      "code": "8904335605201",
+      "name": "Pro clean Plant protein",
+      "brands": "Yoga Bar",
+      "quantity": "500g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "pro clean plant protein",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/5201/front_en.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R106",
+      "code": "8906133026233",
+      "name": "Double Rich Chocolate Impact Whey Protein",
+      "brands": "Nakpro",
+      "quantity": "1kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "double rich chocolate impact whey protein",
+        "nakpro"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/302/6233/front_en.4.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R107",
+      "code": "3948207025716",
+      "name": "Chyawanprash",
+      "brands": "Dabur",
+      "quantity": "1 kg",
+      "productType": "ayurvedic",
+      "category": "food",
+      "aliases": [
+        "chyawanprash",
+        "dabur"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/394/820/702/5716/front_en.6.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:ayurvedic-supplements"
+      ]
+    },
+    {
+      "_id": "R108",
+      "code": "8908008669712",
+      "name": "Raw Whey Protein",
+      "brands": "Powerus",
+      "quantity": "1kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "raw whey protein",
+        "powerus"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/866/9712/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R109",
+      "code": "0891597003662",
+      "name": "Protein Powder",
+      "brands": "MuscleMeds",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein powder",
+        "musclemeds"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/089/159/700/3662/front_en.12.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R110",
+      "code": "4908409918048",
+      "name": "Protein & Herbs For Men",
+      "brands": "O'Ziva",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein & herbs for men",
+        "o'ziva"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/490/840/991/8048/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R111",
+      "code": "8906009653235",
+      "name": "Max Protein Daily Choco Almond Bar",
+      "brands": "Max Protein",
+      "quantity": "50 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "max protein daily choco almond bar",
+        "max protein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/965/3235/front_en.3.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:energy-bars",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R112",
+      "code": "8904221694814",
+      "name": "Creatine Monohydrate",
+      "brands": "Atom",
+      "quantity": "100 g",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "creatine monohydrate",
+        "atom"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/422/169/4814/front_en.18.400.jpg",
+      "categories": [
+        "en:plant-based-foods-and-beverages",
+        "en:plant-based-foods",
+        "en:dietary-supplements",
+        "en:Gym supplement"
+      ]
+    },
+    {
+      "_id": "R113",
+      "code": "8904256715478",
+      "name": "GoodDiet Protein Bar Coconut",
+      "brands": "Big Basket Good Diet",
+      "quantity": "65g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "gooddiet protein bar coconut",
+        "big basket good diet"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/425/671/5478/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R114",
+      "code": "5017174349366",
+      "name": "Vitamin D3",
+      "brands": "Holland & Barrett",
+      "quantity": "100",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "vitamin d3",
+        "holland & barrett"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/501/717/434/9366/front_en.14.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamin-supplements"
+      ]
+    },
+    {
+      "_id": "R115",
+      "code": "8908005543459",
+      "name": "Veg Omega",
+      "brands": "Nutricharge",
+      "quantity": "",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "veg omega",
+        "nutricharge"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/554/3459/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:Omega Capsules"
+      ]
+    },
+    {
+      "_id": "R116",
+      "code": "8908013172238",
+      "name": "Phab Protein Bar",
+      "brands": "Phab",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "phab protein bar",
+        "phab"
+      ],
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R117",
+      "code": "8904221698997",
+      "name": "Whey Protein Concentrate",
+      "brands": "Asitis, as·it·is",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein concentrate",
+        "asitis"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/422/169/8997/front_en.8.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R118",
+      "code": "8906045140614",
+      "name": "Concentrate Whey Protein Unflavoured",
+      "brands": "Nutrabay Pure",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "concentrate whey protein unflavoured",
+        "nutrabay pure"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/604/514/0614/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R119",
+      "code": "4906459636639",
+      "name": "Cookie Cream Protein Shake",
+      "brands": "epigamia",
+      "quantity": "25 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "cookie cream protein shake",
+        "epigamia"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/490/645/963/6639/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-shakes"
+      ]
+    },
+    {
+      "_id": "R120",
+      "code": "8906116957387",
+      "name": "Biozyme Whey Protein - Ice-cream Chocolate",
+      "brands": "MuscleBlaze",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "biozyme whey protein - ice-cream chocolate",
+        "muscleblaze"
+      ],
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R121",
+      "code": "6900258701282",
+      "name": "Protein Milkshake- Choco mint flavour",
+      "brands": "Raw Pressery",
+      "quantity": "200ml",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein milkshake- choco mint flavour",
+        "raw pressery"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/690/025/870/1282/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-shakes"
+      ]
+    },
+    {
+      "_id": "R122",
+      "code": "0004535400090",
+      "name": "Omega-3 Fish Oil",
+      "brands": "Apollo Life",
+      "quantity": "1000 mg",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "omega-3 fish oil",
+        "apollo life"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/000/453/540/0090/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R123",
+      "code": "8906009532172",
+      "name": "Max Protein Daily Choco Almond",
+      "brands": "RiteBite",
+      "quantity": "50g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "max protein daily choco almond",
+        "ritebite"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/953/2172/front_en.6.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:energy-bars",
+        "en:protein-bars",
+        "en:protein-energy-bars"
+      ]
+    },
+    {
+      "_id": "R124",
+      "code": "8908013479382",
+      "name": "The Whole Truth Protein Bar Cranberry mini",
+      "brands": "The Whole Truth",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "the whole truth protein bar cranberry mini",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/801/347/9382/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R125",
+      "code": "8906102430139",
+      "name": "True Vitamin",
+      "brands": "neuherbs",
+      "quantity": "60 tablets",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "true vitamin",
+        "neuherbs"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/610/243/0139/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins",
+        "en:multi vitamin tablets"
+      ]
+    },
+    {
+      "_id": "R126",
+      "code": "0700721646531",
+      "name": "Advanced Mass And Weight Gainer",
+      "brands": "Doctors choice",
+      "quantity": "2 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "advanced mass and weight gainer",
+        "doctors choice"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/070/072/164/6531/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:Doctors-choice"
+      ]
+    },
+    {
+      "_id": "R127",
+      "code": "8903163041731",
+      "name": "HK Vitals Omega 3",
+      "brands": "HK Vitals",
+      "quantity": "",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "hk vitals omega 3",
+        "hk vitals"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/316/304/1731/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R128",
+      "code": "8906151482400",
+      "name": "Nutritin Ultra Protein Shake",
+      "brands": "Nutritin Ultra",
+      "quantity": "200g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "nutritin ultra protein shake",
+        "nutritin ultra"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/615/148/2400/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:Whey protein"
+      ]
+    },
+    {
+      "_id": "R129",
+      "code": "8908009186713",
+      "name": "olena womans protein & superfoods",
+      "brands": "olena",
+      "quantity": "500g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "olena womans protein & superfoods",
+        "olena"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/918/6713/front_en.11.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R130",
+      "code": "0742488364839",
+      "name": "Plant Based Vitamin B12",
+      "brands": "Rasayanam",
+      "quantity": "60 capsules",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "plant based vitamin b12",
+        "rasayanam"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/248/836/4839/front_en.6.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R131",
+      "code": "8902420000160",
+      "name": "ANS Next Gen Whey",
+      "brands": "ANS",
+      "quantity": "1kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "ans next gen whey",
+        "ans"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/242/000/0160/front_en.3.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R132",
+      "code": "8904084504657",
+      "name": "Baidyanath Chyawanprash",
+      "brands": "Baidyanath",
+      "quantity": "500gm",
+      "productType": "ayurvedic",
+      "category": "food",
+      "aliases": [
+        "baidyanath chyawanprash",
+        "baidyanath"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/408/450/4657/front_en.9.400.jpg",
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R133",
+      "code": "8906142025920",
+      "name": "Plix Super Multi Vitamin",
+      "brands": "Plix",
+      "quantity": "",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "plix super multi vitamin",
+        "plix"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/202/5920/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R134",
+      "code": "8906081920669",
+      "name": "Carbamide Forte Vitamin D3+K2",
+      "brands": "Carbamide Forte",
+      "quantity": "120 tablets",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "carbamide forte vitamin d3+k2",
+        "carbamide forte"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/608/192/0669/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R135",
+      "code": "8906133027735",
+      "name": "Nakpro Wheyzyme",
+      "brands": "Nakpro",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "nakpro wheyzyme",
+        "nakpro"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/302/7735/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R136",
+      "code": "8908013950232",
+      "name": "Super Strength Plant Protein Shake - Raw Chocolate Flavour",
+      "brands": "Plix",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "super strength plant protein shake - raw chocolate flavour",
+        "plix"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/801/395/0232/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-shakes"
+      ]
+    },
+    {
+      "_id": "R137",
+      "code": "8906100500124",
+      "name": "Nveda Calcium, Magnesium, Zinc, Vitamin D3 & B12",
+      "brands": "Nveda",
+      "quantity": "60 tablets",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "nveda calcium, magnesium, zinc, vitamin d3 & b12",
+        "nveda"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/610/050/0124/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R138",
+      "code": "9311770604918",
+      "name": "Calcium + Vitamin D",
+      "brands": "Swissie",
+      "quantity": "",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "calcium + vitamin d",
+        "swissie"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/931/177/060/4918/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R139",
+      "code": "0748927029864",
+      "name": "100% Whey Protein Powder Drink Mix Strawberry Banana",
+      "brands": "Optimum Nutrition",
+      "quantity": "5lb",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "100% whey protein powder drink mix strawberry banana",
+        "optimum nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/702/9864/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R140",
+      "code": "0748927060393",
+      "name": "On Micronized Creatine Powder",
+      "brands": "On",
+      "quantity": "300 g",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "on micronized creatine powder",
+        "on"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/706/0393/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:creatine"
+      ]
+    },
+    {
+      "_id": "R141",
+      "code": "8901058847789",
+      "name": "Nestle Resource High Protein",
+      "brands": "Nestlé",
+      "quantity": "1Kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "nestle resource high protein",
+        "nestlé"
+      ],
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R142",
+      "code": "0748927056372",
+      "name": "ON Gold Standard 100% Whey Protein",
+      "brands": "Optimum Nutrition",
+      "quantity": "2.27 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "on gold standard 100% whey protein",
+        "optimum nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/705/6372/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R143",
+      "code": "0754083603695",
+      "name": "The Real Vitamin",
+      "brands": "BIG MUSCLES NUTRITION",
+      "quantity": "30 caps",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "the real vitamin",
+        "big muscles nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/075/408/360/3695/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:Multi vitamins capsules"
+      ]
+    },
+    {
+      "_id": "R144",
+      "code": "8906102980764",
+      "name": "Vitamin B12",
+      "brands": "Prorganiq",
+      "quantity": "60 tablets",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "vitamin b12",
+        "prorganiq"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/610/298/0764/front_fr.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R145",
+      "code": "8906105617933",
+      "name": "Omega 3",
+      "brands": "Wow Life Science",
+      "quantity": "180 N",
+      "productType": "omega",
+      "category": "powder",
+      "aliases": [
+        "omega 3",
+        "wow life science"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/610/561/7933/front_en.3.400.jpg",
+      "categories": [
+        "en:beverages-and-beverages-preparations",
+        "en:fats",
+        "en:beverage-preparations",
+        "en:animal-fats",
+        "en:dietary-supplements",
+        "en:capsules",
+        "en:fish-oils",
+        "en:sardine-oils"
+      ]
+    },
+    {
+      "_id": "R146",
+      "code": "0748927060041",
+      "name": "Gold Standard 100% Whey Extreme Milk Chocolate Flavour",
+      "brands": "Optimum nutrition",
+      "quantity": "907 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "gold standard 100% whey extreme milk chocolate flavour",
+        "optimum nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/706/0041/front_en.3.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R147",
+      "code": "2000000147562",
+      "name": "Tata 1mg Pro+ 2.0 High Protein High Calorie Protein Powder Vanilla",
+      "brands": "Tata 1mg",
+      "quantity": "400g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "tata 1mg pro+ 2.0 high protein high calorie protein powder vanilla",
+        "tata 1mg"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/200/000/014/7562/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R148",
+      "code": "8904248980006",
+      "name": "Vitamin D",
+      "brands": "Lord's",
+      "quantity": "60 tablets",
+      "productType": "multivitamin",
+      "category": "powder",
+      "aliases": [
+        "vitamin d",
+        "lord's"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/424/898/0006/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:vitamins"
+      ]
+    },
+    {
+      "_id": "R149",
+      "code": "8906116954805",
+      "name": "Biozyme Performance Whey",
+      "brands": "Muscleblaze",
+      "quantity": "1 piece, 36g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "biozyme performance whey",
+        "muscleblaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/611/695/4805/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:Whey-protein"
+      ]
+    },
+    {
+      "_id": "R150",
+      "code": "0881314858125",
+      "name": "ISO WHEY",
+      "brands": "BMXX - BODYMAXX SPORTS NUTRITION",
+      "quantity": "2000g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "iso whey",
+        "bmxx - bodymaxx sports nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/088/131/485/8125/front_fr.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R151",
+      "code": "0748927026245",
+      "name": "Gold standard 100% Whey Protein",
+      "brands": "Optimum nutrition",
+      "quantity": "2 lb (909 g)",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "gold standard 100% whey protein",
+        "optimum nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/702/6245/front_en.9.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R152",
+      "code": "0748927052756",
+      "name": "Pre-workout Watermelon Candy",
+      "brands": "ON, Optimum nutrition",
+      "quantity": "300g",
+      "productType": "preworkout",
+      "category": "powder",
+      "aliases": [
+        "pre-workout watermelon candy",
+        "on"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/074/892/705/2756/front_hi.6.400.jpg",
+      "categories": [
+        "en:dietary-supplements"
+      ]
+    },
+    {
+      "_id": "R153",
+      "code": "5056185745231",
+      "name": "MYPROTEIN Impact Whey Protein Strawberry Cream",
+      "brands": "MYPROTEIN",
+      "quantity": "2.5kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "myprotein impact whey protein strawberry cream",
+        "myprotein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/505/618/574/5231/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R154",
+      "code": "8906116956571",
+      "name": "Muscleblaze Biozyme Whey",
+      "brands": "Muscleblaze",
+      "quantity": "1.75kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "muscleblaze biozyme whey",
+        "muscleblaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/611/695/6571/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R155",
+      "code": "5060746508470",
+      "name": "MyProtein Impact Whey Protein - Coffee Caramel",
+      "brands": "MYPROTEIN",
+      "quantity": "1kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "myprotein impact whey protein - coffee caramel",
+        "myprotein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/506/074/650/8470/front_en.3.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R156",
+      "code": "8906143891791",
+      "name": "Mango Whey Protein",
+      "brands": "The Whole Truth",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "mango whey protein",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/1791/front_en.5.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R157",
+      "code": "8906165780868",
+      "name": "Biozyme Performance Whey",
+      "brands": "MuscleBlaze",
+      "quantity": "2kgs",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "biozyme performance whey",
+        "muscleblaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/616/578/0868/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R158",
+      "code": "8906116958797",
+      "name": "Biozyme Performance Whey - Blue Tokai Coffee Flavour",
+      "brands": "Muscleblaze",
+      "quantity": "750 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "biozyme performance whey - blue tokai coffee flavour",
+        "muscleblaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/611/695/8797/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R159",
+      "code": "8908009186461",
+      "name": "SPORT EVOLVE PERFORMANCE PLANT PROTEIN -TROPICAL MANGO",
+      "brands": "Plix",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "sport evolve performance plant protein -tropical mango",
+        "plix"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/918/6461/front_fr.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R160",
+      "code": "8934043905379",
+      "name": "Tata Gofit plant protein",
+      "brands": "Tata Gofit",
+      "quantity": "25g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "tata gofit plant protein",
+        "tata gofit"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/893/404/390/5379/front_fr.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R161",
+      "code": "8904304353102",
+      "name": "Bodypower Nutrition Whey Protein",
+      "brands": "Bodypower Nutrition",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "bodypower nutrition whey protein",
+        "bodypower nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/430/435/3102/front_en.4.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R162",
+      "code": "0089094022495",
+      "name": "PROTEIN POWDER DRINK MIX",
+      "brands": "ISOPURE",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein powder drink mix",
+        "isopure"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/008/909/402/2495/front_en.9.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R163",
+      "code": "8906045141505",
+      "name": "Micellar Casein Protein",
+      "brands": "Nutrabay Pure",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "micellar casein protein",
+        "nutrabay pure"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/604/514/1505/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R164",
+      "code": "8908009477996",
+      "name": "HealthyHey pea and rice protein powder",
+      "brands": "healthy hey",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "healthyhey pea and rice protein powder",
+        "healthy hey"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/947/7996/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R165",
+      "code": "8906127551338",
+      "name": "Peanut Protein Dark Chocolate",
+      "brands": "Alpino",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "peanut protein dark chocolate",
+        "alpino"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/612/755/1338/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R166",
+      "code": "8906001026471",
+      "name": "100% Performance Whey Cold Coffee",
+      "brands": "Avvatar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "100% performance whey cold coffee",
+        "avvatar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/102/6471/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R167",
+      "code": "8906165788666",
+      "name": "Biozyme Whey PR x Singha",
+      "brands": "MuscleBlaze",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "biozyme whey pr x singha",
+        "muscleblaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/616/578/8666/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R168",
+      "code": "8906067022806",
+      "name": "creatine",
+      "brands": "Muscleblaze",
+      "quantity": "1kg",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "creatine",
+        "muscleblaze"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/606/702/2806/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements"
+      ]
+    },
+    {
+      "_id": "R169",
+      "code": "8906185240090",
+      "name": "Isolated Whey Chocolate Chip",
+      "brands": "Deep Impact",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "isolated whey chocolate chip",
+        "deep impact"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/618/524/0090/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R170",
+      "code": "0631656260175",
+      "name": "MuscleTech 100% Whey Isolate",
+      "brands": "MuscleTech",
+      "quantity": "1.81kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "muscletech 100% whey isolate",
+        "muscletech"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/063/165/626/0175/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:incorrect-product-type",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:Non-open-products-facts",
+        "en:Open-food-facts",
+        "en:Whey-protein"
+      ]
+    },
+    {
+      "_id": "R171",
+      "code": "8939121486832",
+      "name": "Nourish Protein Bar Choco Almond",
+      "brands": "Nofuss",
+      "quantity": "60g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "nourish protein bar choco almond",
+        "nofuss"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/893/912/148/6832/front_en.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R172",
+      "code": "8906165788123",
+      "name": "Clean Whey Protein Isolate",
+      "brands": "Truebasics",
+      "quantity": "1kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "clean whey protein isolate",
+        "truebasics"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/616/578/8123/front_en.9.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder",
+        "en:Clean whey protein isolate",
+        "en:Food"
+      ]
+    },
+    {
+      "_id": "R173",
+      "code": "8904221699390",
+      "name": "Soy Protein Isolate",
+      "brands": "Asitis",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "soy protein isolate",
+        "asitis"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/422/169/9390/front_en.7.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:soy protein isolate"
+      ]
+    },
+    {
+      "_id": "R174",
+      "code": "8906143892231",
+      "name": "Cold Coffee Whey Protein Isolate + Concentrate",
+      "brands": "The Whole Truth",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "cold coffee whey protein isolate + concentrate",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/2231/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R175",
+      "code": "8909340000072",
+      "name": "Plant Protein Pro",
+      "brands": "Cosmix",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "plant protein pro",
+        "cosmix"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/934/000/0072/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R176",
+      "code": "8906081926067",
+      "name": "Plant Protein+",
+      "brands": "Carbamide Forte",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "plant protein+",
+        "carbamide forte"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/608/192/6067/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R177",
+      "code": "8906133408695",
+      "name": "Whey Protein Concentrate (Cocoa Edition)",
+      "brands": "Only What's Needed",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein concentrate (cocoa edition)",
+        "only what's needed"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/340/8695/front_en.3.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R178",
+      "code": "8906143890404",
+      "name": "Lemon Cranberry Protein Bar",
+      "brands": "The Whole Truth",
+      "quantity": "52g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "lemon cranberry protein bar",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/614/389/0404/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R179",
+      "code": "8904335605225",
+      "name": "Unflavoured Plant Protein",
+      "brands": "Yoga Bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "unflavoured plant protein",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/5225/front_en.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R180",
+      "code": "8906128673527",
+      "name": "Whey Protein",
+      "brands": "Food Strong",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein",
+        "food strong"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/612/867/3527/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R181",
+      "code": "00094845",
+      "name": "Whey Protein Bar Chocolate Fudge",
+      "brands": "NO!CE",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein bar chocolate fudge",
+        "no!ce"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/000/000/009/4845/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R182",
+      "code": "8906059637476",
+      "name": "Epigamia Turbo+ Malai Kulfi Protein Shake",
+      "brands": "Epigamia",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "epigamia turbo+ malai kulfi protein shake",
+        "epigamia"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/605/963/7476/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-shakes"
+      ]
+    },
+    {
+      "_id": "R183",
+      "code": "8909340000027",
+      "name": "No nonsense plant protein pro",
+      "brands": "Cosmic",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "no nonsense plant protein pro",
+        "cosmic"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/934/000/0027/front_en.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R184",
+      "code": "8904221695569",
+      "name": "Creatine Monohydrate",
+      "brands": "Atom, asitis",
+      "quantity": "",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "creatine monohydrate",
+        "atom"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/422/169/5569/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:creatine"
+      ]
+    },
+    {
+      "_id": "R185",
+      "code": "9100268998628",
+      "name": "Protein powder Chocolate Fudge",
+      "brands": "Supr",
+      "quantity": "500g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein powder chocolate fudge",
+        "supr"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/910/026/899/8628/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R186",
+      "code": "0048553677799",
+      "name": "Pro build Plant protein",
+      "brands": "Cureveda",
+      "quantity": "500g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "pro build plant protein",
+        "cureveda"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/004/855/367/7799/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R187",
+      "code": "8906199680615",
+      "name": "Whey Protein Isolate Coffee",
+      "brands": "The Func. Lab",
+      "quantity": "35 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein isolate coffee",
+        "the func. lab"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/619/968/0615/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R188",
+      "code": "8906001026723",
+      "name": "Protein wafer bar coffee",
+      "brands": "Avvatar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein wafer bar coffee",
+        "avvatar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/600/102/6723/front_en.14.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars",
+        "en:Protein wafer bar"
+      ]
+    },
+    {
+      "_id": "R189",
+      "code": "8904221697600",
+      "name": "High Protein Bar Cookie Latte",
+      "brands": "Atom, asitis",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "high protein bar cookie latte",
+        "atom"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/422/169/7600/front_en.4.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R190",
+      "code": "8901262110303",
+      "name": "Whey Shake",
+      "brands": "Amul",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey shake",
+        "amul"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/126/211/0303/front_en.5.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R191",
+      "code": "8904240606775",
+      "name": "Neuprotein-DF",
+      "brands": "GlenSmith",
+      "quantity": "200g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "neuprotein-df",
+        "glensmith"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/424/060/6775/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R192",
+      "code": "8939112781762",
+      "name": "Whey Isolate Protein Powder",
+      "brands": "Naturaltein",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey isolate protein powder",
+        "naturaltein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/893/911/278/1762/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R193",
+      "code": "8908017087439",
+      "name": "Plant Protein - Mango",
+      "brands": "Happy Cultures",
+      "quantity": "505g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "plant protein - mango",
+        "happy cultures"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/801/708/7439/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R194",
+      "code": "0850041152776",
+      "name": "ProteinX Bar",
+      "brands": "Bolt Nutrition",
+      "quantity": "63g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "proteinx bar",
+        "bolt nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/085/004/115/2776/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R195",
+      "code": "8904335604549",
+      "name": "Protein bar",
+      "brands": "Yoga bar",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein bar",
+        "yoga bar"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/433/560/4549/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R196",
+      "code": "5059606405202",
+      "name": "Whey Protein Isolate Chocolate Flavour",
+      "brands": "Naturaltein",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein isolate chocolate flavour",
+        "naturaltein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/505/960/640/5202/front_en.3.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R197",
+      "code": "8908006989539",
+      "name": "Protein Bar Cocoa Dry Fruit",
+      "brands": "Nutritius",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein bar cocoa dry fruit",
+        "nutritius"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/698/9539/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars",
+        "en:Food"
+      ]
+    },
+    {
+      "_id": "R198",
+      "code": "0048107238810",
+      "name": "Pro Performance Power Protein Double Rich Chocolate",
+      "brands": "GNC",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "pro performance power protein double rich chocolate",
+        "gnc"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/004/810/723/8810/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R199",
+      "code": "8939122247456",
+      "name": "YES Protein, Fermented Yeast Rich Coffee Flavour",
+      "brands": "Naturaltein",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "yes protein, fermented yeast rich coffee flavour",
+        "naturaltein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/893/912/224/7456/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R200",
+      "code": "8906133024833",
+      "name": "Plant Protein (Pea & Brown Rice)",
+      "brands": "Nakpro",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "plant protein (pea & brown rice)",
+        "nakpro"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/302/4833/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R201",
+      "code": "8906150472631",
+      "name": "Plant Protein Chocolate",
+      "brands": "The Butternut Co",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "plant protein chocolate",
+        "the butternut co"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/615/047/2631/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R202",
+      "code": "8901262153638",
+      "name": "Protein Milkshake Kesar Flavour",
+      "brands": "Amul, Kool",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein milkshake kesar flavour",
+        "amul"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/126/215/3638/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-shakes"
+      ]
+    },
+    {
+      "_id": "R203",
+      "code": "8908013479115",
+      "name": "The whole truth coffee cocoa protein bar",
+      "brands": "The whole Truth",
+      "quantity": "52 gm",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "the whole truth coffee cocoa protein bar",
+        "the whole truth"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/801/347/9115/front_en.3.400.jpg",
+      "categories": [
+        "en:snacks",
+        "en:sweet-snacks",
+        "en:bars",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R204",
+      "code": "8906133024505",
+      "name": "Chocolate Flavoured Soy Protein Isolate",
+      "brands": "Nakpro",
+      "quantity": "500 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "chocolate flavoured soy protein isolate",
+        "nakpro"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/302/4505/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:soy protein isolate"
+      ]
+    },
+    {
+      "_id": "R205",
+      "code": "8906133025748",
+      "name": "Creatine Monohydrate",
+      "brands": "Nakpro",
+      "quantity": "",
+      "productType": "creatine",
+      "category": "powder",
+      "aliases": [
+        "creatine monohydrate",
+        "nakpro"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/613/302/5748/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:creatine"
+      ]
+    },
+    {
+      "_id": "R206",
+      "code": "8908004238394",
+      "name": "Plant Protein Unflavoured",
+      "brands": "Origin Nutrition",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "plant protein unflavoured",
+        "origin nutrition"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/800/423/8394/front_en.3.400.jpg",
+      "categories": [
+        "en:plant-based-foods-and-beverages",
+        "en:plant-based-foods",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:plant protein powder"
+      ]
+    },
+    {
+      "_id": "R207",
+      "code": "8908017087613",
+      "name": "Yeast Protein",
+      "brands": "Happy Cultures",
+      "quantity": "505g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "yeast protein",
+        "happy cultures"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/801/708/7613/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:Fermented Yeast Protein"
+      ]
+    },
+    {
+      "_id": "R208",
+      "code": "8909340000386",
+      "name": "no-nonsense plant protein Kerala Vanilla Bean",
+      "brands": "Cosmix",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "no-nonsense plant protein kerala vanilla bean",
+        "cosmix"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/934/000/0386/front_fr.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R209",
+      "code": "8908024977624",
+      "name": "Protein Wafer",
+      "brands": "Superyou",
+      "quantity": "",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "protein wafer",
+        "superyou"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/802/497/7624/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-bars"
+      ]
+    },
+    {
+      "_id": "R210",
+      "code": "8939122247838",
+      "name": "Yes Protein Thandai Flavour",
+      "brands": "Naturaltein",
+      "quantity": "1 kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "yes protein thandai flavour",
+        "naturaltein"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/893/912/224/7838/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
+    },
+    {
+      "_id": "R211",
+      "code": "8906214980324",
+      "name": "Whey Protein Concentrate",
+      "brands": "Only What's Needed",
+      "quantity": "1kg",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "whey protein concentrate",
+        "only what's needed"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/621/498/0324/front_en.3.400.jpg",
+      "categories": [
+        "en:dairies",
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders",
+        "en:whey-powder"
+      ]
+    },
+    {
+      "_id": "R212",
+      "code": "8908024977549",
+      "name": "Fermented Yeast Protein",
+      "brands": "SUPERYOU",
+      "quantity": "180 g",
+      "productType": "whey",
+      "category": "powder",
+      "aliases": [
+        "fermented yeast protein",
+        "superyou"
+      ],
+      "image": "https://images.openfoodfacts.org/images/products/890/802/497/7549/front_en.3.400.jpg",
+      "categories": [
+        "en:dietary-supplements",
+        "en:bodybuilding-supplements",
+        "en:protein-powders"
+      ]
     }
   ]
 }
