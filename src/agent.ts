@@ -190,7 +190,8 @@ function salesAnswer(out: any) {
 function catalogAnswer(out: any) {
   const f = out.filters ?? {};
   const limits = `${f.maxPrice ? ` under ${inr(f.maxPrice)}` : ''}${f.noSugar ? ' with little or no sugar' : ''}`;
-  const hits = (out.hits ?? []).filter((h: any) => !f.maxPrice || h.price <= f.maxPrice);
+  const hits = (out.hits ?? []).filter((h: any) => !f.maxPrice || h.price <= f.maxPrice).slice(0, 6);
+  if (f.maxPrice) hits.sort((a: any, b: any) => a.price - b.price); // "under ₹X": cheapest first
   if (!hits.length) return `No products match "${f.q ?? out.query}"${limits}.`;
   return [`${hits.length === 1 ? '1 product matches' : `${Math.min(hits.length, 6)} products match`}${limits}.`,
     ...hits.slice(0, 6).map((h: any) => `• ${h.name} · ${inr(h.price)}${h.sugarPer100g != null ? ` · ${whole(h.sugarPer100g)} g sugar per 100 g` : ''}${whole(h.demand7) ? ` · about ${whole(h.demand7)} sold a week` : ''}`)].join('\n');
@@ -276,6 +277,8 @@ export async function ask(message: string, history: Msg[] = [], conversationId?:
       const products = await col.products.find().toArray(), arg = String(pick.args?.product ?? message);
       pick.args = { product: matchProduct(arg, products) ? arg : await focusProduct(arg, history, true) ?? arg };
     }
+    // the owner's own words keep price caps and brand names intact; the model's rewrite can drop or add terms
+    if (pick.tool === 'search_catalog' && keywordRoute(message).tool === 'search_catalog') pick.args = { query: message };
     const focus = pick.tool === 'forecast_demand' ? await focusProduct(message, history, /\b(this|that|it)\b/i.test(message)) : undefined;
 
     data ??= await runTool(pick.tool, pick.args);
