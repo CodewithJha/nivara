@@ -72,6 +72,8 @@ version actually used is shown in the UI ("TabPFN v2").
   `nivara.route`, `gen_ai.tool.name`, `nivara.answer_mode`, `nivara.message_chars`, `gen_ai.request.model`;
   child `gen_ai.chat` (model, `gen_ai.usage.input_tokens/output_tokens`), `gen_ai.execute_tool`, `tool.serpapi`,
   `memory.backboard`, `voice.stt/tts`, `forecast.tabpfn`. Latency = span duration.
+- `Sentry.setConversationId(conversationId)` on each `/api/assistant` call when the client sends
+  `conversationId` (body) or `x-conversation-id` (header), grouping multi-turn chats in Sentry Conversations.
 - Privacy: prompts, model answers and tool input/output go to Sentry as `[redacted N chars]` unless
   `SENTRY_SEND_CONTENT=1`; `sendDefaultPii: false`; API keys are only in request headers, never in span
   attributes (asserted in `test/sentry.test.ts`). Full content stays in the local Mongo trace (Activity page).
