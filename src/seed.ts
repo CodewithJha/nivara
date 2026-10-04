@@ -19,7 +19,7 @@ const suppliers = [
 const customers = ['Rahul Verma', 'Priya Singh', 'Aman Khan', 'Sneha Gupta', 'Vikram Rao', 'Neha Sharma', 'Arjun Mehta', 'Kavya Iyer']
   .map((name, i) => ({ _id: `C0${i + 1}`, name, channel: (i % 3 ? 'whatsapp' : 'instagram') as 'whatsapp' | 'instagram', demo: false }));
 
-export async function seed({ online = !process.argv.includes('--offline') } = {}) {
+export async function seed({ online = process.argv.includes('--online') } = {}) {
   const catRes = await importCatalog({ online });
   const priceRes = await importPrices({ online });
   const trendRes = await importTrends({ online });

@@ -32,6 +32,7 @@ export async function fetchTrendsOnline(): Promise<TrendPoint[]> {
     all.push(...parseTimeline(timeline, type));
     await new Promise(r => setTimeout(r, 1500));
   }
+  if (!all.length) throw new Error('SerpApi returned no trend points; keeping cache');
   writeCsv(OUT, ['productType', 'week', 'value', 'accessDate'], all.map(p => [p.productType, p.week, p.value, ACCESS_DATE]));
   return all;
 }
