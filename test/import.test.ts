@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { productType, MANUAL_PRICE } from '../scripts/import/config.ts';
+import { productType } from '../scripts/import/config.ts';
+import { estimatePrice } from '../scripts/import/price-estimate.ts';
 import { mapCatalog, toShopProducts } from '../scripts/import/catalog.ts';
 import { indexPrices } from '../scripts/import/prices.ts';
 import { parseTimeline } from '../scripts/import/trends.ts';
@@ -20,7 +21,7 @@ test('catalog maps OFF rows, filters noise, assigns productType', () => {
   assert.ok(!cat.some(p => /bournvita/i.test(p.name)));
 });
 
-test('prices join by code; missing → manual estimate by productType', () => {
+test('prices join by code; missing → manual estimate from pack + band', () => {
   const byCode = indexPrices([
     { product_code: '8901', price: 2200, date: '2026-09-01', location: { city: 'Delhi' } },
     { product_code: '8901', price: 2100, date: '2026-10-01', location: { city: 'Mumbai' } }, // newer wins
@@ -31,7 +32,8 @@ test('prices join by code; missing → manual estimate by productType', () => {
   assert.equal(shop.find(p => p.origin.code === '8901')!.price, 2100);
   const creatine = shop.find(p => p.origin.code === '8902')!;
   assert.equal(creatine.priceSource, 'manual');
-  assert.equal(creatine.price, MANUAL_PRICE.creatine);
+  assert.equal(creatine.price, estimatePrice({ code: '8902', name: 'Creatine Monohydrate', brands: 'ON', quantity: '250 g', productType: 'creatine' }).price);
+  assert.ok(creatine.price >= 500 && creatine.price <= 1200);
 });
 
 test('trends parseTimeline drops partial last week', () => {

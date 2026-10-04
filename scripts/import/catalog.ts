@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /** Open Food Facts India dietary/bodybuilding/protein catalogue (ODbL). Offline from cache when API fails. */
 import { fileURLToPath } from 'node:url';
-import { ACCESS_DATE, KEEP_RE, MANUAL_COST_RATIO, MANUAL_PRICE, UA, categoryFor, productType } from './config.ts';
+import { ACCESS_DATE, KEEP_RE, MANUAL_COST_RATIO, UA, categoryFor, productType, type ProductType } from './config.ts';
+import { estimatePrice } from './price-estimate.ts';
 import { fetchJson, readJson, writeJson } from './http.ts';
 
 const RAW = fileURLToPath(new URL('../../data/raw/off_india.json', import.meta.url));
@@ -64,14 +65,18 @@ export function mapCatalog(rawProducts: any[]): CatalogProduct[] {
 export function toShopProducts(catalog: CatalogProduct[], prices: Map<string, number>) {
   return catalog.map(p => {
     const h = hash(p.code);
-    const price = prices.get(p.code) ?? MANUAL_PRICE[p.productType] ?? MANUAL_PRICE.other;
-    const priceSource = prices.has(p.code) ? 'open-prices' : 'manual';
+    const open = prices.get(p.code);
+    const est = open === undefined ? estimatePrice({ ...p, productType: p.productType as ProductType }) : null;
+    const price = open ?? est!.price;
+    const cost = est ? est.cost : Math.round(price * MANUAL_COST_RATIO);
+    const priceSource = est ? 'manual' : 'open-prices';
     return {
       _id: p._id, name: p.name, aliases: p.aliases, category: p.category,
-      price, cost: Math.round(price * MANUAL_COST_RATIO), stock: 4 + (h % 40),
+      price, cost, stock: 4 + (h % 40),
       supplierId: ['S1', 'S2', 'S3', 'S4'][h % 4], leadTimeDays: 3 + (h % 5),
       productType: p.productType, priceSource,
-      tags: { brands: p.brands, quantity: p.quantity, categories: p.categories, productType: p.productType, priceSource },
+      tags: { brands: p.brands, quantity: p.quantity, categories: p.categories, productType: p.productType, priceSource,
+        ...(est && { priceEstimate: { profile: est.profile, pack: `${est.pack.amount} ${est.pack.unit}${est.pack.source === 'default' ? ' (assumed)' : ''}`, tier: est.tier } }) },
       origin: { source: 'openfoodfacts', code: p.code, url: `https://world.openfoodfacts.org/product/${p.code}`, license: 'ODbL' },
       demo: false,
     };

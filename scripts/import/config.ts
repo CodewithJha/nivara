@@ -1,15 +1,4 @@
-/** Manual INR retail estimates when Open Prices has no match (by productType). */
-export const MANUAL_PRICE: Record<string, number> = {
-  whey: 2499,
-  creatine: 899,
-  multivitamin: 499,
-  omega: 799,
-  bcaa: 1199,
-  preworkout: 1499,
-  ayurvedic: 349,
-  other: 999,
-};
-
+/** Cost / price for Open Prices rows (manual estimates use pricing.config.ts COST_RATIO_BAND). */
 export const MANUAL_COST_RATIO = 0.72;
 
 /** Average units the whole shop sells per week; proxy demand is scaled to this total. */
