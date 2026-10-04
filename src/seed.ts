@@ -8,6 +8,9 @@ import { readJson } from '../scripts/import/http.ts';
 import { fileURLToPath } from 'node:url';
 import { ensureTiger, syncCatalogToTiger, syncSalesToTiger, embedCatalog } from './tiger.ts';
 import { backfillDeliveredOrders } from './sync.ts';
+import { importOrders } from '../scripts/import-orders.ts';
+
+const SAMPLE_ORDERS = fileURLToPath(new URL('../data/samples/orders.csv', import.meta.url));
 
 const suppliers = [
   { _id: 'S1', name: 'FitFuel Distributors', contact: 'Lucknow wholesale market', quotes: [] as { sku: string; unitCost: number }[] },
@@ -40,6 +43,7 @@ export async function seed({ online = process.argv.includes('--online') } = {}) 
   if (demand.daily.length) await col.sales.insertMany(demand.daily);
   await col.preferences.insertOne({ text: 'Prefer suppliers that deliver within 5 days.', kind: 'note', createdAt: new Date(), mirror: 'local-only', demo: false } as any);
   await col.sales.createIndex({ sku: 1, date: 1 });
+  const orders = await importOrders({ csvPath: SAMPLE_ORDERS }); // before Tiger sync so delivered samples are backfilled
   await col.meta.replaceOne({ _id: 'data_sources' }, {
     _id: 'data_sources',
     value: {
@@ -47,7 +51,8 @@ export async function seed({ online = process.argv.includes('--online') } = {}) 
       prices: { source: 'Open Prices', license: 'ODbL', accessDate: '2026-10-04', matched: [...priceRes.byCode.keys()].filter(c => catalogDoc.products.some(p => p.code === c)).length },
       trends: { source: 'Google Trends IN via SerpApi', accessDate: '2026-10-04', weeks: trendRes.weeks },
       demand: { source: 'proxy', label: demand.label, weekly: demand.weekly.length, daily: demand.daily.length },
-      note: 'Demand is search-interest proxy, not real sales. Owner orders via import:orders.',
+      orders: { source: 'data/samples/orders.csv', imported: orders.imported },
+      note: 'Demand is search-interest proxy, not real sales. Sample orders from data/samples; owner orders via import:orders.',
     },
   }, { upsert: true });
 
@@ -65,7 +70,7 @@ export async function seed({ online = process.argv.includes('--online') } = {}) 
 
   return {
     products: products.length, pricesMatched: priceRes.codes, trendWeeks: trendRes.weeks,
-    demandWeekly: demand.weekly.length, demandDaily: demand.daily.length, customers: customers.length,
+    demandWeekly: demand.weekly.length, demandDaily: demand.daily.length, customers: customers.length, orders: orders.imported,
     suppliers: suppliers.length, tiger, catalogRaw: catRes.raw,
   };
 }
