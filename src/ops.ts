@@ -1,6 +1,6 @@
 // Business operations. Deterministic. These are the agent's tools AND the Temporal activities.
 import { col, daysAgo, today, type Preference } from './db.ts';
-import { MIN_SUPPLIER_SAVING_PERCENT, MIN_SUPPLIER_SAVING_RUPEES, bestQuote, blockTarget, inr, looksClean, matchProduct, methodLabel, movingAverage7, orderFlag, shortDate, stockPlan } from './logic.ts';
+import { MIN_SUPPLIER_SAVING_PERCENT, MIN_SUPPLIER_SAVING_RUPEES, RUN_MAX_AGE_HOURS, bestQuote, blockTarget, freshRun, inr, looksClean, matchProduct, mergeRunPred, methodLabel, movingAverage7, orderFlag, shortDate, stockPlan } from './logic.ts';
 import { backboardLive, backboardList, backboardSave, backboardSearch, gemma, log, serpLive, serpShopping, span, tabpfnForecast } from './integrations.ts';
 import { tigerDemand } from './tiger.ts';
 
@@ -24,8 +24,26 @@ async function reservedBySku() {
   return r;
 }
 
-/** Forecast 7-day demand per product. TabPFN if it runs, else labelled moving average. Cached per day. */
-export async function forecastDemand({ force = false, latest = false } = {}) {
+/** Daily qty per product for the HISTORY_DAYS before `t` (oldest→newest, missing days = 0). */
+export async function demandSeries(t = today()) {
+  const since = daysAgo(HISTORY_DAYS, t);
+  const rows = await col.sales.find({ date: { $gte: since, $lt: t } }).toArray();
+  const products = await col.products.find().toArray();
+  const bySku = new Map<string, Map<string, number>>();
+  for (const r of rows) (bySku.get(r.sku) ?? bySku.set(r.sku, new Map()).get(r.sku)!).set(r.date, r.qty);
+  const series: Record<string, number[]> = {};
+  for (const p of products) series[p._id] = Array.from({ length: HISTORY_DAYS }, (_, i) => bySku.get(p._id)?.get(daysAgo(HISTORY_DAYS - i, t)) ?? 0);
+  return { products, series };
+}
+
+export const latestForecastRun = () => col.forecastRuns.findOne({ source: 'tabpfn' }, { sort: { createdAt: -1 } });
+const runMaxAgeHours = () => Number(process.env.FORECAST_RUN_MAX_AGE_HOURS) || RUN_MAX_AGE_HOURS;
+
+/**
+ * Forecast 7-day demand per product. Cached per day. Order: TabPFN here → newest fresh published TabPFN run
+ * (forecastRuns) → labelled moving average. source 'precomputed' skips the local TabPFN attempt.
+ */
+export async function forecastDemand({ force = false, latest = false, source = 'auto' as 'auto' | 'precomputed' } = {}) {
   const t = today();
   if (!force) {
     // latest: any date, so the dashboard never waits ~90s on TabPFN; callers show the forecast date
@@ -34,20 +52,25 @@ export async function forecastDemand({ force = false, latest = false } = {}) {
     if (cached) return { ...cached, items: cached.items.map((i: any) => ({ ...i, ...stockPlan(i) })) };
   }
   return span('gen_ai.execute_tool', 'execute_tool forecast_demand', { 'gen_ai.tool.name': 'forecast_demand' }, async set => {
-    const since = daysAgo(HISTORY_DAYS, t);
-    const rows = await col.sales.find({ date: { $gte: since, $lt: t } }).toArray();
-    const products = await col.products.find().toArray();
-    const series: Record<string, number[]> = {};
-    for (const p of products) {
-      const byDate = new Map(rows.filter(r => r.sku === p._id).map(r => [r.date, r.qty]));
-      series[p._id] = Array.from({ length: HISTORY_DAYS }, (_, i) => byDate.get(daysAgo(HISTORY_DAYS - i, t)) ?? 0);
-    }
+    const { products, series } = await demandSeries(t);
     let method: 'tabpfn' | 'fallback-moving-average' = 'tabpfn', reason: string | undefined, pred: Record<string, number>, model: string | undefined;
-    try { ({ pred, model } = await tabpfnForecast(series)); }
-    catch (e: any) {
-      method = 'fallback-moving-average'; reason = e.message;
-      log.warn({ err: e.message }, 'TabPFN unavailable, using moving average');
-      pred = Object.fromEntries(Object.entries(series).map(([k, v]) => [k, movingAverage7(v)]));
+    let precomputed: { runId: unknown; at: Date; asOf: string; skus: number; of: number } | undefined, uncovered = new Set<string>();
+    try {
+      if (source === 'precomputed') throw new Error('local TabPFN skipped (source=precomputed)');
+      const r = await tabpfnForecast(series);
+      ({ pred } = r); model = `TabPFN ${r.model}`;
+    } catch (e: any) {
+      const run = await latestForecastRun().catch(() => null);
+      if (run && freshRun(run, new Date(), runMaxAgeHours())) {
+        const m = mergeRunPred(series, run.pred);
+        pred = m.pred; uncovered = new Set(m.uncovered); model = run.model;
+        precomputed = { runId: run._id, at: new Date(run.createdAt), asOf: run.asOf, skus: products.length - m.uncovered.length, of: products.length };
+        log.info({ localError: e.message, run: run._id }, 'Using published TabPFN run');
+      } else {
+        method = 'fallback-moving-average'; reason = e.message + (run ? ' (published TabPFN run is stale)' : '');
+        log.warn({ err: e.message }, 'TabPFN unavailable, using moving average');
+        pred = Object.fromEntries(Object.entries(series).map(([k, v]) => [k, movingAverage7(v)]));
+      }
     }
     const reserved = await reservedBySku();
     const tiger = await tigerDemand();
@@ -61,12 +84,13 @@ export async function forecastDemand({ force = false, latest = false } = {}) {
         sku: p._id, name: p.name, stock: p.stock, reserved: reserved[p._id] ?? 0, leadTimeDays: p.leadTimeDays,
         last7Sold: last7, forecast7, demand7, demand28: tiger[p._id]?.demand28, anomalies,
         tiger: !!tiger[p._id],
+        ...(uncovered.has(p._id) && { forecastMethod: 'moving-average' }),
         ...stockPlan({ stock: p.stock, reserved: reserved[p._id] ?? 0, demand7: forecast7, leadTimeDays: p.leadTimeDays }),
       };
     }).sort((a, b) => ['high', 'medium', 'low'].indexOf(a.risk) - ['high', 'medium', 'low'].indexOf(b.risk) || (a.daysOfCover ?? 1e9) - (b.daysOfCover ?? 1e9));
     const proxy = await col.sales.findOne({ source: 'proxy' });
     const doc = {
-      date: t, method, model: model && `TabPFN ${model}`, fallbackReason: reason, historyDays: HISTORY_DAYS,
+      date: t, method, model, fallbackReason: reason, precomputed, historyDays: HISTORY_DAYS,
       tigerAggregates: Object.keys(tiger).length > 0,
       demandSource: proxy ? 'proxy' : 'orders',
       demandNote: proxy ? 'Demand: search-interest proxy, not real sales' : undefined,
@@ -76,6 +100,30 @@ export async function forecastDemand({ force = false, latest = false } = {}) {
     set('method', method);
     return doc;
   });
+}
+
+/**
+ * Run TabPFN on this machine and store per-SKU predictions in `forecastRuns` for hosts that can't run Python.
+ * top: only the N highest-demand SKUs; the rest use the moving average. chunk: SKUs per TabPFN fit, since CPU
+ * cost grows faster than linearly with context rows (60 days × SKUs). Then caches today's forecast from the run.
+ */
+export async function publishForecastRun({ top, chunk = 50, timeoutMs = Number(process.env.TABPFN_TIMEOUT_MS ?? 900_000) }: { top?: number; chunk?: number; timeoutMs?: number } = {}) {
+  const t = today();
+  const { products, series } = await demandSeries(t);
+  const total = (v: number[]) => v.reduce((a, b) => a + b, 0);
+  const skus = Object.keys(series).sort((a, b) => total(series[b]) - total(series[a])).slice(0, top && top > 0 ? top : undefined);
+  const started = Date.now(), pred: Record<string, number> = {};
+  let r: Awaited<ReturnType<typeof tabpfnForecast>> | undefined;
+  for (let i = 0; i < skus.length; i += chunk) {
+    r = await tabpfnForecast(Object.fromEntries(skus.slice(i, i + chunk).map(k => [k, series[k]])), timeoutMs);
+    Object.assign(pred, r.pred);
+    log.info({ done: Math.min(i + chunk, skus.length), of: skus.length }, 'TabPFN chunk forecast');
+  }
+  if (!r) throw new Error('no products to forecast');
+  const run = { source: 'tabpfn' as const, model: `TabPFN ${r.model}`, package: r.package, asOf: t, historyDays: HISTORY_DAYS, skus: skus.length, of: products.length, pred, seconds: Math.round((Date.now() - started) / 1000), createdAt: new Date() };
+  const { insertedId } = await col.forecastRuns.insertOne(run);
+  const f = await forecastDemand({ force: true, source: 'precomputed' });
+  return { runId: insertedId, model: run.model, package: run.package, asOf: t, skus: run.skus, of: run.of, seconds: run.seconds, forecast: { method: f.method, model: f.model, precomputed: f.precomputed } };
 }
 
 export async function getInventory(opts: { latest?: boolean } = {}) {

@@ -1,4 +1,5 @@
 import { MongoClient } from 'mongodb';
+import type { ForecastRun } from './logic.ts';
 
 // One MongoClient (and pool) per process, cached on globalThis so every importer reuses it. Restart to pick up a new MONGODB_URI.
 
@@ -27,6 +28,7 @@ export const col = {
   suppliers: db.collection<Supplier>('suppliers'),
   preferences: db.collection<Preference>('preferences'),
   forecasts: db.collection<any>('forecasts'),
+  forecastRuns: db.collection<ForecastRun & { source: 'tabpfn'; seconds?: number }>('forecastRuns'), // published TabPFN predictions (npm run forecast:publish)
   briefs: db.collection<any>('briefs'),
   traces: db.collection<any>('traces'),
   meta: db.collection<{ _id: string; value: any }>('meta'),
