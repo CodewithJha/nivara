@@ -22,7 +22,46 @@ const methodNote = m => m === 'tabpfn' ? st('light', 'TabPFN forecast') : st('mi
 const table = (cols, rows, empty = 'Nothing here yet.') => rows.length
   ? `<table><thead><tr>${cols.map(c => `<th scope="col" class="${c[2] ?? ''}">${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c => `<td class="${c[2] ?? ''}" data-label="${esc(c[0])}"><div>${c[1](r)}</div></td>`).join('')}</tr>`).join('')}</tbody></table>`
   : `<p class="empty">${empty}</p>`;
-const fail = e => `<p class="warn" role="alert">That didn't work: ${esc(e.message)}. Try again, or check <a href="#health">Health</a>.</p>`;
+
+// ---------- errors and pending buttons ----------
+// One error component for every failed request: plain words from the error kind, a Retry, raw detail folded away.
+const OOPS = {
+  timeout: 'It took too long to answer.',
+  network: "Nivara couldn't be reached. Check your connection.",
+  server: 'Something went wrong on the server.',
+  request: "Nivara couldn't use that request.",
+};
+const retries = new Map();
+let retrySeq = 0;
+function errorBox(e, what, retry) {
+  const id = ++retrySeq;
+  if (retry) retries.set(id, retry);
+  const detail = [e?.status && `HTTP ${e.status}`, e?.detail ?? e?.message].filter(Boolean).join(' · ');
+  return `<div class="err" role="alert" data-err="${id}"><p>Couldn't ${esc(what)}. ${OOPS[e?.kind] ?? OOPS.server}</p>
+    <div class="acts">${retry ? `<button class="btn" onclick="retryNow(${id})">Retry</button>` : ''}<a href="#health">Check Health</a></div>
+    ${detail ? `<details class="note"><summary>Details</summary><pre>${esc(detail)}</pre></details>` : ''}</div>`;
+}
+function retryNow(id) {
+  const fn = retries.get(id);
+  retries.delete(id);
+  const box = document.querySelector(`[data-err="${id}"]`);
+  (box?.closest('.row-err') ?? box)?.remove();
+  fn?.();
+}
+/** Error for an inline action: shown under the button's group, replacing that group's previous error. */
+function showError(btn, html) {
+  const host = btn.closest('.row') ?? btn.closest('.acts, .field') ?? btn;
+  const next = host.nextElementSibling;
+  if (next?.matches('.err, .row-err')) next.remove();
+  host.insertAdjacentHTML('afterend', host.matches('.row') ? `<li class="row-err">${html}</li>` : html);
+}
+/** Disables the button and shows `label` while fn runs. */
+async function busy(btn, label, fn) {
+  const text = btn.textContent;
+  btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.textContent = label;
+  try { return await fn(); }
+  finally { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = text; }
+}
 const head = (title, sub = '') => `<header class="head"><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</header>`;
 const row = ({ id, level = '', name, why = '', fig = '', act = '', dim }) => `<li class="row${act ? ' has-act' : ''}${dim ? ' dim' : ''}"${id ? ` id="${esc(id)}" tabindex="-1"` : ''}>
   ${level === null ? '<i></i>' : `<i class="edge ${level}" aria-hidden="true"></i>`}<span><span class="name">${name}</span>${why ? `<span class="why">${why}</span>` : ''}</span><span class="fig">${fig}</span><span class="act">${act}</span></li>`;
@@ -106,7 +145,7 @@ const views = {
       ${askBox(['What should I restock?', 'Show my pending orders.', 'What sold the most?', 'What should I focus on today?'])}
       <section class="sec brief"><h2>${d.brief?.date === d.date ? 'Morning brief' : 'Latest brief'}</h2>
         ${d.brief ? `<p class="note">${esc(when(d.brief.createdAt))} · ${d.brief.by === 'template+gemma' ? 'facts from the database, first line summarised by Gemma' : d.brief.by === 'gemma' ? 'written by Gemma (older brief)' : 'facts from the database (no Gemma summary)'}</p><pre class="sec-gap">${esc(d.brief.text)}</pre>` : '<p class="empty">No brief yet. One is made every morning at 8, or make one now.</p>'}
-        <div class="acts"><button class="btn" onclick="runWf('dailyBriefWorkflow', this)">Make a fresh brief</button><span class="small quiet" id="wfout" role="status"></span></div></section>
+        <div class="acts"><button class="btn" onclick="runWf('dailyBriefWorkflow', this)">Make a fresh brief</button></div><div id="wfout" aria-live="polite"></div></section>
     </aside></div>`;
   },
 
@@ -148,7 +187,7 @@ const views = {
     `<section><p>${methodNote(f.method)} <span class="quiet">${esc(f.model ?? '')} · learned from ${f.historyDays} days of sales · worked out ${esc(when(f.createdAt))}</span></p>
       ${f.demandNote ? `<p class="warn">${esc(f.demandNote)}</p>` : ''}
       ${f.fallbackReason ? `<p class="warn">Why the fallback: ${esc(f.fallbackReason)}</p>` : ''}
-      <div class="acts gap"><button class="btn" onclick="this.disabled=true;api('/forecast?force=1').then(route, e => this.insertAdjacentHTML('afterend', fail(e)))">Work it out again</button></div></section>
+      <div class="acts gap"><button class="btn" onclick="refreshForecast(this)">Work it out again</button></div></section>
     <section class="sec">${table([
       ['Product', r => esc(r.name), 'lead'],
       ['Left', r => `${r.available}<span class="sub">${r.stock} in stock, ${r.reserved} held</span>`, 'num big'],
@@ -182,7 +221,7 @@ const views = {
     return head('Workflows', w.temporal ? `${st('light', 'Temporal connected')} <a href="${esc(w.uiUrl)}" target="_blank" rel="noopener">Open the Temporal UI</a>` : st('mid', 'Temporal unavailable: workflows run in-process')) +
     `<section>${w.schedule ? `<p>Next morning brief: <b>${esc(when(w.schedule.next))}</b></p>` : ''}</section>
     <section class="sec"><h2>Run now</h2><ul class="rows">${Object.entries(WF).map(([n, label]) => row({ level: null, name: label, why: `<span class="small">${n}</span>`, act: `<button class="btn" onclick="runWf('${n}', this)">Run</button>` })).join('')}</ul>
-      <pre class="out" id="wfout" role="status"></pre></section>
+      <div id="wfout" aria-live="polite"></div></section>
     ${w.runs.length ? `<section class="sec"><h2>Recent runs</h2>${table([['Workflow', r => esc(WF[r.type] ?? r.type), 'lead'], ['ID', r => `<span class="small">${esc(r.id)}</span>`], ['Status', r => st(r.status === 'COMPLETED' ? 'light' : r.status === 'RUNNING' ? 'mid' : 'heavy', cap(r.status.toLowerCase()))], ['Started', r => esc(when(r.start)), 'num']], w.runs)}</section>` : ''}
     <section class="sec"><h2>Recent briefs</h2>${table([['When', r => esc(when(r.createdAt)), 'lead'], ['By', r => esc(r.by)], ['Brief', r => `<pre class="small">${esc(r.text)}</pre>`]], w.briefs)}</section>`;
   },
@@ -292,9 +331,9 @@ function browserListen(btn, label) {
 // ---------- orders ----------
 let draft;
 async function extract(btn) {
-  btn.disabled = true; $('#draft').innerHTML = '<p class="loading">Gemma is reading the message…</p>';
+  $('#draft').innerHTML = '<p class="loading" role="status">Gemma is reading the message…</p>';
   try {
-    const r = await api('/orders/extract', { method: 'POST', body: { text: $('#otext').value } });
+    const r = await busy(btn, 'Reading…', () => api('/orders/extract', { method: 'POST', body: { text: $('#otext').value }, retry: true }));
     draft = r.draft;
     const unmatched = draft.items.some(i => !i.product);
     $('#draft').innerHTML = `<div class="sec"><h2>Check this order</h2>
@@ -305,62 +344,66 @@ async function extract(btn) {
       ${draft.problems.length ? `<p class="warn">${draft.problems.map(esc).join('<br>')}</p>` : ''}
       <div class="acts gap"><button class="btn primary" onclick="confirmOrder(this)" ${unmatched ? 'disabled title="Fix the unmatched items first"' : ''}>Confirm and save</button>${unmatched ? '<span class="small red">Fix the unmatched items in the message first.</span>' : ''}</div>
       <details class="note"><summary>What Gemma read (validated)</summary><pre>${esc(JSON.stringify(r.extraction, null, 1))}</pre></details></div>`;
-  } catch (e) { $('#draft').innerHTML = fail(e); }
-  btn.disabled = false;
+  } catch (e) { $('#draft').innerHTML = errorBox(e, 'read the message', () => extract(btn)); }
 }
 async function confirmOrder(btn) {
-  btn.disabled = true;
   try {
-    const o = await api('/orders', { method: 'POST', body: { customerId: draft.customer.id, customerName: draft.customer.name, items: draft.items.map(i => ({ sku: i.product.sku, quantity: i.quantity })), deliveryDate: draft.deliveryDate } });
+    const o = await busy(btn, 'Saving…', () => api('/orders', { method: 'POST', body: { customerId: draft.customer.id, customerName: draft.customer.name, items: draft.items.map(i => ({ sku: i.product.sku, quantity: i.quantity })), deliveryDate: draft.deliveryDate } }));
     flash = `Saved ${orderName(o._id)} for ${draft.customer.name}.`; route();
-  } catch (e) { $('#draft').insertAdjacentHTML('beforeend', fail(e)); btn.disabled = false; }
+  } catch (e) { showError(btn, errorBox(e, 'save the order', () => confirmOrder(btn))); }
 }
 async function deliver(id, btn) {
-  btn.disabled = true;
-  try { await api(`/orders/${id}/deliver`, { method: 'POST' }); flash = `${orderName(id)} marked delivered.`; route(); }
-  catch (e) { btn.insertAdjacentHTML('afterend', fail(e)); btn.disabled = false; }
+  try { await busy(btn, 'Saving…', () => api(`/orders/${id}/deliver`, { method: 'POST' })); flash = `${orderName(id)} marked delivered.`; route(); }
+  catch (e) { showError(btn, errorBox(e, `mark ${orderName(id)} delivered`, () => deliver(id, btn))); }
+}
+async function refreshForecast(btn) {
+  try { await busy(btn, 'Working it out…', () => api('/forecast?force=1', { timeoutMs: API.longTimeoutMs })); route(); }
+  catch (e) { showError(btn, errorBox(e, 'work out the forecast', () => refreshForecast(btn))); }
 }
 
 // ---------- suppliers / memory ----------
 async function supSearch(btn) {
-  btn.disabled = true; $('#sres').innerHTML = '<p class="loading">Searching…</p>';
+  $('#sres').innerHTML = '<p class="loading" role="status">Searching…</p>';
   try {
-    const r = await api('/suppliers/search?q=' + encodeURIComponent($('#sq').value));
+    const r = await busy(btn, 'Searching…', () => api('/suppliers/search?q=' + encodeURIComponent($('#sq').value)));
     $('#sres').innerHTML = `<p class="lede gap">${r.product ? `Matched <b>${esc(r.product.name)}</b>. You pay ${inr(r.product.cost)} and sell at ${inr(r.product.price)}.` : 'Not in your catalogue, so it was searched as typed.'}</p>
       ${r.web.available ? `${r.web.hiddenBlocked ? `<p class="note">${plural(r.web.hiddenBlocked, 'result')} hidden: blocked supplier.</p>` : ''}${table([['Listing', o => `<a href="${esc(o.link)}" target="_blank" rel="noopener">${esc(o.title)}</a>`], ['Seller', o => `${esc(o.source)}<span class="sub">${esc(o.sourceDomain)}</span>`], ['Price', o => inr(o.price), 'num big']], r.web.offers.slice().sort((a, b) => a.price - b.price))}<p class="note">Live Google Shopping results via SerpApi. Retail listings: check the pack size before comparing with your unit cost.</p>` : `<p class="warn">${esc(r.web.reason)}</p>`}
       ${r.dbOpportunity ? `<p class="lede gap">Stored quote: <b>${esc(r.dbOpportunity.best.supplier)}</b> at ${inr(r.dbOpportunity.best.unitCost)} a unit, ${inr(r.dbOpportunity.savingPerUnit)} less (${r.dbOpportunity.savingPercent}%${r.dbOpportunity.significant ? '' : ', too small to count'}).</p>` : ''}
       ${r.memory ? `<p class="note">Blocked-supplier memory: ${esc(r.memory.source)}</p>` : ''}`;
-  } catch (e) { $('#sres').innerHTML = fail(e); }
-  btn.disabled = false;
+  } catch (e) { $('#sres').innerHTML = errorBox(e, 'search prices', () => supSearch(btn)); }
 }
 async function loadMem() {
-  const m = await api('/memory');
+  let m;
+  try { m = await api('/memory'); }
+  catch (e) { if ($('#mem')) $('#mem').innerHTML = errorBox(e, 'load what Nivara remembers', loadMem); return; }
   if ($('#mem')) $('#mem').innerHTML = (m.preferences.length ? `<ul class="rows">${m.preferences.map(p => row({ level: null, name: `“${esc(p.text)}”`,
     why: `${p.kind === 'block_supplier' ? `Blocks ${esc(p.supplier)}` : cap(esc(p.kind))} · stored in ${p.mirror === 'backboard' ? 'Mongo and Backboard' : 'Mongo only'}` })).join('')}</ul>` : '<p class="empty">Nothing remembered yet.</p>') +
     `<p class="note">Backboard: ${m.backboard.live ? `live, ${plural(m.backboard.memories.length, 'memory', 'memories')}` : esc(m.backboard.error || 'not set up (no BACKBOARD_API_KEY)')}</p>`;
 }
 async function saveMem(btn) {
-  btn.disabled = true;
-  try { await api('/memory', { method: 'POST', body: { text: $('#mtext').value } }); flash = 'Remembered.'; route(); }
-  catch (e) { btn.insertAdjacentHTML('afterend', fail(e)); btn.disabled = false; }
+  try { await busy(btn, 'Saving…', () => api('/memory', { method: 'POST', body: { text: $('#mtext').value } })); flash = 'Remembered.'; route(); }
+  catch (e) { showError(btn, errorBox(e, 'save that', () => saveMem(btn))); }
 }
 
 // ---------- workflows / traces ----------
 async function runWf(name, btn) {
-  btn.disabled = true; $('#wfout').textContent = `Running ${WF[name] ?? name}…`;
-  try { const r = await api(`/workflows/${name}/run`, { method: 'POST' }); $('#wfout').textContent = `${r.runner}${r.workflowId ? ' · ' + r.workflowId : ''}${r.retries?.length ? '\nretries: ' + r.retries.join('\n') : ''}\n` + JSON.stringify(r.result, null, 1).slice(0, 3000); if (location.hash === '#dashboard' || !location.hash) setTimeout(route, 800); }
-  catch (e) { $('#wfout').textContent = `That didn't work: ${e.message}`; }
-  btn.disabled = false;
+  const out = $('#wfout');
+  out.innerHTML = `<p class="note" role="status">Running ${esc(WF[name] ?? name)}…</p>`;
+  try {
+    const r = await busy(btn, 'Running…', () => api(`/workflows/${name}/run`, { method: 'POST', timeoutMs: API.longTimeoutMs }));
+    out.innerHTML = `<details class="note"><summary>Details</summary><pre>${esc(JSON.stringify(r, null, 1))}</pre></details>`;
+    if (location.hash === '#dashboard' || !location.hash) { flash = `${WF[name]} done.`; route(); }
+  } catch (e) { out.innerHTML = errorBox(e, `run ${(WF[name] ?? name).toLowerCase()}`, () => runWf(name, btn)); }
 }
 async function showTrace(id) {
   try {
-    const t = await api('/traces/' + id);
+    const t = await api('/traces/' + encodeURIComponent(id));
     const t0 = t.spans[0]?.start ?? 0;
     $('#trace').innerHTML = `<section class="sec"><h2>${esc(t.kind)} <span class="n">${t.ms} ms · ${esc(id.slice(0, 8))}</span></h2>
       ${table([['+ms', s => s.start - t0, 'num'], ['Span', s => `<b>${esc(s.op)}</b> ${esc(s.name)}`], ['Took', s => `${s.ms} ms`, 'num'], ['Attributes', s => `<details><summary class="small">${plural(Object.keys(s.attrs).length, 'attribute')}</summary><pre class="small">${esc(JSON.stringify(s.attrs, null, 1))}</pre></details>`], ['Error', s => s.error ? st('heavy', s.error) : '']], t.spans)}
       <p class="lede gap"><b>Final output:</b> ${esc(t.output)}</p></section>`;
     go('trace');
-  } catch (e) { $('#trace').innerHTML = fail(e); }
+  } catch (e) { $('#trace').innerHTML = errorBox(e, 'load the trace', () => showTrace(id)); }
 }
 
 // ---------- router ----------
@@ -372,12 +415,13 @@ async function route() {
   try { $('#more').hidePopover(); } catch {}
   document.title = `${TITLES[name]} · Nivara`;
   const note = flash; flash = '';
-  $('#view').innerHTML = '<p class="loading">Loading…</p>';
+  retries.clear();
+  $('#view').innerHTML = '<p class="loading" role="status">Loading…</p>';
   try {
     $('#view').innerHTML = (note ? `<p class="flash" role="status">${st('light', 'Done')} ${esc(note)}</p>` : '') + await views[name]();
-    if (name === 'suppliers') loadMem().catch(e => $('#mem') && ($('#mem').innerHTML = fail(e)));
+    if (name === 'suppliers') loadMem();
     voiceNotice(elevenOn() ? 'Voice: ElevenLabs' : `Voice: browser speech (${health?.integrations?.elevenlabs?.detail ?? 'ElevenLabs not live'})`);
-  } catch (e) { $('#view').innerHTML = fail(e); }
+  } catch (e) { $('#view').innerHTML = `<div class="sec">${errorBox(e, `load ${TITLES[name]}`, route)}</div>`; }
   if (!first) { scrollTo(0, 0); const h = $('#view h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
   first = false;
 }
