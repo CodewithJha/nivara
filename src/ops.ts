@@ -64,7 +64,14 @@ export async function forecastDemand({ force = false, latest = false } = {}) {
         ...stockPlan({ stock: p.stock, reserved: reserved[p._id] ?? 0, demand7: forecast7, leadTimeDays: p.leadTimeDays }),
       };
     }).sort((a, b) => ['high', 'medium', 'low'].indexOf(a.risk) - ['high', 'medium', 'low'].indexOf(b.risk) || (a.daysOfCover ?? 1e9) - (b.daysOfCover ?? 1e9));
-    const doc = { date: t, method, model: model && `TabPFN ${model}`, fallbackReason: reason, historyDays: HISTORY_DAYS, tigerAggregates: Object.keys(tiger).length > 0, items, createdAt: new Date() };
+    const proxy = await col.sales.findOne({ source: 'proxy' });
+    const doc = {
+      date: t, method, model: model && `TabPFN ${model}`, fallbackReason: reason, historyDays: HISTORY_DAYS,
+      tigerAggregates: Object.keys(tiger).length > 0,
+      demandSource: proxy ? 'proxy' : 'orders',
+      demandNote: proxy ? 'Demand: search-interest proxy, not real sales' : undefined,
+      items, createdAt: new Date(),
+    };
     await col.forecasts.insertOne(doc);
     set('method', method);
     return doc;

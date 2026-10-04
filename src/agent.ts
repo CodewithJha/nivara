@@ -10,15 +10,44 @@ import { Extraction, buildDraft, inr, looksClean, matchProduct, methodLabel, sho
 import * as Sentry from '@sentry/node';
 import { MODEL, OLLAMA, annotate, gemma, gemmaCapabilities, llmDownNote, llmModel, llmProvider, log, parseJson, span, traced } from './integrations.ts';
 import * as ops from './ops.ts';
-import { searchCatalog } from './tiger.ts';
+import { searchCatalog, tigerDemand } from './tiger.ts';
 
 const none = z.object({});
+
+/** Atlas ops context (orders/stock/memory) — separate Sentry tool span. */
+async function atlasOpsContext() {
+  return span('gen_ai.execute_tool', 'execute_tool atlas_ops', { 'gen_ai.tool.name': 'atlas_ops' }, async set => {
+    const [pending, memory, products] = await Promise.all([ops.getPendingOrders(), ops.getMemory(), col.products.countDocuments()]);
+    const out = { store: 'atlas', pendingOrders: pending.orders.length, overdue: pending.orders.filter(o => o.overdue).length, preferences: memory.preferences.length, catalogSkus: products };
+    set('gen_ai.tool.output', out);
+    return out;
+  });
+}
+
+/** Tiger analytics (7d/28d demand) — separate Sentry tool span. */
+async function tigerAnalyticsContext() {
+  return span('gen_ai.execute_tool', 'execute_tool tiger_analytics', { 'gen_ai.tool.name': 'tiger_analytics' }, async set => {
+    const dem = await tigerDemand();
+    const rows = Object.entries(dem).map(([sku, v]) => ({ sku, ...v })).sort((a, b) => b.demand7 - a.demand7).slice(0, 8);
+    const out = { store: 'tiger', skusWithDemand: Object.keys(dem).length, topDemand7: rows, note: 'Demand: search-interest proxy, not real sales' };
+    set('gen_ai.tool.output', out);
+    return out;
+  });
+}
+
+/** Parallel Atlas + Tiger fetch for combined "how's the business" questions. */
+export async function shopPulse() {
+  const [atlas, tiger] = await Promise.all([atlasOpsContext(), tigerAnalyticsContext()]);
+  return { atlas, tiger, fetched: 'parallel' };
+}
+
 const TOOLS = {
   get_inventory: { description: 'Current stock, reserved qty, 7-day demand forecast, stockout risk and reorder qty for every product. Use for "what should I restock".', args: none, run: () => ops.getInventory() },
   forecast_demand: { description: 'Same data focused on the demand forecast and stockout risk. Use for "which products will run out", "why is this product at risk" and "why do you recommend this".', args: none, run: () => ops.forecastDemand() },
   get_pending_orders: { description: 'Pending (not yet delivered) customer orders with due dates; flags overdue.', args: none, run: () => ops.getPendingOrders() },
   get_sales_summary: { description: 'Units sold per product over the last N days, best first.', args: z.object({ days: z.coerce.number().int().min(1).max(90).default(7) }), run: (a: { days: number }) => ops.salesSummary(a.days) },
   search_catalog: { description: 'Hybrid search over the real product catalogue (Tiger pgvector + full-text). Use for "protein under 1500 no sugar", find products by constraint.', args: z.object({ query: z.string().trim().min(2).max(120) }), run: (a: { query: string }) => searchCatalog(a.query) },
+  shop_pulse: { description: 'Combined Atlas ops (orders/stock/memory) + Tiger analytics (7d/28d demand) fetched in parallel. Use for "how is the business", "ops and demand together".', args: none, run: () => shopPulse() },
   search_supplier_prices: { description: 'Find cheaper suppliers for one product: live web prices (SerpApi) and stored supplier quotes. Respects blocked suppliers.', args: z.object({ product: z.string().trim().min(1).max(80) }), run: (a: { product: string }) => ops.searchSupplierPrices(a.product) },
   get_business_memory: { description: "The owner's saved business preferences/rules (e.g. blocked suppliers).", args: none, run: () => ops.getMemory() },
   save_business_memory: { description: 'Save a durable business preference the owner states, e.g. "I don\'t buy from Supplier X". Pass their exact words.', args: z.object({ text: z.string().trim().min(3).max(300) }), run: (a: { text: string }) => ops.saveMemory(a.text) },
@@ -64,6 +93,7 @@ export function keywordRoute(q: string): { tool: ToolName; args: any } {
   if (/\b(memory|preferences?|what do you (remember|know))\b/.test(s)) return { tool: 'get_business_memory', args: {} };
   if (/\b(under|below|no sugar|sugar[- ]?free|find .*protein|catalog|catalogue|show me)\b/.test(s) || (/\bprotein\b/.test(s) && /\b(under|below|₹|rs)\b/.test(s)))
     return { tool: 'search_catalog', args: { query: q } };
+  if (/\b(how('s| is) (the )?business|ops and demand|atlas and tiger|overall pulse|combined)\b/.test(s)) return { tool: 'shop_pulse', args: {} };
   if (/\b(supplier|cheaper|cheapest|wholesale)\b/.test(s) || (/\bprice\b/.test(s) && !/\bunder\b/.test(s))) return { tool: 'search_supplier_prices', args: { product: q } };
   if (/\b(pending|undelivered|orders?)\b/.test(s)) return { tool: 'get_pending_orders', args: {} };
   if (/\b(sell|sold|best ?seller|top|most)\b/.test(s)) return { tool: 'get_sales_summary', args: { days: /month/.test(s) ? 30 : 7 } };
@@ -175,6 +205,14 @@ export function templateAnswer(tool: ToolName, out: any, focus?: string): string
     case 'get_pending_orders': return ordersAnswer(out);
     case 'get_sales_summary': return salesAnswer(out);
     case 'search_catalog': return catalogAnswer(out);
+    case 'shop_pulse': {
+      const a = out.atlas ?? {}, t = out.tiger ?? {};
+      return [
+        `Ops (Atlas): ${a.pendingOrders ?? 0} pending orders (${a.overdue ?? 0} overdue), ${a.catalogSkus ?? 0} SKUs, ${a.preferences ?? 0} saved preferences.`,
+        `Demand (Tiger): ${t.skusWithDemand ?? 0} SKUs with 7d/28d aggregates.${t.topDemand7?.length ? ' Top: ' + t.topDemand7.slice(0, 3).map((x: any) => `${x.sku} (~${x.demand7}/7d)`).join(', ') + '.' : ''}`,
+        t.note ?? 'Demand: search-interest proxy, not real sales',
+      ].join('\n');
+    }
     case 'search_supplier_prices': return supplierAnswer(out);
     case 'save_business_memory': {
       const p = out.saved;
