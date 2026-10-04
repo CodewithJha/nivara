@@ -2,7 +2,7 @@ import { after, afterEach, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 
-process.env.MONGODB_DB = 'nivara_test';
+process.env.MONGODB_DB = 'nivara_test_voice'; // one DB per file: node --test runs files in parallel processes
 process.env.LOG_LEVEL = 'silent';
 delete process.env.ELEVENLABS_API_KEY;
 
