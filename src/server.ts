@@ -242,6 +242,7 @@ if (import.meta.main) {
     await mongo.connect();
     if (!(await col.products.countDocuments())) log.info({ seeded: await seed({ online: false }) }, 'empty database → real stand-in seeded');
     log.info(await startOrderChangeStream(), 'Atlas→Tiger order sync');
+    await ops.numberOrders(); // sample and imported orders get short numbers too
   } catch (e: any) { log.error({ err: e.message }, 'MongoDB unavailable at boot; check MONGODB_URI'); }
   const port = Number(process.env.PORT || 3000);
   const server = app.listen(port, () => log.info(`Nivara on http://localhost:${port}`));

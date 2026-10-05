@@ -287,12 +287,15 @@ export function templateBrief(f: Awaited<ReturnType<typeof briefFacts>>) {
 
 /** Orders or stock changed: today's stock plan and brief no longer match the data. */
 /** Short order numbers people can say out loud (Order 9). Any order without one is numbered first, oldest first. */
-export async function nextOrderNo() {
+export async function numberOrders() {
   const top = (await col.orders.find({ no: { $type: 'number' } }).sort({ no: -1 }).limit(1).next())?.no ?? 0;
   const loose = await col.orders.find({ no: { $exists: false } }).sort({ createdAt: 1, _id: 1 }).toArray();
   let n = Math.max(top, (await col.meta.findOne({ _id: 'orderNo' }))?.value ?? 0);
   for (const o of loose) await col.orders.updateOne({ _id: o._id, no: { $exists: false } }, { $set: { no: ++n } });
   await col.meta.updateOne({ _id: 'orderNo' }, { $max: { value: n } }, { upsert: true });
+}
+export async function nextOrderNo() {
+  await numberOrders();
   return (await col.meta.findOneAndUpdate({ _id: 'orderNo' }, { $inc: { value: 1 } }, { returnDocument: 'after' }))!.value as number;
 }
 
