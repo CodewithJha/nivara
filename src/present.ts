@@ -102,24 +102,30 @@ export function publicActivity(t: any) {
 }
 
 // ---------- health (behind the scenes) ----------
-type HealthIn = { date: string; mongo: boolean; gemma: boolean; mastra: boolean; forecast: any; tiger: boolean; serpapi: boolean; backboard: boolean; elevenlabs: boolean; temporal: boolean; sentry: boolean };
+type HealthIn = { date: string; mongo: boolean; gemma: boolean; mastra: boolean; forecast: any; tiger: boolean; serpapi: boolean; backboard: boolean; elevenlabs: boolean; temporal: boolean; sentry: boolean; model?: string; render?: boolean };
+const shortDay = (d: string | Date) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
 /** Partner statuses worded for people: live or standby, what it does, and what happens when it rests. No hosts, keys or errors. */
 export function publicHealth(h: HealthIn) {
-  const f = h.forecast, tab = f?.method === 'tabpfn';
+  const f = h.forecast, tab = f?.method === 'tabpfn', pre = f?.precomputed;
   const p = (name: string, live: boolean, on: string, off: string) => ({ name, status: live ? 'live' : 'standby', note: live ? on : off });
+  const learnsFrom = f?.demandSource === 'orders' ? 'your confirmed orders' : 'demand estimated from Google searches for each product, not your till sales yet';
   return {
     ok: h.mongo, date: h.date,
     integrations: {
-      mongodb: p('MongoDB Atlas', h.mongo, 'Stores products, orders, customers and saved rules.', 'Not reachable right now. Pages will load again when it is back.'),
-      gemma: p('Gemma', h.gemma, 'Reads order messages, picks the right lookup for each question and writes the brief summary.', 'Resting. Answers use ready-made wording built from your data.'),
-      mastra: p('Mastra', h.mastra, "Runs the assistant's tools.", 'On standby. Gemma picks the tools directly, with the same checks.'),
-      tabpfn: p('TabPFN', tab, f?.precomputed ? `Forecasts 7-day demand for ${f.precomputed.skus} products, worked out ahead and stored.` : 'Forecasts 7-day demand, worked out on this server.', 'On standby. An average of recent sales keeps the forecast going.'),
-      tiger: p('Tiger Data', h.tiger, 'Keeps sales history and powers product search.', 'On standby. Product search uses simple matching.'),
-      serpapi: p('SerpApi', h.serpapi, 'Checks online shop prices each morning.', 'Not set up. Stored supplier quotes are used.'),
-      backboard: p('Backboard', h.backboard, 'Remembers your rules, like suppliers you avoid.', 'Not set up. Rules are kept in the main database.'),
-      elevenlabs: p('ElevenLabs', h.elevenlabs, 'Listens to spoken questions and reads answers aloud.', "On standby. The browser's own voice is used."),
-      temporal: p('Temporal', h.temporal, 'Runs the morning brief and other jobs on a schedule, with retries.', 'On standby. Jobs run inside the app, with retries.'),
-      sentry: p('Sentry', h.sentry, 'Watches for errors and slow answers.', 'Not set up. Activity is kept here only.'),
+      mongodb: p('MongoDB Atlas', h.mongo, 'Stores products, stock, orders, customers, saved rules and briefs. Every order you confirm is saved here.', 'Not reachable right now. Pages will load again when it is back.'),
+      ...(h.render && { render: p('Render', true, 'Hosts Nivara on a free plan in Singapore. If it has been asleep, the first page can take up to a minute.', '') }),
+      gemma: p('Gemma', h.gemma, `Reads order messages and voice notes, picks the right lookup for each question and writes the brief summary${h.model ? `. Model: ${h.model}` : ''}.`, 'Resting. Answers use ready-made wording built from your data, and order reading waits until it is back.'),
+      elevenlabs: p('ElevenLabs', h.elevenlabs, 'Turns voice notes on Orders and spoken questions on Ask into text, in Hindi, English or Hinglish, and reads answers aloud.', "On standby. Voice notes can't be read, so type or paste the order. Ask uses the browser's own voice."),
+      tabpfn: p('TabPFN', tab, pre
+        ? `Forecasts the next 7 days for ${pre.skus} products from 60 days of ${learnsFrom}. Worked out on a laptop on ${shortDay(pre.at)} and stored, since this server has no Python.`
+        : `Forecasts the next 7 days from 60 days of ${learnsFrom}, worked out on this server.`,
+        'On standby. An average of the last 7 days keeps the forecast going.'),
+      tiger: p('Tiger Data', h.tiger, 'Keeps daily sales history, adds each delivered order to it, and powers product search by words and meaning.', 'On standby. Product search uses simple word matching.'),
+      serpapi: p('SerpApi', h.serpapi, 'Checks online shop prices for products that may run out, each morning or when you run Online prices. Also supplied the Google search trends behind the demand estimate.', 'Not set up. Stored supplier quotes are used.'),
+      backboard: p('Backboard', h.backboard, 'Remembers your rules in your own words, like suppliers you avoid, and finds them again when suppliers come up.', 'Not set up. Rules are kept in the main database.'),
+      sentry: p('Sentry', h.sentry, 'Records each answer step by step, with timings, and reports errors. Customer details and messages are left out.', 'Not set up. Activity is kept here only.'),
+      temporal: p('Temporal', h.temporal, 'Runs the morning brief and other jobs on a schedule, with retries.', 'On standby on this free server. The morning brief still runs at 8 inside the app, with retries.'),
+      mastra: p('Mastra', h.mastra, "Runs the assistant's tools.", 'On standby. Gemma picks the tools directly from the same tool list, with the same checks.'),
     },
   };
 }

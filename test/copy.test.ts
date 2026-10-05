@@ -53,3 +53,17 @@ test('publicHealth and publicRun: plain words, no hosts, ids or runner names', (
   const r = publicRun('dailyBriefWorkflow', { mode: 'direct', runner: 'direct-fallback (Temporal unavailable)', traceId: 'abc', retries: ['x failed: boom'], result: { forecast: { method: 'tabpfn', highRisk: 2 }, dailyBrief: { text: 'Brief (TabPFN forecast)\n• Top seller: Bar (0.28 sold).' } } });
   assert.deepEqual(r, { name: 'dailyBriefWorkflow', label: 'Morning brief', done: true, steps: { forecast: { runsOutFirst: 2 }, dailyBrief: { text: 'Brief\n• Top seller: Bar, 0 sold.' } } });
 });
+
+test('publicHealth: live notes name what each partner does now (voice notes, stored forecast, host)', () => {
+  const h = publicHealth({ date: '2026-10-05', mongo: true, gemma: true, mastra: false, forecast: { method: 'tabpfn', demandSource: 'proxy', precomputed: { skus: 212, at: '2026-10-04T17:21:10Z' } }, tiger: true, serpapi: true, backboard: true, elevenlabs: true, temporal: false, sentry: true, model: 'gemma-4-26b-a4b-it', render: true });
+  const i = h.integrations as any;
+  assert.match(i.elevenlabs.note, /voice notes on Orders/);
+  assert.match(i.tabpfn.note, /212 products/);
+  assert.match(i.tabpfn.note, /Google searches/);
+  assert.match(i.tabpfn.note, /4 Oct/);
+  assert.match(i.gemma.note, /gemma-4-26b-a4b-it/);
+  assert.equal(i.render.status, 'live');
+  assert.equal(i.temporal.status, 'standby');
+  for (const v of Object.values<any>(i)) assert.equal(leaks(v.note), false, v.note);
+  assert.equal('render' in publicHealth({ ...h, date: 'x', mongo: true, gemma: false, mastra: false, forecast: null, tiger: false, serpapi: false, backboard: false, elevenlabs: false, temporal: false, sentry: false }).integrations, false);
+});
