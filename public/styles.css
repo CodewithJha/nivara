@@ -187,6 +187,7 @@ button.plate:hover { transform: translateY(var(--lift)); }
 }
 
 /* ---------- tables (stock, forecast, back office) ---------- */
+.lazy-more { height: 1px; } /* lazy.js sentinel: more rows draw as it nears the viewport */
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; font-weight: 700; font-size: var(--t-sm); color: var(--iron); padding: 0 var(--s-3) var(--s-2); border-bottom: var(--rule) solid var(--rubber); vertical-align: bottom; }
 td { padding: var(--s-3); border-bottom: var(--hair) solid var(--line); vertical-align: top; }

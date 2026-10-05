@@ -30,9 +30,11 @@ function answerHtml(text) {
   return html;
 }
 
-const table = (cols, rows, empty = 'Nothing here yet.') => rows.length
-  ? `<table><thead><tr>${cols.map(c => `<th scope="col" class="${c[2] ?? ''}">${c[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c => `<td class="${c[2] ?? ''}" data-label="${esc(c[0])}"><div>${c[1](r)}</div></td>`).join('')}</tr>`).join('')}</tbody></table>`
-  : `<p class="empty">${empty}</p>`;
+const tr = cols => r => `<tr>${cols.map(c => `<td class="${c[2] ?? ''}" data-label="${esc(c[0])}"><div>${c[1](r)}</div></td>`).join('')}</tr>`;
+const tableOf = (cols, body, lazy) => `<table><thead><tr>${cols.map(c => `<th scope="col" class="${c[2] ?? ''}">${c[0]}</th>`).join('')}</tr></thead><tbody${lazy == null ? '' : ` data-lazy="${lazy}"`}>${body}</tbody></table>`;
+const table = (cols, rows, empty = 'Nothing here yet.') => rows.length ? tableOf(cols, rows.map(tr(cols)).join('')) : `<p class="empty">${empty}</p>`;
+/** Sections of long tables ({ before, cols, rows, after }): the first rows draw now, the rest as the reader scrolls (lazy.js). */
+const lazyTables = secs => progressive(secs.map(s => ({ rows: s.rows, row: tr(s.cols), html: (body, g) => s.before + tableOf(s.cols, body, g) + (s.after ?? '') })));
 
 // ---------- errors and pending buttons ----------
 // One error component for every failed request: plain words (api.js OOPS / the server's friendly message) and a Retry.
@@ -187,17 +189,14 @@ const views = {
     const [{ products }, { suppliers }] = await Promise.all([api('/inventory'), api('/suppliers')]);
     const sup = Object.fromEntries(suppliers.map(s => [s._id, s.name]));
     return head('Stock', `What is on the shelf: ${plural(products.length, 'product')}. What to reorder is on <a href="#forecast">Forecast</a>.`) +
-      Object.entries(Object.groupBy(products, p => p.category)).map(([cat, ps]) => `<section class="sec"><h2>${esc(cap(cat))} <span class="n">${ps.length}</span></h2>
-      ${table([['Product', p => esc(p.name), 'lead'], ['In stock', p => p.stock, 'num big'], ['Sells at', p => inr(p.price), 'num'], ['Costs you', p => inr(p.cost), 'num'], ['Supplier', p => esc(sup[p.supplierId] ?? p.supplierId)], ['Delivery takes', p => plural(p.leadTimeDays, 'day'), 'num']], ps)}</section>`).join('');
+      lazyTables(Object.entries(Object.groupBy(products, p => p.category)).map(([cat, ps]) => ({ before: `<section class="sec"><h2>${esc(cap(cat))} <span class="n">${ps.length}</span></h2>`, after: '</section>', rows: ps,
+        cols: [['Product', p => esc(p.name), 'lead'], ['In stock', p => p.stock, 'num big'], ['Sells at', p => inr(p.price), 'num'], ['Costs you', p => inr(p.cost), 'num'], ['Supplier', p => esc(sup[p.supplierId] ?? p.supplierId)], ['Delivery takes', p => plural(p.leadTimeDays, 'day'), 'num']] })));
   },
 
   async forecast() {
     const f = await api('/forecast');
     const COVER_DAYS = 21, frac = n => Math.min(n / COVER_DAYS, 1);
-    return head('Forecast', 'What sells in the next 7 days, and how long your stock lasts against how long a new delivery takes.') +
-    `<section><p class="quiet">Based on your last ${plural(f.historyDays ?? 60, 'day')} of sales.</p>
-      <div class="acts gap"><button class="btn" onclick="refreshForecast(this)">Work it out again</button></div></section>
-    <section class="sec">${table([
+    const cols = [
       ['Product', r => esc(r.name), 'lead'],
       ['Left', r => `${r.available}<span class="sub">${r.stock} in stock, ${r.reserved} held</span>`, 'num big'],
       ['Sold last 7 days', r => whole(r.last7Sold), 'num wide'],
@@ -205,8 +204,12 @@ const views = {
       ['Lasts', r => `${r.daysOfCover == null ? 'Not running out' : plural(Math.max(r.available > 0 ? 1 : 0, r.daysOfCover), 'day')} <span class="quiet">· delivery ${plural(r.leadTimeDays, 'day')}</span>
         <div class="cover ${LEVEL[r.risk]}" style="--cover:${r.daysOfCover == null ? 1 : frac(r.daysOfCover)};--lead:${frac(r.leadTimeDays)}" role="img" aria-label="${r.daysOfCover == null ? 'Not running out' : plural(r.daysOfCover, 'day')} of stock, delivery takes ${plural(r.leadTimeDays, 'day')}"></div>`],
       ['Risk', r => risk(r.risk)],
-      ['Order', r => r.reorderQty || '—', 'num big']], f.items, 'No products yet.')}
-    <p class="note">The bar shows days of stock, up to 3 weeks; the notch shows how long a delivery takes. Red runs out before a reorder could arrive. Amber runs out within 7 days. Order covers the delivery time, a week of sales and 3 spare days.</p></section>`;
+      ['Order', r => r.reorderQty || '—', 'num big']];
+    const note = '<p class="note">The bar shows days of stock, up to 3 weeks; the notch shows how long a delivery takes. Red runs out before a reorder could arrive. Amber runs out within 7 days. Order covers the delivery time, a week of sales and 3 spare days.</p>';
+    return head('Forecast', 'What sells in the next 7 days, and how long your stock lasts against how long a new delivery takes.') +
+    `<section><p class="quiet">Based on your last ${plural(f.historyDays ?? 60, 'day')} of sales.</p>
+      <div class="acts gap"><button class="btn" onclick="refreshForecast(this)">Work it out again</button></div></section>` +
+      (f.items.length ? lazyTables([{ before: '<section class="sec">', cols, rows: f.items, after: note + '</section>' }]) : `<section class="sec">${table(cols, [], 'No products yet.')}${note}</section>`);
   },
 
   async suppliers() {
@@ -449,10 +452,11 @@ async function route() {
   try { $('#more').hidePopover(); } catch {}
   document.title = `${TITLES[name]} · Nivara`;
   const note = flash; flash = '';
-  retries.clear();
+  retries.clear(); lazyOff();
   $('#view').innerHTML = '<p class="loading" role="status">Loading…</p>';
   try {
     $('#view').innerHTML = (note ? `<p class="flash" role="status">${st('light', 'Done')} ${esc(note)}</p>` : '') + await views[name]();
+    lazyArm($('#view'));
     if (name === 'suppliers') loadMem();
   } catch (e) { $('#view').innerHTML = `<div class="sec">${errorBox(e, `load ${TITLES[name]}`, route)}</div>`; }
   if (!first) { scrollTo(0, 0); const h = $('#view h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
