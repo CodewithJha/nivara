@@ -88,7 +88,7 @@ const orderRow = (o, today) => row({
   fig: `<b>${inr(o.total)}</b>`, act: o.status === 'pending' ? deliverBtn(o) : '',
 });
 function restockWhy(r) {
-  const left = r.available <= 0 ? 'None left after pending orders' : `${r.available} left of ${r.stock}`;
+  const left = r.available <= 0 ? 'None left after pending orders' : r.available === r.stock ? `${r.available} left` : `${r.available} left after pending orders, ${r.stock} on the shelf`;
   const lasts = r.daysOfCover == null || r.available <= 0 ? '' : `, about ${plural(Math.max(1, r.daysOfCover), 'day')} of stock`;
   return `${left}${lasts}. ${r.risk === 'high' ? `New stock takes ${plural(r.leadTimeDays, 'day')}.` : 'Runs out this week.'}`;
 }
