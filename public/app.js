@@ -98,7 +98,7 @@ const views = {
   async dashboard() {
     const d = await api('/dashboard');
     const p = d.pending.orders, hp = d.highPriority, th = d.supplierThreshold, f = d.forecast;
-    const listed = (xs, n = 3) => xs.length > n ? `${xs.slice(0, n).join(', ')} and ${plural(xs.length - n, 'more')}` : xs.join(', ');
+    const listed = (xs, n = 3) => xs.length > n ? `${xs.slice(0, n).join(', ')} and ${xs.length - n} more` : xs.join(', ');
     const worth = d.opportunities.filter(o => o.significant), small = d.opportunities.filter(o => !o.significant);
     const restockJob = r => ({ level: LEVEL[r.risk], to: 'p-' + r.sku, title: `Restock ${r.name}${r.risk === 'medium' ? ' this week' : ''}`,
       facts: `${restockWhy(r)}${r.reorderQty ? ` Order ${r.reorderQty}.` : ''}`,
@@ -178,7 +178,7 @@ const views = {
     `<section class="sec"><h2>New order from a chat</h2>
       <p class="lede">Paste the WhatsApp or Instagram message. Nivara reads it and checks each product and customer against your records. Nothing is saved until you confirm.</p>
       <label class="lbl" for="otext">Message</label>
-      <textarea id="otext" rows="3">Rahul wants 3 chocolate bars and one shaker, deliver tomorrow</textarea>
+      <textarea id="otext" rows="3">Rahul bhai ko 2 MB biozyme whey bhej dena kal tak</textarea>
       <div class="acts gap"><button class="btn primary" onclick="extract(this)">Read the message</button></div>
       ${voiceBox()}
       <div id="draft" aria-live="polite"></div></section>
@@ -220,7 +220,7 @@ const views = {
     const s = await api('/suppliers');
     return head('Suppliers', 'Who you buy from, what others quote, and the rules Nivara remembers for you.') +
     `<section class="sec"><h2>Check a price online</h2>
-      <div class="field"><input id="sq" aria-label="Product to search" placeholder="Product, e.g. whey protein 1kg" value="Chocolate Protein Bar" onkeydown="if(event.key==='Enter')supSearch($('#sbtn'))"><button class="btn primary" id="sbtn" onclick="supSearch(this)">Search prices</button></div>
+      <div class="field"><input id="sq" aria-label="Product to search" placeholder="Product, e.g. whey protein 1kg" value="MB biozyme whey" onkeydown="if(event.key==='Enter')supSearch($('#sbtn'))"><button class="btn primary" id="sbtn" onclick="supSearch(this)">Search prices</button></div>
       <div id="sres" aria-live="polite"></div></section>
     <section class="sec"><h2>Cheaper quotes <span class="n">${s.opportunities.filter(o => o.significant).length}</span></h2>
       <p class="lede">Stored quotes against what you pay now. Faded rows save too little to switch for.</p>
@@ -273,8 +273,8 @@ function go(id) {
 // ---------- assistant ----------
 const turns = [];
 const tries = list => list.length ? `<ul class="tries">${list.map(q => `<li><button class="link" onclick="send(this.textContent)">${esc(q)}</button></li>`).join('')}</ul>` : '';
-const askBox = (list, titled = true) => `<section class="sec ask" id="ask" tabindex="-1"${titled ? ' aria-labelledby="ask-h"' : ' aria-label="Ask"'}>${titled ? '<h2 id="ask-h">Ask</h2>' : ''}
-  <div class="field"><input id="q" placeholder="Which orders are late?" aria-label="Ask about your shop" onkeydown="if(event.key==='Enter')send(this.value)"><button class="btn primary" id="askbtn" onclick="send($('#q').value)"${asking ? ' disabled aria-busy="true"' : ''}>${asking ? 'Thinking…' : 'Ask'}</button><button class="btn" id="mic" onclick="listen(this)">Speak</button></div>
+const askBox = (list, titled = true, hint = titled ? 'Ask about your shop' : 'Which orders are late?') => `<section class="sec ask" id="ask" tabindex="-1"${titled ? ' aria-labelledby="ask-h"' : ' aria-label="Ask"'}>${titled ? '<h2 id="ask-h">Ask</h2>' : ''}
+  <div class="field"><input id="q" placeholder="${hint}" aria-label="Ask about your shop" onkeydown="if(event.key==='Enter')send(this.value)"><button class="btn primary" id="askbtn" onclick="send($('#q').value)"${asking ? ' disabled aria-busy="true"' : ''}>${asking ? 'Thinking…' : 'Ask'}</button><button class="btn" id="mic" onclick="listen(this)">Speak</button></div>
   ${tries(list)}
   <p class="small quiet voice" id="voicemode"></p>
   <div class="log" id="chat" aria-live="polite">${drawTurns()}</div></section>`;
@@ -427,7 +427,7 @@ const STEP = {
     : '<p class="empty">Nothing runs out this week.</p>' },
   supplierRefresh: { title: 'Online prices', view: s => s.status === 'skipped' ? '<p class="note">Skipped this time. Your stored quotes still apply.</p>'
     : s.status === 'off' ? '<p class="note">Online prices are not set up. Your stored quotes still apply.</p>'
-    : `<ul class="rows">${s.items.map(p => row({ level: null, name: esc(p.product), why: p.missed ? 'No price this time' : p.cheapest ? `${esc(p.cheapest.source)} · ${plural(p.listings, 'listing')}` : 'No prices found',
+    : `<ul class="rows">${s.items.map(p => row({ level: null, name: esc(p.product), why: p.missed ? 'No price this time' : p.cheapest ? `${esc(p.cheapest.source)} · ${plural(p.listings, 'listing')}` : 'No close match',
       fig: p.cheapest ? `<b>${inr(p.cheapest.price)}</b><span>cheapest</span>` : '' })).join('')}</ul>` },
   dailyBrief: { title: 'Brief', view: s => `<div class="a">${answerHtml(s.text)}</div>` },
 };
