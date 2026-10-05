@@ -1,12 +1,12 @@
-**The world:** the lifting platform in his gym: black rubber floor, chalk dust, a steel bar and competition bumper plates whose colour tells every lifter the weight from across the room.
-**The feeling:** heavy things look heavy. One glance tells him how loaded today is and which plate to lift first; a light day looks light.
+**The world:** the lifting platform in her gym: black rubber floor, chalk dust, a steel bar and competition bumper plates whose colour tells every lifter the weight from across the room.
+**The feeling:** heavy things look heavy. One glance tells her how loaded today is and which plate to lift first; a light day looks light.
 **The signature:** the loaded bar. Today's jobs sit edge-on on a steel bar, heaviest first (the way a bar is loaded), and every row in the app starts with its plate edge.
 
 # Design System: Nivara
 
 ## Overview
 
-**Creative North Star: "The loaded bar."** The owner runs a supplements shop from his phone, between WhatsApp chats, and trains in the same world he sells to. Competition plates are a colour code his whole audience already reads without thinking: red is heaviest, yellow is mid, green is light. Nivara spends that code on one thing only: how heavy a job is. The rest of the app is chalk and rubber: plain, loud type on a chalk ground, black bands where the weight sits.
+**Creative North Star: "The loaded bar."** The owner runs a supplements shop from her phone, between WhatsApp chats, and trains in the same world he sells to. Competition plates are a colour code his whole audience already reads without thinking: red is heaviest, yellow is mid, green is light. Nivara spends that code on one thing only: how heavy a job is. The rest of the app is chalk and rubber: plain, loud type on a chalk ground, black bands where the weight sits.
 
 Mode: Operate. Expression lives in three devices: the loaded bar (Today), the plate edge that opens every status row, and the drenched field that holds the single heaviest job. Everything else is type, rules and white space.
 
@@ -27,7 +27,7 @@ Rubber and chalk carry the brand at page scale; the three plate colours are stat
 ### Status (plates)
 - **Plate red** (`--red` #C8102E): do now. Overdue orders, products that run out before new stock can arrive. Chalk text on it 5.2:1. Text form `--red-ink` #A50E22 (6.9:1 on chalk).
 - **Plate yellow** (`--yellow` #F5C400): this week. Due today/tomorrow, no date, runs out within 7 days, fallbacks. Only rubber text on it (11:1). Text form `--amber-ink` #7A5600.
-- **Plate green** (`--green` #0E7A3B): light. Money to save when he has a minute; live / delivered / fine. Chalk text on it 4.8:1. Text form `--green-ink` #0B6631.
+- **Plate green** (`--green` #0E7A3B): light. Money to save when she has a minute; live / delivered / fine. Chalk text on it 4.8:1. Text form `--green-ink` #0B6631.
 
 ### Neutral
 - **Iron** (`--iron` #4A4740): secondary text on chalk (8.2:1). Used sparingly; most text is rubber.
@@ -94,7 +94,7 @@ Atkinson 700 on rubber; inactive in Fog, current in Chalk with a steel bar under
 ## Do's and Don'ts
 
 ### Do:
-- **Do** write jobs in his words: "Deliver Sneha's order", "Restock Gym Gloves", "Pay less for Mass Gainer 3kg".
+- **Do** write jobs in her words: "Deliver Sneha's order", "Restock Gym Gloves", "Pay less for Mass Gainer 3kg".
 - **Do** let the heaviest job be the biggest thing on Today, and keep it to one.
 - **Do** pair every plate colour with a word or a thickness so colour is never alone.
 - **Do** use tokens only: `--s-*`, `--t-*`, `--plate-*`.
