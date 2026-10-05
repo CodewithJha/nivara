@@ -83,6 +83,7 @@ html { scroll-padding-top: calc(var(--top-h) + var(--s-3)); }
 #more :focus-visible { outline-color: var(--chalk); outline-offset: calc(var(--focus) * -1); }
 
 main { padding-bottom: var(--s-9); }
+main:has(> .loading:only-child) { min-height: 100vh; } /* footer waits below the fold while a page loads, so it does not jump */
 main > * { max-width: var(--page); margin-inline: auto; padding-inline: var(--gut); }
 main > .bleed { max-width: none; padding-inline: max(var(--gut), calc((100% - var(--page)) / 2 + var(--gut))); }
 .loading { padding-block: var(--s-8); color: var(--iron); }
