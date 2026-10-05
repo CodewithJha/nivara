@@ -6,7 +6,7 @@
 
 ## Overview
 
-**Creative North Star: "The loaded bar."** The owner runs a supplements shop from her phone, between WhatsApp chats, and trains in the same world he sells to. Competition plates are a colour code his whole audience already reads without thinking: red is heaviest, yellow is mid, green is light. Nivara spends that code on one thing only: how heavy a job is. The rest of the app is chalk and rubber: plain, loud type on a chalk ground, black bands where the weight sits.
+**Creative North Star: "The loaded bar."** The owner runs a supplements shop from her phone, between WhatsApp chats, and trains in the same world she sells to. Competition plates are a colour code her whole audience already reads without thinking: red is heaviest, yellow is mid, green is light. Nivara spends that code on one thing only: how heavy a job is. The rest of the app is chalk and rubber: plain, loud type on a chalk ground, black bands where the weight sits.
 
 Mode: Operate. Expression lives in three devices: the loaded bar (Today), the plate edge that opens every status row, and the drenched field that holds the single heaviest job. Everything else is type, rules and white space.
 
