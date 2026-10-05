@@ -19,7 +19,7 @@ const dayOf = s => new Date(s).toLocaleDateString('en-IN', { day: 'numeric', mon
 const daysLate = (due, today) => Math.round((Date.parse(today) - Date.parse(due)) / 864e5);
 const itemList = o => o.items.map(i => `${i.quantity}× ${i.name}`).join(', ');
 
-// Job weight, shown as plate colour + thickness (DESIGN.md "The Plate Rule").
+// Job weight, shown as plate colour + thickness (docs/DESIGN.md "The Plate Rule").
 const LEVEL = { high: 'heavy', medium: 'mid', low: 'light' };
 const FLAG = { overdue: 'heavy', 'due today': 'mid', 'due tomorrow': 'mid', 'no delivery date': 'mid' };
 const WEIGHT = { heavy: 'do now', mid: 'this week', light: 'when you can' };

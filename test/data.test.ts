@@ -13,7 +13,7 @@ test('trends cache exists with productType,week,value', () => {
 });
 
 test('DATA.md documents ODbL sources and proxy demand label', () => {
-  const md = readFileSync(fileURLToPath(new URL('../DATA.md', import.meta.url)), 'utf8');
+  const md = readFileSync(fileURLToPath(new URL('../docs/DATA.md', import.meta.url)), 'utf8');
   assert.match(md, /Open Food Facts/);
   assert.match(md, /Open Prices/);
   assert.match(md, /2026-10-04/);

@@ -39,7 +39,7 @@ Not built on purpose: auth, payments, WhatsApp integration, mobile app, RBAC.
 
 ## Architecture (short)
 
-See [ARCHITECTURE.md](ARCHITECTURE.md). One Node 26 server (Express, TypeScript run natively, no build step),
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md). One Node 26 server (Express, TypeScript run natively, no build step),
 plain HTML+JS frontend, MongoDB, a Python subprocess for TabPFN, and a Temporal worker.
 
 **Gemma does language, code does facts.** Gemma picks tools, extracts orders, answers open-ended questions and
@@ -129,7 +129,7 @@ Full list in [.env.example](.env.example). `GET /api/health` reports each integr
 
 ## Partner tech
 
-See [PARTNER-INTEGRATIONS.md](PARTNER-INTEGRATIONS.md) for the role of each partner, how it was verified, and
+See [PARTNER-INTEGRATIONS.md](docs/PARTNER-INTEGRATIONS.md) for the role of each partner, how it was verified, and
 what is fallback-only.
 
 ## Open-source AI: why Gemma
@@ -180,7 +180,7 @@ wasn't exercised by automation.
 
 ## Data
 
-See [DATA.md](DATA.md). `npm run seed` loads Open Food Facts India catalogue, Open Prices (INR), and
+See [DATA.md](docs/DATA.md). `npm run seed` loads Open Food Facts India catalogue, Open Prices (INR), and
 Google Trends→proxy weekly demand into Atlas (ops) + Tiger (analytics). Owner CSV/WhatsApp: `npm run import:orders`.
 
 ## Limitations
