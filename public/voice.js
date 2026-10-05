@@ -14,6 +14,7 @@ const VOICE_SAY = {
   notAudio: "That file isn't a voice note. Pick an audio file, like a WhatsApp voice note.",
   tooBig: 'That voice note is too long to send. Send one under 10 MB, about 10 minutes.',
   tooShort: 'That was too short to hear anything. Record a little longer.',
+  noOrder: 'No order in what was said. Say the customer, the products and how many, then try again.',
 };
 
 /** File name + reported type → the audio type to send, or '' when it is not audio. WhatsApp .opus is Ogg audio. */
@@ -94,6 +95,10 @@ async function sendVoice(clip) {
     const r = await api('/voice/order', { method: 'POST', body: new Blob([clip], { type: mime }), timeoutMs: API.longTimeoutMs });
     if (r.text && $('#otext')) $('#otext').value = r.text.slice(0, 500); // she can fix a word and read it again
     showDraft(r, r.text);
-  } catch (e) { if ($('#draft')) $('#draft').innerHTML = errorBox(e, 'read the voice note', () => sendVoice(clip)); }
+  } catch (e) {
+    // heard words but found no order in them: say so in voice-note terms, not "reword the message"
+    const err = e instanceof ApiError && e.status === 422 && e.code !== 'no_speech' ? new ApiError('request', { status: 422, userMessage: VOICE_SAY.noOrder }) : e;
+    if ($('#draft')) $('#draft').innerHTML = errorBox(err, 'read the voice note', () => sendVoice(clip));
+  }
   voiceBusy(false);
 }
