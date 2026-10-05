@@ -300,8 +300,8 @@ export async function ask(message: string, history: Msg[] = [], conversationId?:
 
 // ---------- order extraction ----------
 
-export async function extractOrder(text: string) {
-  return traced('order_extraction', text, async () => {
+export async function extractOrder(text: string, kind: 'order_extraction' | 'voice_order' = 'order_extraction') {
+  return traced(kind, text, async () => {
     const [products, customers] = await Promise.all([col.products.find().toArray(), col.customers.find().toArray()]);
     const msgs = [
       { role: 'system', content: `Extract a customer order from a shop owner's note. Reply ONLY with JSON:

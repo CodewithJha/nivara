@@ -78,7 +78,7 @@ export const publicWorkflows = (w: { runs: any[]; schedule: any; briefs: any[] }
 
 // ---------- activity (behind the scenes) ----------
 const KIND: Record<string, string> = {
-  assistant: 'Answered a question', order_extraction: 'Read an order message',
+  assistant: 'Answered a question', order_extraction: 'Read an order message', voice_order: 'Read a voice note',
   'workflow.dailyBriefWorkflow': 'Morning brief', 'workflow.lowStockWorkflow': 'Low-stock check', 'workflow.forecastWorkflow': 'Forecast', 'workflow.supplierRefreshWorkflow': 'Online prices',
   'activity.forecast': 'Forecast step', 'activity.lowStockCheck': 'Low-stock step', 'activity.supplierRefresh': 'Online prices step', 'activity.dailyBrief': 'Brief step',
 };
@@ -98,7 +98,7 @@ function stepLabel(s: any): string | null {
 }
 export function publicActivity(t: any) {
   const steps = (t.spans ?? []).flatMap((s: any) => { const label = stepLabel(s); return label ? [{ label, ms: s.ms ?? 0, ok: !s.error }] : []; });
-  return { at: t.at, what: KIND[t.kind] ?? (String(t.kind).startsWith('activity.') ? 'Job step' : 'Background job'), question: t.kind === 'assistant' || t.kind === 'order_extraction' ? String(t.input ?? '').slice(0, 120) : '', ms: t.ms ?? 0, ok: !t.error, steps };
+  return { at: t.at, what: KIND[t.kind] ?? (String(t.kind).startsWith('activity.') ? 'Job step' : 'Background job'), question: ['assistant', 'order_extraction', 'voice_order'].includes(t.kind) ? String(t.input ?? '').slice(0, 120) : '', ms: t.ms ?? 0, ok: !t.error, steps };
 }
 
 // ---------- health (behind the scenes) ----------
