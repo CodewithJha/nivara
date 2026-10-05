@@ -102,8 +102,10 @@ export function matchProduct<T extends P>(query: string, products: T[]): T | nul
   return bestScore >= 0.5 ? best : null;
 }
 
+/** Forms of address that follow a name in Hinglish orders ("Rahul bhai", "Priya ji"); not part of the name. */
+const HONORIFICS = new Set(['bhai', 'bhaiya', 'bhaisaab', 'ji', 'sir', 'madam', 'maam', 'didi', 'bhabhi', 'uncle', 'aunty']);
 export function matchCustomer<T extends { _id: string; name: string }>(name: string, customers: T[]): T | null {
-  const q = norm(name);
+  const q = norm(name).filter(w => !HONORIFICS.has(w));
   return customers.find(c => norm(c.name).join(' ') === q.join(' ')) ?? customers.find(c => q.length === 1 && norm(c.name)[0] === q[0]) ?? null;
 }
 
@@ -119,9 +121,11 @@ export function resolveDate(text: string | null | undefined, today: string): str
   const t = text.toLowerCase();
   let m;
   if ((m = t.match(/\b(\d{4})-(\d{2})-(\d{2})\b/))) return m[0];
-  if (/day after tomorrow/.test(t)) return addDays(today, 2);
-  if (/\b(tomorrow|tmrw|kal)\b/.test(t)) return addDays(today, 1);
-  if (/\b(today|tonight|aaj)\b/.test(t)) return today;
+  // Hinglish voice notes come back in Devanagari too (कल, आज, परसों); \b does not see Devanagari letters
+  const hi = (w: string) => new RegExp(`(^|[\\s,.।])${w}($|[\\s,.।])`).test(t);
+  if (/day after tomorrow|\bparso[n]?\b/.test(t) || hi('परसों')) return addDays(today, 2);
+  if (/\b(tomorrow|tmrw|kal)\b/.test(t) || hi('कल')) return addDays(today, 1);
+  if (/\b(today|tonight|aaj)\b/.test(t) || hi('आज')) return today;
   if ((m = t.match(/\bin (\d{1,2}) days?\b/))) return addDays(today, +m[1]);
   const dow = DAYS.findIndex(d => new RegExp(`\\b${d}\\b`).test(t));
   if (dow >= 0) {
