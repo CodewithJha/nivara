@@ -1,202 +1,189 @@
-# Nivara — an AI operations copilot for small businesses
+# Nivara
 
-Built first for one real friend's one-person WhatsApp/Instagram shop.
+A shop helper for one friend's supplements business, run from her phone.
+
+**Live:** https://nivara-x9iv.onrender.com (free Render plan; after a quiet spell the first page can take up to a minute)
 
 > "What needs my attention in my business today?"
 
-## The problem, and the friend
+| Today on a phone | Voice note → order | Ask, in Hinglish |
+|---|---|---|
+| ![Today](docs/screenshots/today-phone.png) | ![Voice note drafted as an order](docs/screenshots/orders-voice-phone.png) | ![Ask](docs/screenshots/ask-phone.png) |
 
-My friend runs a small fitness-supplements business entirely on WhatsApp and Instagram: protein bars,
-whey, shakers, gym gloves. No staff, no ERP. Orders arrive as chat messages ("Rahul wants 3 chocolate bars and
-one shaker, deliver tomorrow"), stock lives in his head and a notebook, and he finds out a bestseller ran out when
-a customer asks for it. Every morning he needs to know three things: what to deliver, what to restock before it
-runs out, and whether he's overpaying a supplier.
+## Who it is for
 
-## What Nivara does
+My friend sells protein, whey, creatine and chyawanprash on her own, through WhatsApp and Instagram. Orders arrive
+as chat messages and Hinglish voice notes ("Rahul bhai ko 2 MB biozyme whey bhej dena kal tak"). Stock lives in her
+head, and she finds out a product has run out when a customer asks for it. Each morning she needs three answers:
+what to deliver, what to reorder before it runs out, and whether a supplier is charging too much.
 
-- **Dashboard**: "N things need your attention" = high-stockout-risk products + overdue / due-soon / undated
-  orders + supplier savings worth acting on. A cheaper stored quote counts only if it saves **at least ₹10 per
-  unit AND at least 5%** of current cost (`MIN_SUPPLIER_SAVING_RUPEES` / `MIN_SUPPLIER_SAVING_PERCENT` in
-  `src/logic.ts`, env-overridable); blocked suppliers and zero/invalid prices are ignored. Smaller savings are
-  listed as "below threshold, not counted". Each saving shows as e.g. "Save ₹137/unit (6.4%)".
-- **Assistant** (text or voice): "What should I restock?", "Which products are likely to run out?", "Why are you
-  recommending this?", "What did I sell the most this week?", "Find cheaper suppliers for this product",
-  "What orders are still pending?", "Remember that I don't buy from Supplier X", "Give me today's business brief".
-- **Order extraction**: paste a messy chat message → Gemma extracts JSON → zod validation → deterministic matching
-  to real products/customers → dates resolved by code → you confirm → saved.
-- **Forecast**: TabPFN 7-day demand per product, stockout risk, reorder quantity. Clearly labelled moving-average
-  fallback when TabPFN is unavailable.
-- **Supplier search**: the daily Temporal workflow fetches SerpApi Google Shopping prices for at-risk products and
-  caches them; the dashboard shows them as "Live search" (domain link, checked time) next to "Stored quote"s.
-  Blocked suppliers are filtered out. No key → stored quotes only, labelled.
-- **Memory**: business preferences ("never buy from Supplier C") stored in Mongo (source of truth for rules),
-  saved to and searched back from Backboard when configured, and actually applied (supplier filtering).
-- **Workflows**: Temporal runs the daily brief, low-stock check, forecast and supplier refresh on a schedule,
-  with retries.
-- **Activity / trace**: every answer's model calls, tool calls, latency and errors, locally and in Sentry.
+## What it does
 
-Not built on purpose: auth, payments, WhatsApp integration, mobile app, RBAC.
+- **Today.** One list of jobs, heaviest first: late and due orders, products that run out before a new delivery
+  can arrive, and supplier savings worth acting on (at least ₹10 and 5% a unit). Each order can be marked
+  delivered from here. A morning brief is written at 08:00 IST.
+- **Orders from a voice note or a message.** Record a voice note, upload a forwarded WhatsApp one (`.opus`, `.ogg`,
+  `.m4a`, `.mp3`, `.wav`, `.aac`, `.webm`), or paste the chat text. The page shows what it heard, the matched
+  customer, products, prices and delivery date (कल, आज, परसों, kal, parson, weekdays). Nothing is saved until she
+  taps **Confirm and save**. Orders get short numbers (Order 1, 2, 3).
+- **Mark delivered.** Takes the units off stock, records the sale in MongoDB and adds it to the sales history in
+  Tiger Data, so the next forecast learns from it.
+- **Ask.** Typed or spoken questions in English or Hinglish: what to restock and why, pending orders (or one
+  customer's orders), best sellers, cheaper suppliers, catalogue search ("MuscleBlaze whey under 3000"), saved
+  rules. Answers can be read aloud.
+- **Stock and Forecast.** All 212 products with stock, price, cost, supplier and delivery time; a 7-day forecast,
+  days of stock against delivery time, risk and how many to order. Long lists draw 30 rows first and the rest as
+  she scrolls.
+- **Suppliers.** Stored quotes compared with what she pays, an online price check, and rules she wants kept
+  ("I never buy from Supplier C"), which then filter supplier suggestions.
+- **Behind the scenes.** Workflows (run a job now), Activity (each answer step by step with timings) and Health
+  (each service Live or Standby, in plain words).
+- **Phone first.** Below 900px the page links move behind a menu button; every tap target is at least 44px.
 
-## Architecture (short)
+Not built on purpose: login, payments, a WhatsApp Business connection, a native app.
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md). One Node 26 server (Express, TypeScript run natively, no build step),
-plain HTML+JS frontend, MongoDB, a Python subprocess for TabPFN, and a Temporal worker.
+| Laptop: Today | Laptop: Forecast | Laptop: Health |
+|---|---|---|
+| ![Today on a laptop](docs/screenshots/today-laptop.png) | ![Forecast](docs/screenshots/forecast-laptop.png) | ![Health](docs/screenshots/health-laptop.png) |
 
-**Gemma does language, code does facts.** Gemma picks tools, extracts orders, answers open-ended questions and
-writes the brief's summary line. DB writes, validation, stock maths, stockout rules, date resolution and workflow
-state are deterministic code with tests. Standard questions (restock, why at risk, pending orders, best sellers,
-suppliers, memory) are answered by deterministic templates; each response says which (`answerMode`:
-`template`, `template+gemma`, `gemma`) and the UI shows it with the source data.
+## How it works
 
-## Setup
+```mermaid
+flowchart LR
+  Phone[Browser: plain HTML and JS] -->|/api| API[Node server, Express, TypeScript without a build]
+  API --> Atlas[(MongoDB Atlas: products, orders, customers, rules, briefs, traces)]
+  Atlas -->|change stream on delivery| Tiger[(Tiger Data: sales_daily hypertable, 7d/28d aggregates, pgvector search)]
+  API --> Tiger
+  API -->|order reading, tool choice, brief line| Gemma[Gemma 4 via Google AI Studio, or Gemma 3 in Ollama]
+  API -->|voice notes, spoken questions, read aloud| Eleven[ElevenLabs Scribe and TTS]
+  API -->|online prices| Serp[SerpApi Google Shopping]
+  API -->|rules in her words| Backboard[Backboard memory]
+  API -->|spans and errors| Sentry[Sentry]
+  Laptop[Laptop: npm run forecast:publish] -->|TabPFN predictions| Atlas
+  Temporal[Temporal worker, optional] -.->|daily brief, retries| API
+```
 
-Prereqs: Node ≥ 24 (developed on 26), Docker (for local Mongo) or an Atlas URI, [Ollama](https://ollama.com),
-optionally `uv` (TabPFN) and the Temporal CLI (`brew install temporal`).
+**Gemma does language, code does facts.** Gemma reads orders out of messages and transcripts, picks which lookup
+answers a question, and writes the one-line summary of the brief. Stock maths, risk rules, dates, prices, matching
+and every database write are plain code with tests. Gemma output is validated with zod before use; it never
+writes to the database. Standard questions are answered from templates built on tool output, so numbers on Ask
+match Today, Stock and Forecast.
+
+Two databases with different jobs: MongoDB Atlas is where writes happen; Tiger Data holds sales history as a time
+series and serves catalogue search (full text plus `gemini-embedding-001` vectors). A delivered order reaches Tiger
+through an Atlas change stream, keyed by order and product, on the shop's day (Asia/Kolkata).
+
+Every outside service has a fallback: no Gemma means keyword routing and template answers; no TabPFN run means a
+labelled 7-day average; no Temporal means jobs run inside the app (the 08:00 brief included, with retries); no
+ElevenLabs key turns voice notes off and Ask uses the browser's own speech. Health shows which is in use.
+
+More: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PRODUCT.md](docs/PRODUCT.md), [docs/DATA.md](docs/DATA.md),
+[docs/DESIGN.md](docs/DESIGN.md).
+
+## Partners
+
+| Partner | Used for | Live on Render |
+|---|---|---|
+| Gemma (`gemma-4-26b-a4b-it`) | order reading from text and voice transcripts, tool choice, brief summary | Live |
+| MongoDB Atlas | operational data and every confirmed order | Live |
+| Tiger Data | sales history, delivered-order sync, hybrid product search | Live |
+| TabPFN | 7-day forecast for all 212 products, published from a laptop | Live (stored run) |
+| ElevenLabs | Scribe speech to text for voice notes and Ask, text to speech | Live |
+| SerpApi | Google Shopping prices; Google Trends for the demand estimate | Live |
+| Backboard | rules saved in her words and searched back for supplier decisions | Live |
+| Sentry | step-by-step spans for answers and jobs, error capture, content redacted | Live |
+| Render | hosting (free web service, Singapore) | Live |
+| Keploy | 15 recorded API calls replayed as tests | Used in testing |
+| Temporal | scheduled jobs with retries (verified locally) | Standby |
+| Mastra | agent and tool definitions; native tool calls for models that support them | Standby |
+
+Details and how each was checked: [docs/PARTNER-INTEGRATIONS.md](docs/PARTNER-INTEGRATIONS.md).
+
+## Run it locally
+
+Needs Node 24.2 or newer and either Docker (local MongoDB) or a MongoDB Atlas URI. Every API key is optional.
 
 ```bash
-cd nivara
+git clone https://github.com/CodewithJha/nivara.git && cd nivara
 npm install
-cp .env.example .env              # all keys optional
-npm run db                        # local MongoDB in Docker (skip if MONGODB_URI points at Atlas)
-ollama pull gemma3:4b && ollama serve   # serve may already be running
-npm run seed                      # OFF India + Open Prices + Trends proxy demand → Atlas + Tiger
-npm run seed:demo                 # old synthetic demo catalogue
-npm start                         # http://localhost:3000
-
-# optional, separate terminals:
-npm run forecast:setup            # TabPFN in forecast/.venv (python 3.11, pulls torch); v2 weights download on
-                                  # first run; set TABPFN_TOKEN (Prior Labs licence) to use the newest weights
-npm run forecast:publish          # run TabPFN here, store predictions in Mongo (forecastRuns) for a Python-less host
-npm run temporal:dev              # Temporal dev server + UI on :8233
-SUPPLIER_FAIL_FIRST_N=2 npm run worker   # worker + daily schedule; supplier activity fails twice to show retries
-
-npm test                          # logic, answer formatting, partner paths (mocked fetch, uses Mongo db nivara_test), Sentry offline
-python3 forecast/test_forecast.py # forecast feature/recursion test (needs numpy; use forecast/.venv/bin/python)
+cp .env.example .env     # set MONGODB_URI to use Atlas instead of Docker
+npm run db               # MongoDB 8 in Docker on :27017 (skip with Atlas)
+npm run seed             # catalogue, prices and demand from the cached files in data/real
+npm start                # http://localhost:3000
 ```
 
-### Running the services (detached `screen` sessions)
+Gemma: run Ollama (`ollama pull gemma3:4b`, the default) or set `LLM_PROVIDER=gemini` and `GEMINI_API_KEY` for
+`gemma-4-26b-a4b-it` from Google AI Studio.
 
-Processes started from a short-lived shell die with it, and an old server can keep holding port 3000. Use:
+| Script | What it does |
+|---|---|
+| `npm test` | 137 tests: stock, risk and date rules, Hinglish order parsing, answers and copy, voice-note UI, phone menu, lazy rows, partner paths with mocked `fetch`, Sentry redaction (uses the `nivara_test` database) |
+| `npm run forecast:setup` | TabPFN in `forecast/.venv` (Python 3.11, pulls torch) |
+| `npm run forecast:publish` | runs TabPFN on this machine and stores the predictions in MongoDB for a host without Python |
+| `npm run reprice` | recomputes estimated prices in MongoDB and Tiger after changing the price rules |
+| `npm run data:catalog` / `data:prices` / `data:trends` / `data:demand` | refresh the source data from Open Food Facts, Open Prices and Google Trends |
+| `npm run import:orders` | import her own orders from CSV or a WhatsApp export |
+| `npm run sync:tiger` | backfill delivered orders into Tiger |
+| `npm run temporal:dev`, `npm run worker` | Temporal dev server and worker with the daily schedule (`SUPPLIER_FAIL_FIRST_N=2` shows retries) |
+| `npm run services -- status` | start, stop or restart server, worker and Temporal in `screen` sessions |
 
-```bash
-npm run services -- status                 # pid, port owner, screen session per service
-npm run services -- restart all            # stop server → worker → temporal, start temporal → worker → server
-npm run services -- restart server         # or worker / temporal
-npm run services -- stop all
-```
-
-`scripts/dev.sh` only touches processes whose cwd is this project and whose command line is that service
-(server: `node … src/server.ts`, worker: `node … src/temporal/worker.ts`, temporal: `temporal server start-dev`).
-It sends SIGTERM, then SIGKILL after 10 s, refuses to continue if the port is still held by someone else, starts
-the service in `screen` (logs `/tmp/nivara-<svc>.log`), and fails loudly unless the new PID owns the port
-(server also passes `/api/health`) or the worker log shows `RUNNING`. The worker starts with
-`SUPPLIER_FAIL_FIRST_N=2` (retry demo) unless you set it.
-
-## Deploy to Render
-
-`render.yaml` is a Blueprint for one **free** web service (Singapore, Node 24): `npm ci`, `npm start`, health check
-`/api/health`. `npm start` binds `process.env.PORT`; `src/server.ts` exports `app` and only listens when run as the entry.
-
-1. Render → **New → Blueprint** → pick this repo/branch.
-2. Fill the `sync: false` vars: `MONGODB_URI` (Atlas; allow `0.0.0.0/0` in Atlas Network Access, free Render has no
-   static IP) and `GEMINI_API_KEY` (Google AI Studio). The blueprint already sets `LLM_PROVIDER=gemini`,
-   `GEMINI_MODEL=gemma-4-26b-a4b-it` (alt `gemma-4-31b-it`), `MONGODB_DB=nivara`, `FORECAST_MODE=fallback`.
-3. Optional: `SERPAPI_API_KEY`, `BACKBOARD_API_KEY`, `ELEVENLABS_API_KEY`, `SENTRY_DSN`; leave `TEMPORAL_*` and
-   `OLLAMA_*` empty.
-
-An empty database is seeded with demo data on first boot. Without a Gemini key, Temporal, or TabPFN the app uses
-its labelled fallbacks (keyword router + templated answers, in-process workflows, moving-average forecast). No auth.
+Keploy: `keploy.yml` and `keploy/real-data-partners-1/` hold 15 recorded calls (health, dashboard, forecast,
+Ask, order reading, voice, catalogue search) that replay against a local server with `keploy test`.
 
 ## Environment variables
 
-| Var | Needed for | Without it |
+| Var | Used for | Without it |
 |---|---|---|
-| `MONGODB_URI` | data (default `mongodb://localhost:27017`) | health reports Mongo down; routes that read the DB fail |
-| `LLM_PROVIDER` | `ollama` (default) or `gemini` | — |
-| `OLLAMA_BASE_URL`, `GEMMA_MODEL` | Gemma via Ollama (default local `gemma3:4b`) | keyword router + templated answers; order extraction returns 503 |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | Gemma via Google AI Studio (`gemma-4-26b-a4b-it`) + `gemini-embedding-001` for hybrid catalog search | keyword router / FTS-only search |
-| `TIGER_DATABASE_URL` | Timescale hypertables + pgvector hybrid `searchCatalog` | Mongo sales + keyword catalog search |
-| `SERPAPI_API_KEY` | live supplier prices (Temporal refresh, `SUPPLIER_REFRESH_MAX` products per run, default 5) | stored quotes, labelled |
-| `BACKBOARD_API_KEY` | memory saved/searched in Backboard | Mongo only, labelled |
-| `ELEVENLABS_API_KEY` | Scribe STT (voice notes → order draft) + TTS | browser Web Speech API |
-| `SENTRY_DSN` (`SENTRY_SEND_CONTENT=1` to include prompts/answers) | Sentry agent traces + errors | local traces only |
-| `MIN_SUPPLIER_SAVING_RUPEES` / `MIN_SUPPLIER_SAVING_PERCENT` | attention threshold (default ₹10 and 5%) | defaults |
-| `TEMPORAL_ADDRESS` (+`TEMPORAL_API_KEY` for Cloud) | Temporal | workflows run in-process, labelled `direct-fallback` |
-| `FORECAST_MODE=fallback` | skip TabPFN | — |
-| `FORECAST_RUN_MAX_AGE_HOURS` | how long a published TabPFN run (`npm run forecast:publish`) is used on hosts without Python (default 720, 30 days) | moving average |
+| `MONGODB_URI`, `MONGODB_DB` | data (default `mongodb://localhost:27017`, db `nivara`) | pages that read data fail; Health shows MongoDB down |
+| `LLM_PROVIDER` | `ollama` (default) or `gemini` | Ollama |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Gemma through Google AI Studio, embeddings for hybrid search | keyword routing, full-text search only |
+| `OLLAMA_BASE_URL`, `GEMMA_MODEL` | Gemma through Ollama (default `gemma3:4b`) | keyword routing and templates; order reading returns an error |
+| `TIGER_DATABASE_URL` | Tiger Data history, sync and search | MongoDB sales and keyword search |
+| `ELEVENLABS_API_KEY` | voice notes, spoken questions, read aloud | voice notes off; browser speech on Ask |
+| `SERPAPI_API_KEY` | online prices (`SUPPLIER_REFRESH_MAX` products per run, default 5) | stored quotes only |
+| `BACKBOARD_API_KEY` | rules mirrored to and searched in Backboard | rules in MongoDB only |
+| `SENTRY_DSN` | spans and errors (`SENTRY_SEND_CONTENT=1` to include text) | local traces only |
+| `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_API_KEY` | Temporal workflows | jobs run in the app |
+| `FORECAST_MODE=fallback` | do not start TabPFN in this process | TabPFN runs if installed |
+| `FORECAST_RUN_MAX_AGE_HOURS` | how long a published TabPFN run is used (default 720, 30 days) | 7-day average after that |
+| `MIN_SUPPLIER_SAVING_RUPEES`, `MIN_SUPPLIER_SAVING_PERCENT` | when a cheaper quote counts (default ₹10 and 5%) | defaults |
+| `BUSINESS_TZ` | the shop's day (default `Asia/Kolkata`) | default |
 
-Full list in [.env.example](.env.example). `GET /api/health` reports each integration as `live` or `fallback`.
+Full list in [.env.example](.env.example).
 
-## Partner tech
+## Deploy on Render
 
-See [PARTNER-INTEGRATIONS.md](docs/PARTNER-INTEGRATIONS.md) for the role of each partner, how it was verified, and
-what is fallback-only.
+`render.yaml` describes one free web service in Singapore: Node 24, `npm ci`, `npm start`, health check
+`/api/health`, `LLM_PROVIDER=gemini`, `GEMINI_MODEL=gemma-4-26b-a4b-it`, `FORECAST_MODE=fallback`. Secrets go in the
+Render dashboard: `MONGODB_URI` (allow `0.0.0.0/0` in Atlas, free Render has no static IP), `GEMINI_API_KEY`,
+`TIGER_DATABASE_URL`, `ELEVENLABS_API_KEY`, `SERPAPI_API_KEY`, `BACKBOARD_API_KEY`, `SENTRY_DSN`.
 
-## Open-source AI: why Gemma
+```bash
+render deploys create <service-id> --commit <sha> --wait
+```
 
-- **Model**: Gemma 3 4B instruction-tuned (`gemma3:4b`), configurable via `GEMMA_MODEL`.
-- **Where it runs**: locally through Ollama on the shop owner's laptop (Apple Silicon, 16 GB RAM is enough), or on
-  any OpenAI-compatible host (e.g. Ollama on a DigitalOcean GPU droplet) via `OLLAMA_BASE_URL`.
-- **Tasks**: tool selection (JSON), order extraction (JSON), open-ended answers, the morning brief's summary line.
-- **Why**: customer names, phone-chat orders and margins are exactly the data a tiny business shouldn't ship to a
-  closed API by default. An open-weight model runs on hardware he already owns, costs nothing per message, keeps
-  working when a vendor changes pricing, and can be swapped or fine-tuned later.
-- **Failure behaviour**: Gemma output is never trusted blindly. Tool choices and extractions are zod-validated;
-  invalid extraction JSON gets one corrective retry then a 422; routing failures fall to a deterministic keyword
-  router; if Gemma is unreachable the assistant still answers from tool data with templates, and the UI says
-  which route was used. Gemma never writes to the DB.
-- **Swapping models**: `GEMMA_MODEL=gemma3:12b` (better reasoning) or `gemma4:e4b` (native tool calling in
-  Ollama, which switches the assistant onto the Mastra native-tools route automatically). Any OpenAI-compatible
-  server works.
-
-## Verification status (dev machine: macOS, Apple Silicon, 16 GB, 2026-10-04)
-
-Actually run end-to-end:
-- MongoDB (local Docker), seed, all dashboard/inventory/orders/forecast/suppliers APIs and pages.
-- **Gemma 3 4B via Ollama**: all 8 assistant questions routed correctly by the Gemma JSON router
-  (10–30 s each on CPU/Metal); order extraction for English and Hinglish messages
-  ("neha ko 2 pb bar aur ek creatine bhejna hai friday tak" → Neha Sharma, 2× PB bar, 1× creatine, Friday's date).
-- **TabPFN v2** (local, CPU): 14 products forecast in ~18 s through the API, labelled `method: tabpfn`. Real catalogue:
-  212 products in 317 s (4 chunks of 50 + 12, Apple M5 CPU, tabpfn 9.1.0) published to Atlas with `npm run forecast:publish`;
-  the Render deploy serves it as `method: tabpfn`, `precomputed`.
-- **Temporal** (CLI dev server): daily-brief workflow with Gemma + TabPFN; supplier activity failed attempts 1–2
-  (simulated) and succeeded on attempt 3; schedule `daily-brief` registered (next run 08:00 IST).
-- **Mastra native tool calling**: verified only with `qwen3:8b` as a stand-in (Gemma 3 lacks the tools capability
-  in Ollama). With Gemma 3 the Mastra-registered tools are selected through the JSON router.
-- **Sentry**: span tree (invoke_agent → chat / execute_tool), route/tool/answer-mode/token attributes, content
-  redaction, absence of secrets and error capture verified offline with the real SDK (`test/sentry.test.ts`);
-  delivery to a real Sentry project not verified (no DSN).
-- **Answer quality**: the 5 dashboard questions answered through Gemma routing with `answerMode: template`
-  (brief: `template+gemma`); an open-ended question answered by Gemma (`answerMode: gemma`).
-- **Attention**: 12 items on the seeded data (5 high-risk products, 3 orders, 4 supplier savings ≥ ₹10 and ≥ 5%),
-  down from 16 before the threshold.
-- SerpApi / Backboard / ElevenLabs code paths: tested with mocked `fetch` in `test/partners.test.ts`.
-- Fallbacks: no Gemma → keyword router + templates; no TabPFN → labelled moving average; no Temporal →
-  `direct-fallback`; no SerpApi/Backboard/ElevenLabs keys → labelled fallbacks.
-
-Not verified (no keys): real SerpApi results, real Backboard API calls, real ElevenLabs STT/TTS, Sentry ingestion,
-Render deploy, Atlas (same driver; only the URI differs). Browser voice (Web Speech API) needs a real mic and
-wasn't exercised by automation.
+Render has no Python, so the live forecast is the latest TabPFN run published from a laptop (`npm run
+forecast:publish`); Health names the day it was worked out. There is no Temporal worker on Render, so the app
+writes the 08:00 brief itself. `.github/workflows/keep-alive.yml` pings `/api/health` every 10 minutes until
+15 Oct 2026 so the free service stays awake during judging.
 
 ## Data
 
-See [DATA.md](docs/DATA.md). `npm run seed` loads Open Food Facts India catalogue, Open Prices (INR), and
-Google Trends→proxy weekly demand into Atlas (ops) + Tiger (analytics). Owner CSV/WhatsApp: `npm run import:orders`.
+212 real products from Open Food Facts India (ODbL), 4 observed prices from Open Prices and estimated prices for
+the rest, and daily demand estimated from Google Trends search interest. The demand is an estimate, not till sales;
+the app says so on Forecast and Health. Her confirmed and delivered orders are added to the history as they happen.
+See [docs/DATA.md](docs/DATA.md).
 
 ## Limitations
 
-- Seeded demand is a search-interest proxy (not POS sales); import the owner's orders when available.
-- 4B model: decent JSON, occasionally weak routing (hence validation + fallbacks). Its free-text answers mixed up
-  stock figures and leaked field names, so the standard questions are now answered by templates.
-- Supplier web prices are retail listings; pack sizes aren't normalised against wholesale unit cost.
-- Product matching is token overlap, fine for ~15 SKUs, not for hundreds.
-- TabPFN on CPU takes tens of seconds per forecast; results are cached per day. Render has no Python, so the live
-  site uses a TabPFN run published from a laptop (`npm run forecast:publish`) until it is older than 7 days.
-- Single-tenant, no auth: run it locally or behind a private URL.
+- Demand is estimated from search interest until there are weeks of her own sales.
+- Most prices are estimates until she enters her own costs.
+- Online prices are retail listings; pack sizes are not normalised, so the page says to check them.
+- Some catalogue names come straight from Open Food Facts (lowercase, near duplicates).
+- One shop, no login.
 
-## Future work
+## Next
 
-- WhatsApp Business API ingestion of order messages (the extraction pipeline is ready for it).
-- Purchase orders: one click from "reorder 51" to a supplier message.
-- Pack-size normalisation for supplier comparisons; supplier lead-time learning.
-- Gemma 4 with native tool calling as the default once it fits the target hardware comfortably.
+- Read orders straight from WhatsApp Business (the reading path already takes the raw text).
+- One tap from "order 11" to a message for the supplier.
+- Refit TabPFN on her real sales once there are a few weeks of them.
