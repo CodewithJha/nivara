@@ -1,132 +1,134 @@
-# Partner integrations — what each one actually does here
+# Partner integrations
 
-Status legend: **verified live** = exercised end-to-end on the dev machine ·
-**code complete, key-gated** = implemented against the documented API, fallback verified, live path untested because no key was available ·
-**not done** = not built.
+What each partner does in Nivara, where the code is, what happens without it, and how it was checked.
+"Checked live" means on https://nivara-x9iv.onrender.com on 5 Oct 2026, with the result confirmed in Atlas or
+Tiger directly, not only in the page.
 
-| Partner | Product role | Status | Fallback (verified) |
-|---|---|---|---|
-| **Gemma (open-weight, via Ollama)** | Intent / tool selection, order extraction, open-ended answers, brief summary line | **verified live** (`gemma3:4b`, local Ollama) | keyword router + templated answers |
-| **MongoDB** | Source of truth: products, customers, orders, sales, suppliers, preferences, briefs, traces | **verified live** (local MongoDB 9 in Docker). Atlas = same driver, just `MONGODB_URI`; Atlas itself untested | — (required) |
-| **Temporal** | Daily brief, low-stock, forecast, supplier-refresh workflows; daily schedule; retries | **verified live** (Temporal CLI 1.9 dev server) | activities run in-process with a retry loop, labelled `direct-fallback` (verified) |
-| **Mastra** | `Agent` + `createTool` definitions for all 8 tools | Gemma handles reasoning and structured tool intent, while a validated JSON router provides deterministic tool invocation; Mastra defines the agent and tools. Mastra's native tool-calling route is used only for models that advertise `tools` in Ollama (`gemma3:4b` does not; verified earlier with a `qwen3:8b` stand-in) | keyword router (verified) |
-| **TabPFN** | 7-day demand regression per product | **verified live** (TabPFN v2 weights, local CPU, ~18 s / 14 products; 212 real products in 317 s on an M5 CPU, published to Atlas for Render via `npm run forecast:publish`) | `fallback-moving-average`, labelled in API + UI (verified) |
-| **Sentry** | gen_ai agent spans (invoke_agent / chat / execute_tool), error capture, content redacted by default | code complete, DSN-gated. **Real API not tested — needs `SENTRY_DSN`.** Span tree, attributes, redaction and error capture verified offline with the real SDK + a capturing transport (`test/sentry.test.ts`) | local span store + Activity page (verified) |
-| **SerpApi** | Google Shopping prices for at-risk products, fetched by the Temporal `supplierRefresh` activity, cached in `supplierPrices`, shown on the dashboard as "Live search" | code complete, key-gated. **Real API not tested — needs `SERPAPI_API_KEY`.** Mock-fetch tests: store, HTTP error, malformed results, no key, blocked supplier | stored DB quotes, labelled "Stored quote" (verified) |
-| **Backboard** | Business memory: owner's words saved to Backboard, searched back for supplier decisions | code complete, key-gated, endpoints checked against docs.backboard.io. **Real API not tested — needs `BACKBOARD_API_KEY`.** Mock-fetch tests: save, list, search → changes a supplier decision, outage fallback | Mongo-only, labelled (verified) |
-| **ElevenLabs** | Scribe speech-to-text + TTS for spoken answers | code complete, key-gated; "live" only after `GET /v1/user` accepts the key. **Real API not tested — needs `ELEVENLABS_API_KEY`.** Mock-fetch tests: 501 without key, Scribe call with correct file type, 502 on provider failure | browser Web Speech API / speechSynthesis, with a notice on runtime failure |
-| **Render** | `render.yaml` blueprint, single web service | prepared, **not deployed** (no credentials) | — |
-| **DigitalOcean** | Documented option for hosting Gemma (GPU droplet running Ollama) | docs only — **not claimed** | — |
-| **Tiger Data** | `sales_daily` hypertable + 7d/28d continuous aggregates feeding forecasts; pgvector + FTS hybrid `searchCatalog` agent tool | **verified live** (Tiger Cloud Timescale + vector; seed sync + `/api/catalog/search`) | Mongo sales + in-process keyword catalog search |
+| Partner | Status on Render | Without it |
+|---|---|---|
+| Gemma | Live (`gemma-4-26b-a4b-it`, Google AI Studio) | keyword routing and template answers; order reading off |
+| MongoDB Atlas | Live | required |
+| Tiger Data | Live | MongoDB sales, keyword search |
+| TabPFN | Live, stored run from 4 Oct | labelled 7-day average |
+| ElevenLabs | Live | voice notes off; browser speech on Ask |
+| SerpApi | Live | stored quotes only |
+| Backboard | Live | rules in MongoDB only |
+| Sentry | Live | local traces only (Activity page) |
+| Render | Live (hosting) | n/a |
+| Keploy | used in testing | n/a |
+| Temporal | Standby on Render; verified locally | jobs run in the app, 08:00 brief included |
+| Mastra | Standby | Gemma picks tools through a validated JSON router |
 
-## Details
+## Gemma
+- **Code:** `src/integrations.ts` (`gemma`, `llmModel`), `src/agent.ts`.
+- **Live:** Gemma 4 `gemma-4-26b-a4b-it` through Google AI Studio (`LLM_PROVIDER=gemini`), since a free Render
+  instance cannot run a model. Locally: Gemma 3 `gemma3:4b` in Ollama, which most of the app was built against.
+- **Tasks:** reads orders out of pasted messages and voice-note transcripts (JSON: customer, items, delivery words),
+  picks the tool for a question, writes open-ended answers from readable facts, and writes the brief's summary line.
+- **Guards:** every JSON reply is validated with zod; a bad extraction gets one corrective retry, then an error.
+  Products and customers are matched by code against the database, and dates are resolved by code (कल, आज, परसों,
+  kal, parson, weekdays). Answers that leak field names are dropped for the template answer. Gemma never writes.
+- **Checked live:** a pasted Hinglish message and an uploaded voice note both drafted Rahul Verma, 2 × MB biozyme
+  whey, ₹5,198, delivery 6 Oct; Health names the model.
 
-### Gemma
-- Model: `GEMMA_MODEL` (default `gemma3:4b`), served by Ollama, called through its OpenAI-compatible
-  `/v1/chat/completions` API with `response_format: json_object` for structured tasks.
-- Gemma never writes to the DB and never supplies numbers. Answers to the standard questions (restock, risk,
-  pending orders, best sellers, suppliers, memory) are deterministic templates; Gemma writes the answer only for
-  open-ended questions, from the template's readable facts (never raw JSON), and the result is rejected if it
-  leaks field names (`looksClean`). The daily brief is a deterministic template with a 1–2 sentence Gemma summary
-  on top. Every response carries `answerMode: template | template+gemma | gemma`, shown in the UI.
-- `gemma3` in Ollama does **not** advertise the `tools` capability, so native tool calling is off. The capability
-  check is automatic: a model that advertises `tools` switches to the Mastra native-tools route (not verified
-  with any Gemma model here; only `gemma3:4b` and `qwen3:8b` are installed).
+## MongoDB Atlas
+- **Code:** `src/db.ts`, `src/ops.ts`, `src/server.ts`.
+- **Holds:** products (212), customers, orders, sales, suppliers and quotes, rules, briefs, forecast runs,
+  online prices, traces. The only order write path is `POST /api/orders`, which re-validates and checks that every
+  product and customer exists. Delivering an order takes units off stock and records the sale.
+- **Checked live:** confirmed orders appeared in Atlas with short numbers; Mark delivered moved MB biozyme whey
+  stock 21 → 19 → 17 and added the sales.
 
-### MongoDB
-`src/db.ts`. Deterministic CRUD only. The single order write path is `POST /api/orders`, which re-validates
-with zod and checks every SKU / customer exists. Delivering an order decrements stock and records the sale,
-which feeds the next forecast.
+## Tiger Data
+- **Code:** `src/tiger.ts`, `src/sync.ts`.
+- **Holds:** `sales_daily` hypertable (the 60-day history the forecast reads), continuous aggregates
+  `sales_demand_7d` and `sales_demand_28d`, `order_sales` (one row per delivered order line), and `catalog_items`
+  with `tsvector` and `vector(768)` columns.
+- **Sync:** an Atlas change stream on `orders` sends each delivered order to `order_sales`, keyed by order and
+  product, and adds the units to `sales_daily` on the shop's day (Asia/Kolkata). `npm run sync:tiger` backfills.
+- **Search:** the `search_catalog` tool and `GET /api/catalog/search` combine full-text search with
+  `gemini-embedding-001` vectors and read limits like "under 3000".
+- **Checked live:** each delivered test order produced an `order_sales` row and raised `sales_daily` by its units;
+  "MuscleBlaze whey under 3000" on Ask returned matches sorted by price.
 
-### Temporal
-`src/temporal/`. Activities are the same functions the assistant uses (`src/ops.ts`).
-- `dailyBriefWorkflow` = lowStockCheck → forecast → supplierRefresh → dailyBrief. Retry policy: 5 attempts,
-  exponential backoff. If supplier refresh exhausts retries the brief still completes.
-- Schedule `daily-brief` (cron `0 8 * * *`, Asia/Kolkata) created idempotently by the worker.
-- Retry demo: `SUPPLIER_FAIL_FIRST_N=2 npm run worker` → attempts 1–2 throw a simulated outage, attempt 3
-  succeeds. Verified: worker log shows both failures, the workflow result shows `attempt: 3`.
-- `supplierRefresh` is the SerpApi live-price job (see SerpApi below).
+## TabPFN
+- **Code:** `forecast/forecast.py`, `scripts/forecast-publish.ts`, `src/ops.ts` (`forecastDemand`).
+- **How:** per product and day, features are product, weekday, time index and 7- and 28-day means; the target is
+  units sold. The model rolls forward 7 days. Output is checked in Node (finite, not negative) before use.
+- **On Render:** Render has no Python, so `npm run forecast:publish` runs TabPFN on a laptop (212 products in chunks
+  of 50, 317 s on an Apple M5 CPU) and stores the predictions in `forecastRuns`. The server uses the newest run up
+  to `FORECAST_RUN_MAX_AGE_HOURS` old (default 30 days); stock, held units and risk are still worked out live.
+  Products a run does not cover use the 7-day average and are marked.
+- **Honesty:** the demand TabPFN learns from is estimated from Google searches, not her till sales; Forecast and
+  Health say so. "Next 7 days", days of stock, risk and reorder quantity all come from the forecast, so Today,
+  Forecast and Ask give the same numbers.
+- **Checked live:** Health shows TabPFN Live for 212 products; "Work it out again" keeps it live.
 
-### Mastra
-Gemma handles reasoning and structured tool intent, while a validated JSON router provides deterministic tool
-invocation; Mastra defines the agent and tools. `src/agent.ts` builds one tool table; each tool is registered with
-Mastra via `createTool` on an `Agent` whose model is an OpenAI-compatible config pointing at Ollama. Gemma 3 is not
-forced into native tool calling: it emits `{"tool","args"}` JSON, validated with zod against the fixed tool enum and
-each tool's argument schema, then the same tool function runs. If Gemma's JSON is invalid, a deterministic keyword
-router picks the tool. Only a model that advertises `tools` in Ollama uses `agent.generate` with native tool calls.
-Every answer reports its `route` and `answerMode`.
+## ElevenLabs
+- **Code:** `src/integrations.ts` (`elevenSTT`, `elevenTTS`), `public/voice.js`, `POST /api/voice/order`,
+  `POST /api/voice/stt`, `POST /api/voice/tts`.
+- **Speech to text:** Scribe (`scribe_v1` unless `ELEVENLABS_STT_MODEL` is set) with `tag_audio_events=false`; a
+  transcript that is only sound tags ("[music]") counts as no speech. Used for voice notes on Orders (recorded in the
+  browser or a forwarded WhatsApp `.opus`) and for spoken questions on Ask.
+- **Text to speech:** "Read aloud" on answers (`eleven_flash_v2_5`).
+- **Status:** Health says Live only when the key is accepted by `GET /v1/user`.
+- **Checked live:** an uploaded clip was heard as "राहुल भाई को 2 MB Biozyme भेज देना कल तक" and drafted as an
+  order; a recorded clip did the same; the spoken question "मुझे क्या restock करना चाहिए?" was answered; Read aloud
+  returned audio.
 
-### TabPFN
-`forecast/forecast.py`, run as a subprocess from Node. Features per (product, day): product code, weekday,
-time index, 7-day and 28-day moving means; target = units sold. Rolled forward 7 days recursively.
-Output validated in Node (finite, non-negative numbers) before use. TabPFN ≥ 2.5 weights are licence-gated
-(`TABPFN_TOKEN` from Prior Labs); without a token the script uses the ungated TabPFN v2 weights, and the
-version actually used is shown in the UI ("TabPFN v2").
+## SerpApi
+- **Code:** `src/integrations.ts` (`serpShopping`), `src/ops.ts` (`supplierRefresh`, `livePrices`),
+  `scripts/import/trends.ts`.
+- **Prices:** `engine=google_shopping`, `gl=in`, for the products most likely to run out (`SUPPLIER_REFRESH_MAX`,
+  default 5), each morning and when she runs Online prices; also on demand from Suppliers and Ask. A listing counts
+  as comparable only if it shares a brand word and sits within half to double her price, so sachets and other
+  brands are not shown as "cheapest". Results are cached in `supplierPrices`; blocked suppliers are hidden.
+- **Trends:** `engine=google_trends` (India, 5 years) supplied the search-interest series behind the demand
+  estimate.
+- **Checked live:** Online prices ran from Workflows; Suppliers search for "MB biozyme whey" listed shop prices
+  with links.
 
-**Hosts without Python (Render).** `npm run forecast:publish` runs the same TabPFN script on a machine that has
-`forecast/.venv` (e.g. a laptop) against whatever `MONGODB_URI` points at, in chunks of 50 products per fit
-(`--chunk=N`; CPU cost grows faster than linearly with context rows), optionally only the top-N products by demand
-(`--top=N`). The per-product 7-day predictions are stored in the `forecastRuns` collection with the model, package
-version, history window and timestamp. When the server can't run TabPFN itself, `forecastDemand` uses the newest
-run younger than `FORECAST_RUN_MAX_AGE_HOURS` (default 168 = one forecast horizon): `method: tabpfn` plus
-`precomputed: { runId, at, skus, of }`; products the run doesn't cover use the moving average and carry
-`forecastMethod: moving-average`. Stock, reserved units and risk are still computed live from Mongo. `/api/health`
-shows `tabpfn: live` with `mode: precomputed`, `model` and `at`. A stale or missing run → labelled moving average.
+## Backboard
+- **Code:** `src/integrations.ts` (`backboardSave`, `backboardList`, `backboardSearch`), `src/ops.ts`.
+- **How:** base `https://app.backboard.io/api`, header `X-API-Key`; one assistant created once (id kept in
+  `meta`), memories saved with `POST /assistants/{id}/memories` and found with `.../memories/search`. Her words go to
+  Backboard; the structured rule (for example "block Supplier C") stays in MongoDB as the source of truth. Supplier
+  answers merge rules found in either place. Saving the same rule twice keeps one copy.
+- **Checked live:** a note saved on Suppliers appeared in the memory list and on Ask ("What preferences have I
+  saved?"). The example questions on Ask are read-only, so a tap never saves a block.
 
-### Sentry
-- `src/instrument.ts` calls `Sentry.init` (only if `SENTRY_DSN`) and is preloaded with `node --import` by
-  `npm start` / `npm run worker`, so http/express are auto-instrumented. `Sentry.setupExpressErrorHandler`
-  captures 5xx; `traced()` calls `captureException` for failed agent/workflow runs (incl. Temporal activities).
-  The server flushes (`Sentry.close`) on SIGTERM.
-- Spans (`src/integrations.ts` `span()`, AI Agents conventions): `gen_ai.invoke_agent` per assistant run, with
-  `nivara.route`, `gen_ai.tool.name`, `nivara.answer_mode`, `nivara.message_chars`, `gen_ai.request.model`;
-  child `gen_ai.chat` (model, `gen_ai.usage.input_tokens/output_tokens`), `gen_ai.execute_tool`, `tool.serpapi`,
-  `memory.backboard`, `voice.stt/tts`, `forecast.tabpfn`. Latency = span duration.
-- `Sentry.setConversationId(conversationId)` on each `/api/assistant` call when the client sends
-  `conversationId` (body) or `x-conversation-id` (header), grouping multi-turn chats in Sentry Conversations.
-- Privacy: prompts, model answers and tool input/output go to Sentry as `[redacted N chars]` unless
-  `SENTRY_SEND_CONTENT=1`; `sendDefaultPii: false`; API keys are only in request headers, never in span
-  attributes (asserted in `test/sentry.test.ts`). Full content stays in the local Mongo trace (Activity page).
-- SDK v11 streams spans (`traceLifecycle: 'stream'`), so hooks are `beforeSendSpan`, not `beforeSendTransaction`.
+## Sentry
+- **Code:** `src/instrument.ts`, `src/integrations.ts` (`span`, `traced`).
+- **How:** preloaded with `node --import`; spans follow the AI agent conventions (`gen_ai.invoke_agent`,
+  `gen_ai.chat` with model and token counts, `gen_ai.execute_tool`) plus `tool.serpapi`, `memory.backboard`,
+  `voice.stt`, `voice.tts`, `forecast.tabpfn` and each workflow step. Prompts, answers and customer details are sent
+  as `[redacted N chars]` unless `SENTRY_SEND_CONTENT=1`. Express 5xx errors and failed jobs are captured.
+- **Checked:** span tree, attributes and redaction in `test/sentry.test.ts` with the real SDK; Health shows Live on
+  Render. The same steps show on the Activity page.
 
-### SerpApi
-- Called only by the Temporal `supplierRefresh` activity (and on demand from the Suppliers page / assistant),
-  never on dashboard load. Targets: at-risk products with the largest reorder spend, capped at
-  `SUPPLIER_REFRESH_MAX` (default 3) to save quota.
-- `engine=google_shopping`, `gl=in`. Each result is zod-validated (title, seller, price > 0, http(s) link) and
-  gets a `sourceDomain`; invalid ones are counted as `rejected`. Blocked suppliers are filtered out.
-- Latest result per SKU is upserted into `supplierPrices` (`sku, offers, cheapest, sourceDomain, link, checkedAt`).
-  The dashboard shows it as "Live search" with the domain link and "checked <time>"; stored DB quotes are labelled
-  "Stored quote". If every search fails the activity throws so Temporal retries; nothing is written.
-- No key → activity returns `source: 'stored'`, makes no network call; the `SUPPLIER_FAIL_FIRST_N` retry demo
-  still runs first.
+## Render
+- **Config:** `render.yaml`, one free web service in Singapore, Node 24, health check `/api/health`. Deploys are
+  made with the Render CLI for a specific commit. Health shows a Render row only when the `RENDER` variable is set.
+- **Keep-alive:** `.github/workflows/keep-alive.yml` pings `/api/health` every 10 minutes until 15 Oct 2026.
 
-### Backboard
-- Endpoints checked against docs.backboard.io: base `https://app.backboard.io/api`, header `X-API-Key`,
-  `POST /assistants` (created once, id kept in `meta`), `POST /assistants/{id}/memories`,
-  `GET /assistants/{id}/memories`, `POST /assistants/{id}/memories/search` (`{query, limit}`).
-- Saving ("Remember that I don't buy from Supplier C"): the structured rule (`block_supplier`) goes to Mongo
-  (source of truth); the owner's words go to Backboard. Only preferences are sent, not the database.
-- Retrieval: supplier questions search Backboard for "suppliers the owner does not buy from"; any blocking memory
-  found there is merged with the Mongo rules and filters stored quotes and live offers. The answer is labelled
-  `mongo + backboard` or `mongo only (Backboard unavailable: …)`. The dashboard uses Mongo rules only, so it
-  never waits on Backboard.
+## Keploy
+- **Config:** `keploy.yml`, cases in `keploy/real-data-partners-1/`.
+- **What:** 15 recorded API calls (health, dashboard, forecast, Ask, order reading, voice, catalogue search) replayed
+  against a local server with Tiger unset, so the mocks stay stable. They sit alongside the 137 `npm test` tests.
 
-### ElevenLabs
-- `POST /v1/speech-to-text` (`scribe_v1`) for mic input; the uploaded filename follows the recording's real MIME
-  type (`audio.mp4` from Safari, `audio.webm` from Chrome). `POST /v1/text-to-speech/{voice}` for 🔊.
-- **Deep path**: `POST /api/voice/order` = Scribe STT (Hindi/Hinglish WhatsApp voice notes) → Gemma `extractOrder` → draft (not auto-written; confirm via `POST /api/orders`).
-- `/api/health` reports ElevenLabs `live` only when the key is present and `GET /v1/user` accepts it (cached
-  10 min); only then does the UI say "Voice: ElevenLabs".
-- Provider errors return 502 with a `fallback` hint; the browser shows a small notice and uses Web Speech API /
-  speechSynthesis. Voice never blocks the dashboard.
+## Temporal
+- **Code:** `src/temporal/` (workflows, worker, schedule).
+- **How:** `dailyBriefWorkflow` runs low-stock check, forecast, online prices and the brief, with 5 attempts and
+  backoff per step; the brief still completes if online prices fail. The worker registers a `daily-brief` schedule
+  at 08:00 Asia/Kolkata.
+- **On Render:** no worker (free plan), so Health shows Standby. The same steps run inside the app with a retry
+  loop, and the app writes the 08:00 brief itself; if that run fails it tries again 10 minutes later.
+- **Checked locally:** with `SUPPLIER_FAIL_FIRST_N=2` the supplier step failed twice and passed on attempt 3; the
+  workflow resumed after the worker was killed and restarted.
 
-### Tiger Data
-- `src/tiger.ts`. Requires `TIGER_DATABASE_URL`. Migrations create `sales_daily` hypertable, continuous aggregates
-  `sales_demand_7d` / `sales_demand_28d`, and `catalog_items` (`tsvector` + optional `vector(768)`).
-- Seed (`npm run seed`) syncs Mongo sales + OFF catalogue into Tiger. Forecast attaches Tiger 7d/28d realised demand;
-  TabPFN/moving-average still owns the forward `forecast7` used for stock plans.
-- Agent tool `search_catalog` / `GET /api/catalog/search?q=…`: hybrid FTS + `gemini-embedding-001` when
-  `GEMINI_API_KEY` is set; FTS-only or Mongo keyword fallback otherwise. Parses constraints like
-  `protein under 1500 no sugar`.
-- `/api/health` → `integrations.tiger` live/fallback + row counts.
+## Mastra
+- **Code:** `src/agent.ts`.
+- **How:** one tool table is registered with Mastra (`createTool` on an `Agent`). Mastra's native tool calling is
+  used only with a model that advertises tool support; with Gemma here, Gemma returns `{tool, args}` JSON that is
+  validated against the same tools, and a keyword router covers invalid replies. Health shows Standby for that
+  reason. Native tool calls were checked locally with `qwen3:8b` as a stand-in.
