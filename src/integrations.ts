@@ -249,6 +249,7 @@ export async function elevenSTT(audio: Buffer, mime: string): Promise<string> {
   return span('voice.stt', 'elevenlabs scribe', { bytes: audio.length, mime }, async () => {
     const fd = new FormData();
     fd.append('model_id', env.ELEVENLABS_STT_MODEL ?? 'scribe_v1');
+    fd.append('tag_audio_events', 'false'); // no "[music]"-style tags: silence or a jingle comes back empty
     fd.append('file', new Blob([new Uint8Array(audio)], { type: mime.split(';')[0] }), audioFilename(mime));
     const r = await fetch('https://api.elevenlabs.io/v1/speech-to-text', { method: 'POST', headers: { 'xi-api-key': env.ELEVENLABS_API_KEY! }, body: fd, signal: AbortSignal.timeout(30_000) });
     if (!r.ok) throw new Error(`ElevenLabs STT HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);

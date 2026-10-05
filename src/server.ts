@@ -185,9 +185,9 @@ r.post('/voice/order', express.raw({ type: 'audio/*', limit: '10mb' }), async (q
   let text: string;
   try { text = await elevenSTT(bytes, q.get('content-type') ?? 'audio/webm'); }
   catch (e: any) { log.warn({ err: e.message }, 'ElevenLabs STT failed'); return voiceFail(s, 502, 'browser-web-speech'); }
-  if (!text.trim()) return s.status(422).json({ error: { code: 'no_speech', message: "We couldn't hear any words. Try again a little closer to the mic." }, text });
+  if (!text.replace(/\[[^\]]*\]|\([^)]*\)/g, '').trim()) return s.status(422).json({ error: { code: 'no_speech', message: "We couldn't hear any words. Try again a little closer to the mic." }, text });
   try {
-    s.json({ text, ...pub.publicDraft(await extractOrder(text)), note: 'Draft only. Check it, then confirm to save.' });
+    s.json({ text, ...pub.publicDraft(await extractOrder(text, 'voice_order')), note: 'Draft only. Check it, then confirm to save.' });
   } catch (e: any) {
     log.warn({ err: e.message }, 'voice order extraction failed');
     const { status, body } = errorResponse(e);
