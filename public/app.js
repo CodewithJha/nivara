@@ -204,7 +204,7 @@ const views = {
       ['Left', r => `${r.available}<span class="sub">${r.stock} in stock, ${r.reserved} held</span>`, 'num big'],
       ['Sold last 7 days', r => whole(r.last7Sold), 'num wide'],
       ['Next 7 days', r => whole(r.demand7), 'num'],
-      ['Lasts', r => `${r.daysOfCover == null ? 'Not running out' : plural(Math.max(r.available > 0 ? 1 : 0, r.daysOfCover), 'day')} <span class="quiet nw">· delivery ${plural(r.leadTimeDays, 'day')}</span>
+      ['Lasts', r => `<span class="nw">${r.daysOfCover == null ? 'Not running out' : plural(Math.max(r.available > 0 ? 1 : 0, r.daysOfCover), 'day')} <span class="quiet">· delivery ${plural(r.leadTimeDays, 'day')}</span></span>
         <div class="cover ${LEVEL[r.risk]}" style="--cover:${r.daysOfCover == null ? 1 : frac(r.daysOfCover)};--lead:${frac(r.leadTimeDays)}" role="img" aria-label="${r.daysOfCover == null ? 'Not running out' : plural(r.daysOfCover, 'day')} of stock, delivery takes ${plural(r.leadTimeDays, 'day')}"></div>`],
       ['Risk', r => risk(r.risk)],
       ['Order', r => r.reorderQty || '—', 'num big']];
