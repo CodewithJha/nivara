@@ -307,7 +307,9 @@ export async function extractOrder(text: string) {
       { role: 'system', content: `Extract a customer order from a shop owner's note. Reply ONLY with JSON:
 {"customer": string, "items": [{"product": string, "quantity": integer}], "delivery_text": string|null}
 - product: the closest name from this catalogue if obvious, else the customer's words: ${products.map(p => p.name).join('; ')}
-- quantity: integer (convert words like "one" to 1)
+- quantity: integer (convert words like "one" to 1; Hindi too: "ek" 1, "do" 2, "teen" 3, "char" 4, "paanch" 5)
+- The note may be Hindi, English or Hinglish (often a transcribed voice note). "bhai", "ji", "bhaiya" after a name are not part of it. "MB" is MuscleBlaze.
+- customer: the name in English letters even if the note is in Devanagari ("राहुल" → "Rahul").
 - delivery_text: the delivery phrase copied verbatim (e.g. "tomorrow", "friday", "12 oct"), or null. Do NOT convert it to a date.` },
       { role: 'user', content: text },
     ];
