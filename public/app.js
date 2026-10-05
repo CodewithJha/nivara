@@ -1,4 +1,9 @@
 // Plain JS, no build. Every number rendered here comes from an API response backed by Mongo.
+/** Example questions. Read-only on purpose: a tap must never save a rule (a supplier block would stick in memory). */
+const ASK_EXAMPLES = {
+  today: ['What should I restock?', 'Show my pending orders.', 'What sold the most?', 'What should I focus on today?'],
+  ask: ["Give me today's business brief", 'What should I restock?', 'Which products are likely to run out?', 'Why are you recommending this?', 'What did I sell the most this week?', 'Find cheaper suppliers for this product', 'What orders are still pending?', 'What preferences have I saved?'],
+};
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const inr = n => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
@@ -157,7 +162,7 @@ const views = {
         : `<p class="note">${d.onlinePrices ? 'No online prices yet. Make a fresh brief to check them.' : 'Online prices are not set up. Showing your stored quotes.'}</p>`}</section>
     </div>
     <aside>
-      ${askBox(['What should I restock?', 'Show my pending orders.', 'What sold the most?', 'What should I focus on today?'])}
+      ${askBox(ASK_EXAMPLES.today)}
       <section class="sec brief"><h2>${d.brief?.date === d.date ? 'Morning brief' : 'Latest brief'}</h2>
         ${d.brief ? `<p class="note">${esc(when(d.brief.createdAt))}</p><div class="a sec-gap">${answerHtml(d.brief.text)}</div>` : '<p class="empty">No brief yet. One is made every morning at 8, or make one now.</p>'}
         <div class="acts"><button class="btn" onclick="runWf('dailyBriefWorkflow', this)">Make a fresh brief</button></div><div id="wfout" aria-live="polite"></div></section>
@@ -168,7 +173,7 @@ const views = {
     setTimeout(() => $('#q')?.focus());
     return head('Ask', 'Ask about stock, orders, suppliers or your day. Answers come from your own shop data.') +
       `<div class="day"><div>${askBox([], false)}</div>
-      <aside><section class="sec"><h2>Try asking</h2>${tries(["Give me today's business brief", 'What should I restock?', 'Which products are likely to run out?', 'Why are you recommending this?', 'What did I sell the most this week?', 'Find cheaper suppliers for this product', 'What orders are still pending?', "Remember that I don't buy from Supplier C"])}</section></aside></div>`;
+      <aside><section class="sec"><h2>Try asking</h2>${tries(ASK_EXAMPLES.ask)}</section></aside></div>`;
   },
 
   async orders() {
