@@ -62,7 +62,7 @@ test('static files: index.html revalidates, versioned assets and fonts cache for
   assert.equal(r.headers.get('cache-control'), 'no-cache');
   const html = await r.text();
   const assets = [...html.matchAll(/(?:src|href)="([\w-]+\.(?:js|css)\?v=[0-9a-f]{10})"/g)].map(m => m[1]);
-  assert.deepEqual(assets.map(a => a.split('?')[0]).sort(), ['api.js', 'app.js', 'lazy.js', 'plates.js', 'styles.css']);
+  assert.deepEqual(assets.map(a => a.split('?')[0]).sort(), ['api.js', 'app.js', 'lazy.js', 'nav.js', 'plates.js', 'styles.css']);
   for (const a of assets) assert.equal((await get('/' + a)).headers.get('cache-control'), 'public, max-age=31536000, immutable');
   assert.equal((await get('/app.js')).headers.get('cache-control'), 'no-cache');
   assert.equal((await get('/fonts/anybody-latin.woff2')).headers.get('cache-control'), 'public, max-age=31536000, immutable');

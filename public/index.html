@@ -13,7 +13,7 @@
 <body>
 <header class="top">
   <a class="mark" href="#dashboard">Nivara</a>
-  <nav class="nav" aria-label="Main">
+  <nav class="nav" id="nav" aria-label="Main">
     <a href="#dashboard">Today</a>
     <a href="#assistant">Ask</a>
     <a href="#orders">Orders</a>
@@ -21,22 +21,16 @@
     <a class="x" href="#forecast">Forecast</a>
     <a class="x" href="#suppliers">Suppliers</a>
     <span class="office"><a href="#workflows">Workflows</a><a href="#activity">Activity</a><a href="#health">Health</a></span>
-    <button class="more" popovertarget="more" aria-haspopup="menu">More</button>
   </nav>
-  <div id="more" popover>
-    <a href="#forecast">Forecast</a>
-    <a href="#suppliers">Suppliers</a>
-    <a href="#workflows">Workflows</a>
-    <hr>
-    <a href="#activity">Activity</a>
-    <a href="#health">Health</a>
-  </div>
+  <button class="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav"><span aria-hidden="true"></span></button>
+  <div class="scrim" aria-hidden="true"></div>
 </header>
 <main id="view"><p class="loading">Loading…</p></main>
 <footer class="data-credit">Product data: <a href="https://world.openfoodfacts.org">Open Food Facts</a>, ODbL · Prices: <a href="https://prices.openfoodfacts.org">Open Prices</a> · Demand trends: Google Trends</footer>
 <script src="api.js" defer></script>
 <script src="plates.js" defer></script>
 <script src="lazy.js" defer></script>
+<script src="nav.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

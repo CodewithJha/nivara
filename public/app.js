@@ -447,9 +447,7 @@ let first = true;
 async function route() {
   const [view] = location.hash.slice(1).split('/');
   const name = TITLES[view] ? view : 'dashboard';
-  document.querySelectorAll('.nav a, #more a').forEach(a => a.hash === '#' + name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
-  $(`#more a[href="#${name}"]`) ? $('.more').setAttribute('aria-current', 'page') : $('.more').removeAttribute('aria-current');
-  try { $('#more').hidePopover(); } catch {}
+  document.querySelectorAll('.nav a').forEach(a => a.hash === '#' + name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
   document.title = `${TITLES[name]} · Nivara`;
   const note = flash; flash = '';
   retries.clear(); lazyOff();
