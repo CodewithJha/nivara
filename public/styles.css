@@ -59,6 +59,7 @@ summary { cursor: pointer; }
 .small { font-size: var(--t-sm); }
 .quiet { color: var(--iron); }
 .nw, td .st { white-space: nowrap; }
+@media (min-width: 900px) { th.wide { width: 45%; } } /* Stock tables line up across categories */
 .num { text-align: right; white-space: nowrap; }
 .red { color: var(--red-ink); } .amber { color: var(--amber-ink); } .green { color: var(--green-ink); }
 

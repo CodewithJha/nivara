@@ -193,7 +193,7 @@ const views = {
     const sup = Object.fromEntries(suppliers.map(s => [s._id, s.name]));
     return head('Stock', `What is on the shelf: ${plural(products.length, 'product')}. What to reorder is on <a href="#forecast">Forecast</a>.`) +
       lazyTables(Object.entries(Object.groupBy(products, p => p.category)).map(([cat, ps]) => ({ before: `<section class="sec"><h2>${esc(cap(cat))} <span class="n">${ps.length}</span></h2>`, after: '</section>', rows: ps,
-        cols: [['Product', p => esc(p.name), 'lead'], ['In stock', p => p.stock, 'num big'], ['Sells at', p => inr(p.price), 'num'], ['Costs you', p => inr(p.cost), 'num'], ['Supplier', p => esc(sup[p.supplierId] ?? p.supplierId)], ['Delivery takes', p => plural(p.leadTimeDays, 'day'), 'num']] })));
+        cols: [['Product', p => esc(p.name), 'lead wide'], ['In stock', p => p.stock, 'num big'], ['Sells at', p => inr(p.price), 'num'], ['Costs you', p => inr(p.cost), 'num'], ['Supplier', p => esc(sup[p.supplierId] ?? p.supplierId), 'nw'], ['Delivery takes', p => plural(p.leadTimeDays, 'day'), 'num']] })));
   },
 
   async forecast() {
