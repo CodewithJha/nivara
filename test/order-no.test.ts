@@ -6,6 +6,7 @@ process.env.MONGODB_DB = 'nivara_test_order_no';
 process.env.LOG_LEVEL = 'silent';
 const { client, col } = await import('../src/db.ts');
 const ops = await import('../src/ops.ts');
+const { orderToLines } = await import('../src/sync.ts');
 const mongoOk = await client.connect().then(() => true, () => false);
 const skip = !mongoOk && 'MongoDB not reachable';
 after(async () => { if (mongoOk) await client.db(process.env.MONGODB_DB).dropDatabase(); await client.close(); });
@@ -19,3 +20,6 @@ test('nextOrderNo numbers old orders by age, then counts on', { skip }, async ()
   assert.equal(await ops.nextOrderNo(), 4);
 });
 
+test('delivered lines use the shop day, not the UTC day', () => {
+  assert.equal(orderToLines({ _id: 'X', items: [{ sku: 'R1', name: 'n', quantity: 1, price: 1 }], deliveredAt: '2026-10-04T20:00:00Z' })[0].day, '2026-10-05');
+});

@@ -1,5 +1,5 @@
 // Atlas (Mongo) → Tiger: delivered orders upsert into analytics. Idempotent by (orderId, sku).
-import { col, type Order } from './db.ts';
+import { col, TZ, type Order } from './db.ts';
 import { ensureTiger, poolForSync, refreshDemandAggregates } from './tiger.ts';
 import { log } from './integrations.ts';
 
@@ -7,7 +7,7 @@ export type DeliveredLine = { orderId: string; sku: string; day: string; qty: nu
 
 /** Pure: expand a delivered order into Tiger upsert rows (one per line item). */
 export function orderToLines(order: Pick<Order, '_id' | 'items'> & { deliveredAt?: Date | string | null }): DeliveredLine[] {
-  const day = (order.deliveredAt ? new Date(order.deliveredAt) : new Date()).toISOString().slice(0, 10);
+  const day = (order.deliveredAt ? new Date(order.deliveredAt) : new Date()).toLocaleDateString('en-CA', { timeZone: TZ }); // shop's day, same as Atlas sales
   return order.items.map(i => ({ orderId: order._id, sku: i.sku, day, qty: i.quantity }));
 }
 
