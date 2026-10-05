@@ -150,7 +150,7 @@ const views = {
           fig: `<b>${inr(o.savingPerUnit)}</b><span>less a unit · ${o.savingPercent}%</span>` })).join('')}</ul>` : '<p class="empty">Your suppliers are already the cheapest you have quotes for.</p>'}
         ${small.length ? `<p class="note">Too small to switch for: ${esc(listed(small.map(o => o.name)))}.</p>` : ''}
         ${d.opportunities.some(o => o.skippedBlocked.length) ? `<p class="note">Left out because you blocked them: ${esc([...new Set(d.opportunities.flatMap(o => o.skippedBlocked))].join(', '))}.</p>` : ''}
-        ${d.livePrices.length ? `<h3 class="h2 sec">Online prices</h3>${table([['Product', r => esc(r.name), 'lead'], ['Cheapest online', r => r.cheapest ? `${inr(r.cheapest.price)}${r.link ? ` · <a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.cheapest.source)}</a>` : ` · ${esc(r.cheapest.source)}`}` : '<span class="quiet">No prices found</span>', 'num']], d.livePrices)}
+        ${d.livePrices.length ? `<h3 class="h2 sec">Online prices</h3>${table([['Product', r => esc(r.name), 'lead'], ['Cheapest online', r => r.cheapest ? `${inr(r.cheapest.price)}${r.link ? ` · <a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.cheapest.source)}</a>` : ` · ${esc(r.cheapest.source)}`}` : '<span class="quiet">No close match</span>', 'num']], d.livePrices)}
           <p class="note">Updated each morning. These are shop prices, so check the pack size before comparing with your cost.</p>`
         : `<p class="note">${d.onlinePrices ? 'No online prices yet. Make a fresh brief to check them.' : 'Online prices are not set up. Showing your stored quotes.'}</p>`}</section>
     </div>

@@ -1,6 +1,6 @@
 // Business operations. Deterministic. These are the agent's tools AND the Temporal activities.
 import { col, daysAgo, today, type Preference } from './db.ts';
-import { MIN_SUPPLIER_SAVING_PERCENT, MIN_SUPPLIER_SAVING_RUPEES, RUN_MAX_AGE_HOURS, bestQuote, blockTarget, freshRun, looksClean, matchProduct, mergeRunPred, movingAverage7, orderFlag, shortDate, stockPlan } from './logic.ts';
+import { MIN_SUPPLIER_SAVING_PERCENT, MIN_SUPPLIER_SAVING_RUPEES, RUN_MAX_AGE_HOURS, bestQuote, blockTarget, comparableOffer, freshRun, looksClean, matchProduct, mergeRunPred, movingAverage7, orderFlag, shortDate, stockPlan } from './logic.ts';
 import { backboardLive, backboardList, backboardSave, backboardSearch, gemma, log, serpLive, serpShopping, span, tabpfnForecast } from './integrations.ts';
 import { tigerDemand } from './tiger.ts';
 import { cleanCopy, displayName, inr, plural, whole } from './copy.ts';
@@ -214,7 +214,7 @@ export async function searchSupplierPrices(query: string) {
   const web = await serpShopping(q).catch((e: any) => { log.warn({ err: e.message }, 'online price search failed'); return { available: false, reason: 'Online prices are not available right now.', offers: [], query: q }; });
   const offers = web.offers.filter(o => !isBlocked(o.source, mem.blocked));
   const dbQuotes = product ? (await supplierOpportunities(mem.blocked)).find(o => o.sku === product._id) ?? null : null;
-  return { product: product && { sku: product._id, name: product.name, cost: product.cost, price: product.price, currentSupplier: (await col.suppliers.findOne({ _id: product.supplierId }))?.name }, query: q, web: { ...web, offers, hiddenBlocked: web.offers.length - offers.length }, cheapestWeb: offers.slice().sort((a, b) => a.price - b.price)[0] ?? null, dbOpportunity: dbQuotes, threshold: supplierThreshold, memory: { source: mem.memorySource, recalled: mem.recalled } };
+  return { product: product && { sku: product._id, name: product.name, cost: product.cost, price: product.price, currentSupplier: (await col.suppliers.findOne({ _id: product.supplierId }))?.name }, query: q, web: { ...web, offers, hiddenBlocked: web.offers.length - offers.length }, cheapestWeb: product ? comparableOffer(product.name, product.price, offers) : offers.toSorted((a, b) => a.price - b.price)[0] ?? null, dbOpportunity: dbQuotes, threshold: supplierThreshold, memory: { source: mem.memorySource, recalled: mem.recalled } };
 }
 
 /**
@@ -227,7 +227,7 @@ export async function supplierPriceRefresh(attempt = 1) {
   if (attempt <= failN) throw new Error(`Simulated supplier API outage (attempt ${attempt}/${failN} configured to fail)`);
   if (!serpLive()) return { attempt, source: 'stored', reason: 'SERPAPI_API_KEY not set — no live search run; dashboard keeps showing stored supplier quotes.', refreshed: [] };
   const [inv, products, { blocked }] = await Promise.all([getInventory(), col.products.find().toArray(), blockedSuppliers()]);
-  const cost = Object.fromEntries(products.map(p => [p._id, p.cost]));
+  const cost = Object.fromEntries(products.map(p => [p._id, p.cost])), price = Object.fromEntries(products.map(p => [p._id, p.price]));
   // At-risk first, then fill remaining quota with highest-price real-catalog SKUs so SerpApi covers the OFF catalogue
   const max = Number(process.env.SUPPLIER_REFRESH_MAX ?? 5);
   const atRisk = inv.lowStock.toSorted((a: any, b: any) => cost[b.sku] * b.reorderQty - cost[a.sku] * a.reorderQty);
@@ -237,7 +237,7 @@ export async function supplierPriceRefresh(attempt = 1) {
     try {
       const web = await serpShopping(t.name);
       const offers = web.offers.filter(o => !isBlocked(o.source, blocked)).sort((a, b) => a.price - b.price);
-      const cheapest = offers[0] ?? null;
+      const cheapest = comparableOffer(t.name, price[t.sku] ?? 0, offers);
       await col.supplierPrices.replaceOne({ _id: t.sku }, { sku: t.sku, name: t.name, query: web.query, offers, cheapest, sourceDomain: cheapest?.sourceDomain ?? null, link: cheapest?.link ?? null, hiddenBlocked: web.offers.length - offers.length, rejected: web.rejected ?? 0, checkedAt: new Date() }, { upsert: true });
       return { product: t.name, offers: offers.length, cheapest };
     } catch (e: any) { return { product: t.name, error: e.message }; }
@@ -247,7 +247,12 @@ export async function supplierPriceRefresh(attempt = 1) {
 }
 
 /** Latest cached live results (written by supplierPriceRefresh). */
-export const livePrices = () => col.supplierPrices.find().sort({ checkedAt: -1 }).toArray();
+/** Cached online prices, with the cheapest comparable listing picked against today's product price. */
+export async function livePrices() {
+  const [docs, products] = await Promise.all([col.supplierPrices.find().sort({ checkedAt: -1 }).toArray(), col.products.find({}, { projection: { price: 1 } }).toArray()]);
+  const price = Object.fromEntries(products.map(p => [p._id, p.price]));
+  return docs.map(d => { const c = comparableOffer(d.name, price[d.sku] ?? 0, d.offers ?? []); return { ...d, cheapest: c, link: c?.link ?? null, sourceDomain: c?.sourceDomain ?? null }; });
+}
 
 // ---------- daily brief ----------
 

@@ -55,6 +55,16 @@ export type Risk = 'high' | 'medium' | 'low';
  * reorderQty covers lead time + 7 days + safety days of demand, minus what's available; 0 when risk is low
  * (more than a week of cover — no point topping up to a target level yet).
  */
+// ---------- online prices ----------
+// Shopping results mix sachets, other brands and bundles. A listing only counts as a comparable price when it is
+// within half to double our price and, if the product name has a distinctive word (usually the brand), mentions it.
+const GENERIC = new Set('whey protein powder isolate concentrate bar bars tablets tablet capsules capsule gold standard premium ultra with and for the flavour flavor chocolate vanilla strawberry cream pack plus mass gainer creatine monohydrate omega oil fish vitamin multivitamin pre workout performance high nutrition daily sugar free natural pure raw'.split(' '));
+export function comparableOffer<T extends { price: number; title?: string }>(name: string, price: number, offers: T[]): T | null {
+  const words = (name.toLowerCase().match(/[a-z]{3,}/g) ?? []).filter(w => !GENERIC.has(w)).slice(0, 2);
+  const ok = offers.filter(o => o.price >= price * 0.5 && o.price <= price * 2 && (!words.length || words.some(w => String(o.title ?? '').toLowerCase().includes(w))));
+  return ok.toSorted((a, b) => a.price - b.price)[0] ?? null;
+}
+
 /** In-app morning brief (no Temporal): due once a day from 08:00 shop time. */
 export const MORNING_HOUR = 8;
 export const morningDue = (hour: number, lastDay: string | undefined, day: string) => hour >= MORNING_HOUR && lastDay !== day;
