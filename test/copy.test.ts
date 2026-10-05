@@ -61,7 +61,7 @@ test('publicHealth: live notes name what each partner does now (voice notes, sto
   assert.match(i.tabpfn.note, /212 products/);
   assert.match(i.tabpfn.note, /Google searches/);
   assert.match(i.tabpfn.note, /4 Oct/);
-  assert.match(i.gemma.note, /gemma-4-26b-a4b-it/);
+  assert.match(i.gemma.note, /Model: Gemma 4 26B A4B\./);
   assert.equal(i.render.status, 'live');
   assert.equal(i.temporal.status, 'standby');
   for (const v of Object.values<any>(i)) assert.equal(leaks(v.note), false, v.note);

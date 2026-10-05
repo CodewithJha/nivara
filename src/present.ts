@@ -103,6 +103,8 @@ export function publicActivity(t: any) {
 
 // ---------- health (behind the scenes) ----------
 type HealthIn = { date: string; mongo: boolean; gemma: boolean; mastra: boolean; forecast: any; tiger: boolean; serpapi: boolean; backboard: boolean; elevenlabs: boolean; temporal: boolean; sentry: boolean; model?: string; render?: boolean };
+/** gemma-4-26b-a4b-it → Gemma 4 26B A4B: readable on Health, still the exact model. */
+export const modelName = (m: string) => m.split('-').filter(w => w !== 'it').map(w => /^a?\d+b$/i.test(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1)).join(' ');
 const shortDay = (d: string | Date) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
 /** Partner statuses worded for people: live or standby, what it does, and what happens when it rests. No hosts, keys or errors. */
 export function publicHealth(h: HealthIn) {
@@ -114,7 +116,7 @@ export function publicHealth(h: HealthIn) {
     integrations: {
       mongodb: p('MongoDB Atlas', h.mongo, 'Stores products, stock, orders, customers, saved rules and briefs. Every order you confirm is saved here.', 'Not reachable right now. Pages will load again when it is back.'),
       ...(h.render && { render: p('Render', true, 'Hosts Nivara on a free plan in Singapore. If it has been asleep, the first page can take up to a minute.', '') }),
-      gemma: p('Gemma', h.gemma, `Reads order messages and voice notes, picks the right lookup for each question and writes the brief summary${h.model ? `. Model: ${h.model}` : ''}.`, 'Resting. Answers use ready-made wording built from your data, and order reading waits until it is back.'),
+      gemma: p('Gemma', h.gemma, `Reads order messages and voice notes, picks the right lookup for each question and writes the brief summary${h.model ? `. Model: ${modelName(h.model)}` : ''}.`, 'Resting. Answers use ready-made wording built from your data, and order reading waits until it is back.'),
       elevenlabs: p('ElevenLabs', h.elevenlabs, 'Turns voice notes on Orders and spoken questions on Ask into text, in Hindi, English or Hinglish, and reads answers aloud.', "On standby. Voice notes can't be read, so type or paste the order. Ask uses the browser's own voice."),
       tabpfn: p('TabPFN', tab, pre
         ? `Forecasts the next 7 days for ${pre.skus} products from 60 days of ${learnsFrom}. Worked out on a laptop on ${shortDay(pre.at)} and stored, since this server has no Python.`
