@@ -14,7 +14,7 @@ Node 26 server (src/server.ts, Express, runs .ts natively — no build step)
    ├─ src/db.ts           MongoDB (Atlas if MONGODB_URI, else local docker mongo)
    ├─ src/ops.ts          business operations = tools = Temporal activities
    │                      (inventory, pending orders, forecast, suppliers, memory, brief)
-   ├─ src/agent.ts        Gemma via Ollama OpenAI-compatible API
+   ├─ src/agent.ts        Gemma via Google AI Studio (live) or Ollama (local)
    │                      Mastra Agent + tools → Gemma JSON router → keyword router
    │                      order extraction (Gemma JSON → zod → deterministic match)
    ├─ src/integrations.ts SerpApi, Backboard, ElevenLabs, TabPFN subprocess,
@@ -37,13 +37,13 @@ forecast/forecast.py      TabPFN regressor (py3.11 venv), JSON stdin → JSON st
 
 | Concern        | Live                         | Fallback (labelled)                    |
 |----------------|------------------------------|----------------------------------------|
-| LLM            | Gemma via Ollama             | keyword router + template text         |
+| LLM            | Gemma (AI Studio live, Ollama local) | keyword router + template text         |
 | Tool calling   | Mastra agent native tools    | Gemma JSON router → keyword router     |
 | Forecast       | TabPFN here, or a published TabPFN run (`forecastRuns`, `precomputed`) | `fallback-moving-average` |
 | Supplier search| SerpApi via Temporal refresh → `supplierPrices` cache | "Stored quote" from DB only |
 | Memory         | Mongo rules + Backboard save/search | Mongo only, labelled            |
-| Voice          | ElevenLabs Scribe + TTS (key verified) | browser Web Speech API, notice on failure |
-| Workflows      | Temporal (worker + schedule) | activities run in-process (`direct`)   |
+| Voice          | ElevenLabs Scribe (voice notes, Ask) + TTS | voice notes off; browser speech on Ask |
+| Workflows      | Temporal (worker + schedule) | in-process with retries; 08:00 brief written by the app |
 | Tracing        | Sentry gen_ai spans + local  | local trace store only                 |
 
 ## Why two databases (Atlas + Tiger)
@@ -90,7 +90,8 @@ Real seed docs are not `demo: true`; `npm run seed:demo` still marks demo.
 - [x] Temporal workflows + schedule + retry demo
 - [x] Mastra agent + Gemma JSON router + keyword router
 - [x] Sentry spans + local trace view
-- [x] render.yaml, docs (not deployed)
+- [x] Deployed on Render (render.yaml)
+- [x] Voice note → order (ElevenLabs Scribe → Gemma → confirm)
 
 ## Why these shapes
 
@@ -101,3 +102,5 @@ Real seed docs are not `demo: true`; `npm run seed:demo` still marks demo.
   deterministic templates; Gemma is kept for routing, extraction, open-ended questions and the brief summary.
 - **Attention threshold**: a supplier saving counts only if ≥ ₹10/unit AND ≥ 5% (`bestQuote` in `logic.ts`).
 - **Forecast cached per day**, invalidated when an order is created or delivered (reserved stock changes).
+- **One forecast number everywhere**: "next 7 days", days of stock, risk and reorder quantity use the TabPFN `forecast7`;
+  realised sales from Tiger are shown separately as "sold last 7 days".
