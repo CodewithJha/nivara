@@ -247,6 +247,7 @@ textarea { font-size: var(--t-1); line-height: var(--lh-field); resize: vertical
 @keyframes rec-pulse { to { opacity: .25; } }
 .heard { margin: var(--s-2) 0 var(--s-4); padding-left: var(--s-3); border-left: var(--rule) solid var(--steel); max-width: var(--measure); }
 .heard .small { display: block; }
+.source { margin-top: var(--s-1); max-width: var(--measure); }
 
 /* ---------- ask ---------- */
 .ask .field input { font-size: var(--t-1); }

@@ -208,7 +208,8 @@ const views = {
       ['Order', r => r.reorderQty || '—', 'num big']];
     const note = '<p class="note">The bar shows days of stock, up to 3 weeks; the notch shows how long a delivery takes. Red runs out before a reorder could arrive. Amber runs out within 7 days. Order covers the delivery time, a week of sales and 3 spare days.</p>';
     return head('Forecast', 'What sells in the next 7 days, and how long your stock lasts against how long a new delivery takes.') +
-    `<section><p class="quiet">Based on your last ${plural(f.historyDays ?? 60, 'day')} of sales.</p>
+    `<section><p class="quiet">Based on the last ${plural(f.historyDays ?? 60, 'day')}.</p>
+      ${health?.integrations?.tabpfn?.status === 'standby' ? '' : '<p class="small quiet source">Worked out by TabPFN, an open forecasting model, from demand estimated using Google searches for each product, not your till sales yet. <a href="#health">More on Health</a></p>'}
       <div class="acts gap"><button class="btn" onclick="refreshForecast(this)">Work it out again</button></div></section>` +
       (f.items.length ? lazyTables([{ before: '<section class="sec">', cols, rows: f.items, after: note + '</section>' }]) : `<section class="sec">${table(cols, [], 'No products yet.')}${note}</section>`);
   },
