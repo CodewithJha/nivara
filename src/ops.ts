@@ -53,7 +53,8 @@ export async function forecastDemand({ force = false, latest = false, source = '
     // latest: any date, so the dashboard never waits ~90s on TabPFN; callers show the forecast date
     const cached = await col.forecasts.findOne(latest ? {} : { date: t }, { sort: { createdAt: -1 } });
     // stock rules re-applied so cached docs follow the current logic.ts
-    if (cached) return { ...cached, items: cached.items.map((i: any) => ({ ...i, ...stockPlan(i) })) };
+    // Plan from the forecast (TabPFN or labelled average); older cached docs carried realised sales in demand7.
+    if (cached) return { ...cached, items: cached.items.map((i: any) => { const x = { ...i, demand7: i.forecast7 ?? i.demand7 }; return { ...x, ...stockPlan(x) }; }) };
   }
   return span('gen_ai.execute_tool', 'execute_tool forecast_demand', { 'gen_ai.tool.name': 'forecast_demand' }, async set => {
     const [{ products, series }, reserved, tiger, proxy] = await Promise.all([
@@ -80,13 +81,15 @@ export async function forecastDemand({ force = false, latest = false, source = '
     }
     const items = products.map(p => {
       // TabPFN/MA = forward 7d demand for stock plan; Tiger caggs = realised 7d/28d that calibrate the brief/agent
+      // demand7 (shown as "Next 7 days" and used for cover/risk/reorder) is the forecast; Tiger's realised 7/28-day
+      // sales are kept alongside as sold7/demand28 for the brief and the assistant.
       const forecast7 = Math.round((pred[p._id] ?? 0) * 10) / 10;
-      const demand7 = Math.round((tiger[p._id]?.demand7 ?? forecast7) * 10) / 10;
+      const demand7 = forecast7, sold7 = tiger[p._id] ? Math.round(tiger[p._id].demand7 * 10) / 10 : undefined;
       const last7 = series[p._id].slice(-7).reduce((a, b) => a + b, 0);
       const anomalies = anomalyFlags(series[p._id]);
       return {
         sku: p._id, name: p.name, stock: p.stock, reserved: reserved[p._id] ?? 0, leadTimeDays: p.leadTimeDays,
-        last7Sold: last7, forecast7, demand7, demand28: tiger[p._id]?.demand28, anomalies,
+        last7Sold: last7, forecast7, demand7, sold7, demand28: tiger[p._id]?.demand28, anomalies,
         tiger: !!tiger[p._id],
         ...(uncovered.has(p._id) && { forecastMethod: 'moving-average' }),
         ...stockPlan({ stock: p.stock, reserved: reserved[p._id] ?? 0, demand7: forecast7, leadTimeDays: p.leadTimeDays }),
