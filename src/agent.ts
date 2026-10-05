@@ -170,11 +170,16 @@ function riskAnswer(out: any, focus?: string) {
 }
 
 const when = (o: any) => o.overdue ? `overdue, was due ${shortDate(o.deliveryDate)}` : o.dueToday ? 'due today' : !o.deliveryDate ? 'no delivery date' : o.flag === 'due tomorrow' ? 'due tomorrow' : `due ${shortDate(o.deliveryDate)}`;
-function ordersAnswer(out: any) {
+/** The customer a question names by first name ("Rahul ka order kab hai?"), if they have a pending order. */
+export const customerIn = (q: string, orders: any[]) => orders.map(o => String(o.customerName ?? '')).find(n => n && new RegExp(`\\b${n.split(' ')[0].replace(/[^\p{L}]/gu, '')}\\b`, 'iu').test(q));
+function ordersAnswer(out: any, who?: string) {
   if (!out.orders.length) return 'You have no pending orders.';
   const overdue = out.orders.filter((o: any) => o.overdue).length;
-  return [`You have ${plural(out.orders.length, 'pending order')}${overdue ? `, ${overdue} overdue` : ''}.`,
-    ...out.orders.map((o: any) => `• ${o.customerName}: ${o.items.map((i: any) => `${i.quantity}× ${i.name}`).join(', ')} · ${inr(o.total)} · ${when(o)}`)].join('\n');
+  const items = (o: any) => `${o.items.map((i: any) => `${i.quantity}× ${i.name}`).join(', ')} · ${inr(o.total)} · ${when(o)}`;
+  const n = plural(out.orders.length, 'pending order'), late = overdue ? `, ${overdue} overdue` : '';
+  const mine = who ? out.orders.filter((o: any) => o.customerName === who) : [];
+  if (mine.length) return [`${who} has ${plural(mine.length, 'pending order')}.`, ...mine.map((o: any) => `• ${items(o)}`), `You have ${n} in all${late}.`].join('\n');
+  return [`You have ${n}${late}.`, ...out.orders.map((o: any) => `• ${o.customerName}: ${items(o)}`)].join('\n');
 }
 
 /** Sold counts are whole units; anything sold rounds up to at least 1. */
@@ -213,7 +218,7 @@ export function templateAnswer(tool: ToolName, out: any, focus?: string): string
   switch (tool) {
     case 'get_inventory': return restockAnswer(out);
     case 'forecast_demand': return riskAnswer(out, focus);
-    case 'get_pending_orders': return ordersAnswer(out);
+    case 'get_pending_orders': return ordersAnswer(out, focus);
     case 'get_sales_summary': return salesAnswer(out);
     case 'search_catalog': return catalogAnswer(out);
     case 'shop_pulse': {
@@ -282,9 +287,10 @@ export async function ask(message: string, history: Msg[] = [], conversationId?:
     const focus = pick.tool === 'forecast_demand' ? await focusProduct(message, history, /\b(this|that|it)\b/i.test(message)) : undefined;
 
     data ??= await runTool(pick.tool, pick.args);
+    const who = pick.tool === 'get_pending_orders' ? customerIn(message, data?.orders ?? []) : undefined;
     let answerMode: 'template' | 'template+gemma' | 'gemma' = answer ? 'gemma' : pick.tool === 'generate_daily_brief' && data.by === 'template+gemma' ? 'template+gemma' : 'template';
     if (!answer) {
-      answer = templateAnswer(pick.tool, data, focus);
+      answer = templateAnswer(pick.tool, data, focus ?? who);
       if (!isStructured(message) && status.reachable) {
         try {
           const g = (await gemma([{ role: 'system', content: ANSWER_SYS }, ...history.slice(-4), { role: 'user', content: `QUESTION: ${message}\n\nFACTS:\n${answer}` }])).trim();

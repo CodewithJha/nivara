@@ -46,6 +46,19 @@ test('pending orders: customer, items, ₹ total with Indian grouping, due wordi
   assert.equal(templateAnswer('get_pending_orders', { orders: [] }), 'You have no pending orders.');
 });
 
+test('pending orders for a named customer answer about them first', async () => {
+  const { customerIn } = await import('../src/agent.ts');
+  const orders = [
+    { customerName: 'Aman Khan', items: [{ quantity: 6, name: 'Protein Bar' }], total: 300, deliveryDate: '2026-10-04', overdue: true },
+    { customerName: 'Rahul Verma', items: [{ quantity: 1, name: 'MB biozyme whey' }], total: 2599, deliveryDate: '2026-10-05', dueToday: true },
+  ];
+  assert.equal(customerIn('Rahul ka order kab deliver karna hai?', orders), 'Rahul Verma');
+  assert.equal(customerIn('Kaun se orders pending hain?', orders), undefined);
+  const a = templateAnswer('get_pending_orders', { orders }, 'Rahul Verma');
+  clean(a);
+  assert.equal(a, 'Rahul Verma has 1 pending order.\n• 1× MB biozyme whey · ₹2,599 · due today\nYou have 2 pending orders in all, 1 overdue.');
+});
+
 test('sales answer leads with the best seller sentence', () => {
   const a = templateAnswer('get_sales_summary', { since: '2026-09-27', days: 7, top: [{ sku: 'P01', name: 'Chocolate Protein Bar', qty: 55, revenue: 4950 }, { sku: 'P02', name: 'Peanut Butter Protein Bar', qty: 1, revenue: 95 }] });
   clean(a);
