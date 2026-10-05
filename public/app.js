@@ -8,7 +8,9 @@ const cap = s => String(s ?? '').replace(/^./, c => c.toUpperCase());
 const firstName = s => String(s ?? '').split(' ')[0];
 const orderName = id => 'Order ' + (parseInt(String(id).replace(/\D/g, ''), 10) || id);
 const day = s => new Date(s + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-const when = s => new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const SHOP_TZ = 'Asia/Kolkata'; // times are the shop's, wherever the page is opened
+const when = s => new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: SHOP_TZ });
+const dayOf = s => new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: SHOP_TZ });
 const daysLate = (due, today) => Math.round((Date.parse(today) - Date.parse(due)) / 864e5);
 const itemList = o => o.items.map(i => `${i.quantity}× ${i.name}`).join(', ');
 
