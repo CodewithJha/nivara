@@ -58,6 +58,7 @@ h1, h2, h3 { margin: 0; font-family: var(--display); text-wrap: balance; }
 summary { cursor: pointer; }
 .small { font-size: var(--t-sm); }
 .quiet { color: var(--iron); }
+.nw, td .st { white-space: nowrap; }
 .num { text-align: right; white-space: nowrap; }
 .red { color: var(--red-ink); } .amber { color: var(--amber-ink); } .green { color: var(--green-ink); }
 
