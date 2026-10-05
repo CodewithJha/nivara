@@ -6,7 +6,7 @@ const whole = n => Math.round(Number(n) || 0);
 const plural = (n, one, many = one + 's') => `${whole(n)} ${whole(n) === 1 ? one : many}`;
 const cap = s => String(s ?? '').replace(/^./, c => c.toUpperCase());
 const firstName = s => String(s ?? '').split(' ')[0];
-const orderName = id => 'Order ' + (parseInt(String(id).replace(/\D/g, ''), 10) || id);
+const orderName = o => 'Order ' + (o.no ?? (parseInt(String(o._id).replace(/\D/g, ''), 10) || o._id));
 const day = s => new Date(s + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 const SHOP_TZ = 'Asia/Kolkata'; // times are the shop's, wherever the page is opened
 const when = s => new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: SHOP_TZ });
@@ -74,9 +74,9 @@ async function busy(btn, label, fn) {
 const head = (title, sub = '') => `<header class="head"><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</header>`;
 const row = ({ id, level = '', name, why = '', fig = '', act = '', dim }) => `<li class="row${act ? ' has-act' : ''}${dim ? ' dim' : ''}"${id ? ` id="${esc(id)}" tabindex="-1"` : ''}>
   ${level === null ? '<i></i>' : `<i class="edge ${level}" aria-hidden="true"></i>`}<span><span class="name">${name}</span>${why ? `<span class="why">${why}</span>` : ''}</span><span class="fig">${fig}</span><span class="act">${act}</span></li>`;
-const deliverBtn = (o, cls = 'btn') => `<button class="${cls}" onclick="deliver('${esc(o._id)}', this)">Mark delivered</button>`;
+const deliverBtn = (o, cls = 'btn') => `<button class="${cls}" onclick="deliver('${esc(o._id)}', this, ${esc(JSON.stringify(orderName(o)))})">Mark delivered</button>`;
 function dueWords(o, today) {
-  if (o.status !== 'pending') return `${cap(esc(o.status))}${o.deliveryDate ? `, was due ${esc(day(o.deliveryDate))}` : ''}`;
+  if (o.status !== 'pending') return `${cap(esc(o.status))}${o.deliveredAt ? ` ${esc(dayOf(o.deliveredAt))}` : ''}`;
   if (o.flag === 'overdue') return `<b class="red">${plural(daysLate(o.deliveryDate, today), 'day')} late</b>, was due ${esc(day(o.deliveryDate))}`;
   if (o.flag === 'no delivery date') return '<b class="amber">No delivery date</b>';
   if (o.flag) return `<b class="amber">${cap(esc(o.flag))}</b>`;
@@ -84,7 +84,7 @@ function dueWords(o, today) {
 }
 const orderRow = (o, today) => row({
   id: 'o-' + o._id, level: o.status === 'pending' ? FLAG[o.flag] ?? '' : '', dim: o.status !== 'pending',
-  name: esc(o.customerName), why: `${orderName(o._id)} · ${esc(itemList(o))}<br>${dueWords(o, today)}`,
+  name: esc(o.customerName), why: `${orderName(o)} · ${esc(itemList(o))}<br>${dueWords(o, today)}`,
   fig: `<b>${inr(o.total)}</b>`, act: o.status === 'pending' ? deliverBtn(o) : '',
 });
 function restockWhy(r) {
@@ -104,7 +104,7 @@ const views = {
       facts: `${restockWhy(r)}${r.reorderQty ? ` Order ${r.reorderQty}.` : ''}`,
       acts: `<button class="btn primary" onclick="send(${esc(JSON.stringify(`Why is ${r.name} at risk?`))});go('ask')">Ask why</button><a class="btn" href="#forecast">See the forecast</a>` });
     const orderJob = o => ({ level: FLAG[o.flag], to: 'o-' + o._id, title: `Deliver ${firstName(o.customerName)}'s order`,
-      facts: `${dueWords(o, d.date).replace(/<[^>]+>/g, '')}. ${orderName(o._id)}: ${itemList(o)}. ${inr(o.total)}.`,
+      facts: `${dueWords(o, d.date).replace(/<[^>]+>/g, '')}. ${orderName(o)}: ${itemList(o)}. ${inr(o.total)}.`,
       acts: `${deliverBtn(o, 'btn primary')}<a class="btn" href="#orders">All orders</a>` });
     const jobs = [
       ...p.filter(o => o.flag === 'overdue').map(orderJob),
@@ -384,12 +384,12 @@ function showDraft(r, heard) {
 async function confirmOrder(btn) {
   try {
     const o = await busy(btn, 'Saving…', () => api('/orders', { method: 'POST', body: { customerId: draft.customer.id, customerName: draft.customer.name, items: draft.items.map(i => ({ sku: i.product.sku, quantity: i.quantity })), deliveryDate: draft.deliveryDate } }));
-    flash = `Saved ${orderName(o._id)} for ${draft.customer.name}.`; route();
+    flash = `Saved ${orderName(o)} for ${draft.customer.name}.`; route();
   } catch (e) { showError(btn, errorBox(e, 'save the order', () => confirmOrder(btn))); }
 }
-async function deliver(id, btn) {
-  try { await busy(btn, 'Saving…', () => api(`/orders/${id}/deliver`, { method: 'POST' })); flash = `${orderName(id)} marked delivered.`; route(); }
-  catch (e) { showError(btn, errorBox(e, `mark ${orderName(id)} delivered`, () => deliver(id, btn))); }
+async function deliver(id, btn, name = 'the order') {
+  try { const o = await busy(btn, 'Saving…', () => api(`/orders/${id}/deliver`, { method: 'POST' })); flash = `${orderName(o)} marked delivered.`; route(); }
+  catch (e) { showError(btn, errorBox(e, `mark ${name} delivered`, () => deliver(id, btn, name))); }
 }
 async function refreshForecast(btn) {
   try { await busy(btn, 'Working it out…', () => api('/forecast?force=1', { timeoutMs: API.longTimeoutMs })); route(); }
