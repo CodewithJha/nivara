@@ -163,6 +163,8 @@ export async function getMemory() {
 
 /** Save a preference. Mongo is the source of truth (structured rules like block_supplier); Backboard gets the owner's words. */
 export async function saveMemory(text: string) {
+  const same = await col.preferences.findOne({ text: { $regex: `^\\s*${text.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, $options: 'i' } });
+  if (same) return { saved: same, matchedSupplier: same.kind === 'block_supplier', backboardError: undefined, note: 'Already remembered.' }; // saving twice changes nothing
   const b = blockTarget(text, await col.suppliers.find().toArray());
   const pref: Preference = { text, kind: b ? 'block_supplier' : 'note', supplier: b?.supplier?.name ?? b?.target, createdAt: new Date(), mirror: 'local-only' };
   let backboardError: string | undefined;
