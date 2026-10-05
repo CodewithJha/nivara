@@ -138,7 +138,7 @@ r.post('/orders', async (q, s) => {
   if (customerId && !(await col.customers.findOne({ _id: customerId }))) throw fail('unknown_customer', "That customer isn't in your records any more. Read the message again.", 400);
   if (!customerId) { customerId = 'C' + randomUUID().slice(0, 8); await col.customers.insertOne({ _id: customerId, name: o.customerName, channel: 'whatsapp' }); }
   const items = o.items.map(i => { const p = products.find(p => p._id === i.sku)!; return { sku: p._id, name: p.name, quantity: i.quantity, price: p.price }; });
-  const order = { _id: 'O' + Date.now().toString(36).toUpperCase(), customerId, customerName: o.customerName, items, total: items.reduce((a, i) => a + i.price * i.quantity, 0), status: 'pending' as const, deliveryDate: o.deliveryDate ?? null, createdAt: new Date(), source: 'assistant-extraction' };
+  const order = { _id: 'O' + Date.now().toString(36).toUpperCase(), no: await ops.nextOrderNo(), customerId, customerName: o.customerName, items, total: items.reduce((a, i) => a + i.price * i.quantity, 0), status: 'pending' as const, deliveryDate: o.deliveryDate ?? null, createdAt: new Date(), source: 'assistant-extraction' };
   await col.orders.insertOne(order);
   await ops.invalidateDay(); // reserved stock changed → recompute plan and brief
   s.status(201).json(pub.publicOrder(order));
@@ -146,14 +146,15 @@ r.post('/orders', async (q, s) => {
 
 /** Deliver: decrement stock, record Atlas sale, upsert into Tiger analytics (idempotent by orderId). */
 r.post('/orders/:id/deliver', async (q, s) => {
-  const o = await col.orders.findOneAndUpdate({ _id: q.params.id, status: 'pending' }, { $set: { status: 'delivered' } }, { returnDocument: 'after' });
+  const deliveredAt = new Date();
+  const o = await col.orders.findOneAndUpdate({ _id: q.params.id, status: 'pending' }, { $set: { status: 'delivered', deliveredAt } }, { returnDocument: 'after' });
   if (!o) throw fail('order_not_pending', 'That order is already delivered or no longer exists.', 404);
   for (const i of o.items) {
     await col.products.updateOne({ _id: i.sku }, { $inc: { stock: -i.quantity } });
     await col.sales.updateOne({ sku: i.sku, date: today() }, { $inc: { qty: i.quantity }, $set: { source: 'order' } }, { upsert: true });
   }
   await ops.invalidateDay();
-  await syncDeliveredOrder({ ...o, deliveredAt: new Date() }).catch((e: any) => log.warn({ err: e.message }, 'delivered-order analytics sync failed'));
+  await syncDeliveredOrder({ ...o, deliveredAt }).catch((e: any) => log.warn({ err: e.message }, 'delivered-order analytics sync failed'));
   s.json(pub.publicOrder(o));
 });
 

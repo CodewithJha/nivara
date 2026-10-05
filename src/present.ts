@@ -13,7 +13,7 @@ export const publicProduct = (p: any) => ({ _id: p._id, name: p.name, category: 
 
 export const publicOrder = (o: any) => ({
   _id: o._id, customerName: o.customerName, items: (o.items ?? []).map((i: any) => ({ sku: i.sku, name: i.name, quantity: i.quantity, price: i.price })),
-  total: o.total, status: o.status, deliveryDate: o.deliveryDate ?? null, createdAt: o.createdAt,
+  total: o.total, status: o.status, deliveryDate: o.deliveryDate ?? null, createdAt: o.createdAt, ...(o.no && { no: o.no }), ...(o.deliveredAt && { deliveredAt: o.deliveredAt }),
   ...(o.flag !== undefined && { flag: o.flag, overdue: !!o.overdue, dueToday: !!o.dueToday }), ...(o.demo && { demo: true }),
 });
 
