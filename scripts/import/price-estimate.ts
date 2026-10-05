@@ -13,7 +13,7 @@ import { within } from './hash.ts';
 export type ParsedPack = { grams?: number; count?: number; servings?: number; bare?: number };
 export type Pack = { amount: number; unit: 'g' | 'units'; source: 'quantity' | 'default' };
 export type PriceEstimate = { price: number; cost: number; profile: ProfileKey; pack: Pack; tier: string };
-export type EstimateInput = { code: string; name: string; brands?: string; quantity?: string; productType: ProductType };
+export type EstimateInput = { code: string; name: string; brands?: string; quantity?: string; productType: ProductType; categories?: string[] };
 
 /** "1.75kg", "2 lb (909 g)", "6 bars, 50g each", "60 capsules", "500g 14 servings", "950" → numbers. */
 export function parsePack(quantity = ''): ParsedPack {
@@ -46,8 +46,8 @@ export function packFor(profile: PriceProfile, parsed: ParsedPack): Pack {
 }
 
 /** Retail form for pricing: bars, RTD shakes, oats and gainers get their own bands inside "whey". */
-export function profileFor(p: Pick<EstimateInput, 'name' | 'brands' | 'productType'>, parsed: ParsedPack = {}): ProfileKey {
-  const text = `${p.name} ${p.brands ?? ''}`;
+export function profileFor(p: Pick<EstimateInput, 'name' | 'brands' | 'productType' | 'categories'>, parsed: ParsedPack = {}): ProfileKey {
+  const text = `${p.name} ${p.brands ?? ''} ${(p.categories ?? []).join(' ')}`;
   const rule = FORM_RULES.find(r => r.type === p.productType && r.re.test(text) && !(r.maxPack && (parsed.grams ?? 0) > r.maxPack));
   return rule?.profile ?? TYPE_PROFILE[p.productType] ?? 'other';
 }

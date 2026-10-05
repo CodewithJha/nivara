@@ -61,6 +61,24 @@ test('estimates land in realistic Indian MRP ranges', () => {
   assert.ok(est('Whey Protein', 'whey', '2.27 kg').price > est('Whey Protein', 'whey', '1 kg').price);
 });
 
+test('powders: a serving weight from OFF is not the tub size (Biozyme Performance Whey was ₹139)', () => {
+  const tub = est('Biozyme Performance Whey', 'whey', '1 piece, 36g', 'Muscleblaze');
+  assert.equal(tub.profile, 'whey');
+  assert.deepEqual(tub.pack, { amount: 1000, unit: 'g', source: 'default' });
+  assert.ok(tub.price >= 1000 && tub.price <= 6000, `₹${tub.price}`);
+  for (const q of ['30g', '25g', '35 g', '100']) assert.ok(est('Whey Protein Isolate', 'whey', q).price >= 1000, q);
+  assert.ok(est('Plant Protein', 'whey', '200g').price < est('Plant Protein', 'whey', '1 kg').price); // real small tubs still scale down
+  // every powder in the real catalogue prices like a tub, not a sachet
+  for (const p of catalog) { const e = estimatePrice(p); if (e.profile === 'whey') assert.ok(e.price >= 399, `${p.name}: ₹${e.price}`); }
+});
+
+test('form: OFF categories mark a bar the name does not (High Protein Peanut Cocoa, en:protein-bars)', () => {
+  const e = estimatePrice({ code: 'x', name: 'The Whole Truth High Protein Peanut Cocoa', brands: 'The Whole Truth', quantity: '67g', productType: 'whey', categories: ['en:protein-bars'] });
+  assert.equal(e.profile, 'protein_bar');
+  assert.ok(e.price < 200);
+  assert.equal(profileFor({ name: 'Cocoa Whey Protein', productType: 'whey', categories: ['en:protein-powders', 'en:whey-powder'] }), 'whey');
+});
+
 test('brand tier: premium brands sit above value brands for the same pack', () => {
   const premium = est('Gold Standard 100% Whey', 'whey', '1 kg', 'Optimum Nutrition', 'a');
   const value = est('Whey Protein', 'whey', '1 kg', 'Nakpro', 'a');

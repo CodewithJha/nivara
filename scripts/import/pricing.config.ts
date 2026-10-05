@@ -33,10 +33,11 @@ export type PriceProfile = {
 export const PACK_ELASTICITY = 0.9;
 
 export const PROFILES = {
-  whey:         { basis: 'mass',  refPack: 1000, band: [1800, 3500], defaultPack: 1000, packRange: [20, 5000], clamp: [79, 9999], gramsPerUnit: 33 },
+  // OFF often records a powder's serving or sample weight ("1 piece, 36g", "30g") as its quantity; no shop tub is under 150 g.
+  whey:         { basis: 'mass',  refPack: 1000, band: [1800, 3500], defaultPack: 1000, packRange: [150, 5000], clamp: [399, 9999], gramsPerUnit: 33 },
   gainer:       { basis: 'mass',  refPack: 1000, band: [900, 1600],  defaultPack: 1000, packRange: [100, 6000], clamp: [299, 5999], gramsPerUnit: 100 },
   protein_bar:  { basis: 'mass',  refPack: 50,   band: [40, 120],    defaultPack: 50,   packRange: [20, 800],  clamp: [29, 999], gramsPerUnit: 50, margin: [0.7, 0.82] },
-  protein_rtd:  { basis: 'mass',  refPack: 200,  band: [60, 150],    defaultPack: 200,  packRange: [20, 500],  clamp: [39, 499], gramsPerUnit: 200, margin: [0.7, 0.82] },
+  protein_rtd:  { basis: 'mass',  refPack: 200,  band: [60, 150],    defaultPack: 200,  packRange: [150, 500], clamp: [49, 499], gramsPerUnit: 200, margin: [0.7, 0.82] },
   protein_oats: { basis: 'mass',  refPack: 400,  band: [199, 399],   defaultPack: 400,  packRange: [100, 3000], clamp: [99, 1999], gramsPerUnit: 50 },
   creatine:     { basis: 'mass',  refPack: 250,  band: [500, 1200],  defaultPack: 250,  packRange: [50, 1000], clamp: [249, 3499], gramsPerUnit: 3 },
   bcaa:         { basis: 'mass',  refPack: 250,  band: [900, 1800],  defaultPack: 250,  packRange: [50, 1000], clamp: [399, 3999], gramsPerUnit: 10 },
@@ -52,7 +53,7 @@ export type ProfileKey = keyof typeof PROFILES;
  * Retail form inside a productType, first match wins. Whey covers every "protein" row in OFF,
  * so oats/muesli, bars, ready-to-drink shakes and gainers need their own price bands
  * (oats first: "Yoga bar High Protein Muesli" is muesli, not a bar).
- * Matched against name + brands (RiteBite "Max Protein" is a bar line). `maxPack` (grams) stops "Plant Protein Shake 1 kg" (a powder) from pricing as a 200 ml bottle.
+ * Matched against name + brands + OFF categories (RiteBite "Max Protein" is a bar line; "High Protein Peanut Cocoa" is filed under en:protein-bars). `maxPack` (grams) stops "Plant Protein Shake 1 kg" (a powder) from pricing as a 200 ml bottle.
  */
 export const FORM_RULES: { type: ProductType; profile: ProfileKey; re: RegExp; maxPack?: number }[] = [
   { type: 'whey', profile: 'protein_oats', re: /\boats\b|muesli/i },
