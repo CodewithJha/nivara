@@ -92,8 +92,9 @@ const Route = z.object({ tool: z.enum(Object.keys(TOOLS) as [ToolName, ...ToolNa
 
 export function keywordRoute(q: string): { tool: ToolName; args: any } {
   const s = q.toLowerCase();
-  if (/\b(remember|never buy|don'?t buy|do not buy|stop buying|avoid|note that)\b/.test(s)) return { tool: 'save_business_memory', args: { text: q } };
-  if (/\b(memory|preferences?|what do you (remember|know))\b/.test(s)) return { tool: 'get_business_memory', args: {} };
+  const recall = /\b(memory|what (do you|did you|have you) (remember|know|saved?)|(preferences?|rules?) (have|did) i (save|set)|saved (preferences?|rules?))\b/.test(s);
+  if (!recall && /\b(remember|never buy|don'?t buy|do not buy|stop buying|avoid|note that)\b/.test(s)) return { tool: 'save_business_memory', args: { text: q } };
+  if (recall || /\bpreferences?\b/.test(s)) return { tool: 'get_business_memory', args: {} };
   if (/\b(under|below|no sugar|sugar[- ]?free|find .*protein|catalog|catalogue|show me)\b/.test(s) || (/\bprotein\b/.test(s) && /\b(under|below|₹|rs)\b/.test(s)))
     return { tool: 'search_catalog', args: { query: q } };
   if (/\b(how('s| is) (the )?business|ops and demand|atlas and tiger|overall pulse|combined)\b/.test(s)) return { tool: 'shop_pulse', args: {} };

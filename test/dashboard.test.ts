@@ -56,6 +56,9 @@ test('dashboard suggestion chips route to sensible tools without Gemma', () => {
   assert.equal(keywordRoute('What should I restock?').tool, 'get_inventory');
   assert.equal(keywordRoute('Why is this product at risk?').tool, 'forecast_demand');
   assert.equal(keywordRoute('Show my pending orders.').tool, 'get_pending_orders');
+  // questions about memory read it; only statements save a rule
+  for (const q of ['What preferences have I saved?', 'What do you remember about my suppliers?', 'Show my saved rules']) assert.equal(keywordRoute(q).tool, 'get_business_memory', q);
+  for (const q of ["Remember that I don't buy from Supplier C", 'I never buy from FitFuel']) assert.equal(keywordRoute(q).tool, 'save_business_memory', q);
   assert.equal(keywordRoute('What sold the most?').tool, 'get_sales_summary');
   assert.equal(keywordRoute('What should I focus on today?').tool, 'generate_daily_brief');
   assert.ok(asksForBrief("Give me today's business brief"));
