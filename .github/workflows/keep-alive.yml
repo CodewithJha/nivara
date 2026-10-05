@@ -1,0 +1,22 @@
+name: Keep demo awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render demo
+        run: |
+          # Keep the free Render demo awake during judging.
+          # Stop pinging after October 20, 2026.
+          if [[ "$(date -u +%F)" > "2026-10-20" ]]; then
+            exit 0
+          fi
+          curl -fsS -m 60 --retry 3 --retry-delay 10 \
+            https://nivara-x9iv.onrender.com/api/health -o /dev/null || echo 'ping failed'
