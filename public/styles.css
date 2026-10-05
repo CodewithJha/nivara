@@ -314,6 +314,7 @@ textarea { font-size: var(--t-1); line-height: var(--lh-field); resize: vertical
   .sec { margin-top: var(--s-7); }
   .field { flex-wrap: wrap; }
   .field input { flex-basis: 100%; }
+  .btn { min-height: 44px; } /* thumb-sized buttons on phones */
 }
 
 @media (prefers-reduced-motion: reduce) {
