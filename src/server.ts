@@ -254,7 +254,10 @@ if (import.meta.main) {
     if (!morningDue(hour, last, day)) return;
     const claimed = await col.meta.updateOne({ _id: 'morningBrief', value: { $ne: day } }, { $set: { value: day } }, { upsert: true }).then(r => r.modifiedCount + r.upsertedCount > 0, () => false);
     if (!claimed) return; // another instance or tick took it
-    await traced('workflow.dailyBriefWorkflow', {}, () => runDirect('dailyBriefWorkflow')).then(() => log.info({ day }, 'morning brief made in-app'), (e: any) => log.warn({ err: e.message }, 'in-app morning brief failed'));
+    await traced('workflow.dailyBriefWorkflow', {}, () => runDirect('dailyBriefWorkflow')).then(() => log.info({ day }, 'morning brief made in-app'), async (e: any) => { // give the day back so the next tick tries again
+      log.warn({ err: e.message }, 'in-app morning brief failed');
+      await col.meta.updateOne({ _id: 'morningBrief', value: day }, { $set: { value: last ?? '' } }).catch(() => {});
+    });
   };
   setTimeout(() => morning().catch(() => {}), 20_000);
   setInterval(() => morning().catch(() => {}), 10 * 60_000).unref();
