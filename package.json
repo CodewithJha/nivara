@@ -11,6 +11,7 @@
     "dev": "node --env-file-if-exists=.env --import ./src/instrument.ts --watch src/server.ts",
     "seed": "node --env-file-if-exists=.env src/seed.ts",
     "seed:demo": "node --env-file-if-exists=.env src/seed-demo.ts",
+    "reprice": "node --env-file-if-exists=.env scripts/reprice.ts",
     "data:catalog": "node --env-file-if-exists=.env scripts/import/catalog.ts --online",
     "data:prices": "node --env-file-if-exists=.env scripts/import/prices.ts --online",
     "data:trends": "node --env-file-if-exists=.env scripts/import/trends.ts --online",
