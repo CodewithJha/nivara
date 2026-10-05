@@ -123,7 +123,7 @@ its labelled fallbacks (keyword router + templated answers, in-process workflows
 | `MIN_SUPPLIER_SAVING_RUPEES` / `MIN_SUPPLIER_SAVING_PERCENT` | attention threshold (default ₹10 and 5%) | defaults |
 | `TEMPORAL_ADDRESS` (+`TEMPORAL_API_KEY` for Cloud) | Temporal | workflows run in-process, labelled `direct-fallback` |
 | `FORECAST_MODE=fallback` | skip TabPFN | — |
-| `FORECAST_RUN_MAX_AGE_HOURS` | how long a published TabPFN run (`npm run forecast:publish`) is used on hosts without Python (default 168) | moving average |
+| `FORECAST_RUN_MAX_AGE_HOURS` | how long a published TabPFN run (`npm run forecast:publish`) is used on hosts without Python (default 720, 30 days) | moving average |
 
 Full list in [.env.example](.env.example). `GET /api/health` reports each integration as `live` or `fallback`.
 

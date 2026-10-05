@@ -55,7 +55,7 @@ test('fresh published run → method tabpfn, precomputed, its predictions drive 
 });
 
 test('stale published run is ignored', { skip }, async () => {
-  await run(24 * 8, { A: 14, B: 14 });
+  await run(24 * 31, { A: 14, B: 14 });
   const f = await ops.forecastDemand({ force: true });
   assert.equal(f.method, 'fallback-moving-average');
   assert.match(f.fallbackReason, /stale/);

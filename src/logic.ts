@@ -16,8 +16,8 @@ export function movingAverage7(daily: number[], window = 14): number {
 
 export type ForecastRun = { model: string; package?: string; asOf: string; historyDays: number; skus: number; of: number; pred: Record<string, number>; createdAt: Date | string };
 
-/** Default freshness = one 7-day forecast horizon. */
-export const RUN_MAX_AGE_HOURS = 168;
+/** A published laptop run stays in use for 30 days (hosts without Python can't refit); Health shows the day it was worked out. */
+export const RUN_MAX_AGE_HOURS = 24 * 30;
 
 /** Usable = has predictions and is younger than maxAgeHours. */
 export function freshRun(run: Pick<ForecastRun, 'pred' | 'createdAt'> | null | undefined, now = new Date(), maxAgeHours = RUN_MAX_AGE_HOURS): boolean {
