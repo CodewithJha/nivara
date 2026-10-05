@@ -178,6 +178,7 @@ const views = {
       <label class="lbl" for="otext">Message</label>
       <textarea id="otext" rows="3">Rahul wants 3 chocolate bars and one shaker, deliver tomorrow</textarea>
       <div class="acts gap"><button class="btn primary" onclick="extract(this)">Read the message</button></div>
+      ${voiceBox()}
       <div id="draft" aria-live="polite"></div></section>
     <section class="sec"><h2>To deliver <span class="n">${pending.length}</span></h2>
       ${pending.length ? `<ul class="rows">${pending.map(o => orderRow(o, d.date)).join('')}</ul>` : '<p class="empty">Nothing to deliver. New orders you confirm above land here.</p>'}</section>
@@ -361,17 +362,21 @@ let draft;
 async function extract(btn) {
   $('#draft').innerHTML = '<p class="loading" role="status">Reading the message…</p>';
   try {
-    const r = await busy(btn, 'Reading…', () => api('/orders/extract', { method: 'POST', body: { text: $('#otext').value }, retry: true }));
-    draft = r.draft;
-    const unmatched = draft.items.some(i => !i.product);
-    $('#draft').innerHTML = `<div class="sec"><h2>Check this order</h2>
-      <p class="lede"><b>${esc(draft.customer.name)}</b> ${draft.customer.isNew ? st('mid', 'New customer') : ''}
-        · Delivery <b>${draft.deliveryDate ? esc(day(draft.deliveryDate)) : 'not given'}</b>${draft.deliveryText ? ` <span class="small">from “${esc(draft.deliveryText)}”</span>` : ''}</p>
-      ${table([['Asked for', i => esc(i.requested), 'lead'], ['Matched product', i => i.product ? esc(i.product.name) : st('heavy', 'No match')], ['Qty', i => i.quantity, 'num big'], ['Price', i => i.product ? inr(i.product.price) : '—', 'num'], ['In stock', i => i.product?.stock ?? '—', 'num']], draft.items)}
-      <p class="total">Total <b>${inr(draft.total)}</b></p>
-      ${draft.problems.length ? `<p class="warn">${draft.problems.map(esc).join('<br>')}</p>` : ''}
-      <div class="acts gap"><button class="btn primary" onclick="confirmOrder(this)" ${unmatched ? 'disabled title="Fix the unmatched items first"' : ''}>Confirm and save</button>${unmatched ? '<span class="small red">Fix the unmatched items in the message first.</span>' : ''}</div></div>`;
+    showDraft(await busy(btn, 'Reading…', () => api('/orders/extract', { method: 'POST', body: { text: $('#otext').value }, retry: true })));
   } catch (e) { $('#draft').innerHTML = errorBox(e, 'read the message', () => extract(btn)); }
+}
+/** The draft to check before saving, from a pasted message or a voice note (`heard` = what the voice note said). */
+function showDraft(r, heard) {
+  draft = r.draft;
+  const unmatched = draft.items.some(i => !i.product);
+  $('#draft').innerHTML = `<div class="sec"><h2>Check this order</h2>${heard ? `
+    <p class="heard"><span class="small quiet">Heard</span> “${esc(heard)}”</p>` : ''}
+    <p class="lede"><b>${esc(draft.customer.name)}</b> ${draft.customer.isNew ? st('mid', 'New customer') : ''}
+      · Delivery <b>${draft.deliveryDate ? esc(day(draft.deliveryDate)) : 'not given'}</b>${draft.deliveryText ? ` <span class="small">from “${esc(draft.deliveryText)}”</span>` : ''}</p>
+    ${table([['Asked for', i => esc(i.requested), 'lead'], ['Matched product', i => i.product ? esc(i.product.name) : st('heavy', 'No match')], ['Qty', i => i.quantity, 'num big'], ['Price', i => i.product ? inr(i.product.price) : '—', 'num'], ['In stock', i => i.product?.stock ?? '—', 'num']], draft.items)}
+    <p class="total">Total <b>${inr(draft.total)}</b></p>
+    ${draft.problems.length ? `<p class="warn">${draft.problems.map(esc).join('<br>')}</p>` : ''}
+    <div class="acts gap"><button class="btn primary" onclick="confirmOrder(this)" ${unmatched ? 'disabled title="Fix the unmatched items first"' : ''}>Confirm and save</button>${unmatched ? '<span class="small red">Fix the unmatched items in the message first.</span>' : ''}</div></div>`;
 }
 async function confirmOrder(btn) {
   try {

@@ -235,6 +235,18 @@ textarea { font-size: var(--t-1); line-height: var(--lh-field); resize: vertical
 .field { display: flex; gap: var(--s-2); }
 .field input { flex: 1; }
 .lbl { display: block; font-weight: 700; margin-bottom: var(--s-2); }
+/* voice note → order (voice.js) */
+.voice { margin-top: var(--s-5); padding-top: var(--s-4); border-top: var(--hair) solid var(--line); max-width: var(--measure); }
+.voice h3 { font: 700 var(--t-0)/var(--lh-ui) var(--text); }
+.voice .acts { display: flex; flex-wrap: wrap; gap: var(--s-3); }
+.voice #vstat { margin-top: var(--s-2); }
+.btn .dot { width: .625rem; height: .625rem; border-radius: 50%; background: var(--red); margin-right: var(--s-2); flex: none; }
+.btn.recording { border-color: var(--red); color: var(--red-ink); font-variant-numeric: tabular-nums; }
+.btn.recording:hover { background: transparent; color: var(--red-ink); }
+.btn.recording .dot { animation: rec-pulse 1s ease-in-out infinite alternate; }
+@keyframes rec-pulse { to { opacity: .25; } }
+.heard { margin: var(--s-2) 0 var(--s-4); padding-left: var(--s-3); border-left: var(--rule) solid var(--steel); max-width: var(--measure); }
+.heard .small { display: block; }
 
 /* ---------- ask ---------- */
 .ask .field input { font-size: var(--t-1); }
