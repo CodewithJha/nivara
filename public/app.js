@@ -253,7 +253,8 @@ const views = {
     health = await api('/health');
     return head('Health', 'Behind the scenes: the services that power Nivara. When one rests, Nivara keeps working with less.') +
       `<section><ul class="rows">${Object.values(health.integrations).map(v => row({ level: v.status === 'live' ? 'light' : 'mid', name: esc(v.name), why: esc(v.note),
-        fig: `<b class="${v.status === 'live' ? 'green' : 'amber'}">${v.status === 'live' ? 'Live' : 'Standby'}</b>` })).join('')}</ul></section>`;
+        fig: `<b class="${v.status === 'live' ? 'green' : 'amber'}">${v.status === 'live' ? 'Live' : 'Standby'}</b>` })).join('')}</ul>
+      <p class="small quiet source">Before each release, automated tests and Keploy check the app. Keploy replays recorded calls for orders, voice notes, Ask, the forecast, search and this page.</p></section>`;
   },
 };
 const secs = ms => ms < 1000 ? 'under 1 s' : `${Math.round(ms / 100) / 10} s`;
