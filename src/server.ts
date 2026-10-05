@@ -2,7 +2,8 @@ import './instrument.ts'; // same init as `node --import`; no-op if that preload
 import * as Sentry from '@sentry/node';
 import express from 'express';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { Client, Connection } from '@temporalio/client';
 import { client as mongo, col, today, TZ } from './db.ts';
@@ -21,7 +22,14 @@ import { startOrderChangeStream, syncDeliveredOrder } from './sync.ts';
 export const app = express();
 export default app;
 app.use(express.json({ limit: '100kb' }));
-app.use(express.static(fileURLToPath(new URL('../public', import.meta.url)), { setHeaders: s => s.setHeader('Cache-Control', 'no-cache') }));
+// Static files. index.html is built once at start with ?v=<content hash> on its scripts and stylesheet, so the browser
+// keeps those for a year and still picks up a deploy; index.html itself is checked every visit. Fonts never change.
+const PUBLIC = new URL('../public/', import.meta.url);
+const YEAR = 'public, max-age=31536000, immutable';
+const hashed = (f: string) => createHash('sha256').update(readFileSync(new URL(f, PUBLIC))).digest('hex').slice(0, 10);
+const indexHtml = readFileSync(new URL('index.html', PUBLIC), 'utf8').replace(/(src|href)="([\w-]+\.(?:js|css))"/g, (_m, a, f) => `${a}="${f}?v=${hashed(f)}"`);
+app.get(['/', '/index.html'], (_q, s) => { s.set('Cache-Control', 'no-cache').type('html').send(indexHtml); });
+app.use(express.static(fileURLToPath(PUBLIC), { index: false, setHeaders: (s, path) => s.setHeader('Cache-Control', /[\\/]fonts[\\/]/.test(path) || /[?&]v=/.test(s.req.url ?? '') ? YEAR : 'no-cache') }));
 /** Validate input; the owner sees `message`, the log gets zod's detail. */
 const body = <T extends z.ZodTypeAny>(s: T, b: unknown, message = "That request didn't look right. Check it and try again."): z.infer<T> => {
   const r = s.safeParse(b);

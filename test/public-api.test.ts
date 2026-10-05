@@ -57,6 +57,18 @@ const envelope = async (r: Response, status: number) => {
   return j.error;
 };
 
+test('static files: index.html revalidates, versioned assets and fonts cache for a year', async () => {
+  const r = await get('/');
+  assert.equal(r.headers.get('cache-control'), 'no-cache');
+  const html = await r.text();
+  const assets = [...html.matchAll(/(?:src|href)="([\w-]+\.(?:js|css)\?v=[0-9a-f]{10})"/g)].map(m => m[1]);
+  assert.deepEqual(assets.map(a => a.split('?')[0]).sort(), ['api.js', 'app.js', 'lazy.js', 'plates.js', 'styles.css']);
+  for (const a of assets) assert.equal((await get('/' + a)).headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  assert.equal((await get('/app.js')).headers.get('cache-control'), 'no-cache');
+  assert.equal((await get('/fonts/anybody-latin.woff2')).headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  assert.equal((await get('/index.html')).headers.get('cache-control'), 'no-cache');
+});
+
 test('error envelope: unknown route, unreadable JSON, missing input', async () => {
   assert.equal((await envelope(await get('/api/nope'), 404)).code, 'not_found');
   assert.equal((await envelope(await post('/api/assistant', '{bad'), 400)).code, 'bad_json');
