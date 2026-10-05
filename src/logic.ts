@@ -55,6 +55,10 @@ export type Risk = 'high' | 'medium' | 'low';
  * reorderQty covers lead time + 7 days + safety days of demand, minus what's available; 0 when risk is low
  * (more than a week of cover — no point topping up to a target level yet).
  */
+/** In-app morning brief (no Temporal): due once a day from 08:00 shop time. */
+export const MORNING_HOUR = 8;
+export const morningDue = (hour: number, lastDay: string | undefined, day: string) => hour >= MORNING_HOUR && lastDay !== day;
+
 export function stockPlan(p: { stock: number; reserved: number; demand7: number; leadTimeDays: number; safetyDays?: number }) {
   const available = p.stock - p.reserved;
   const daily = Math.max(0, p.demand7) / 7;

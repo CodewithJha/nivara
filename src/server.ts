@@ -7,9 +7,9 @@ import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { Client, Connection } from '@temporalio/client';
 import { client as mongo, col, today, TZ } from './db.ts';
-import { OrderInput, attention } from './logic.ts';
+import { OrderInput, attention, morningDue } from './logic.ts';
 import { ask, extractOrder, llmStatus } from './agent.ts';
-import { backboardLive, elevenLive, elevenStatus, elevenSTT, elevenTTS, log, serpLive, traced } from './integrations.ts';
+import { backboardLive, elevenLive, elevenStatus, elevenSTT, elevenTTS, llmModel, log, serpLive, traced } from './integrations.ts';
 import { AppError, errorResponse, fail } from './errors.ts';
 import * as pub from './present.ts';
 import * as ops from './ops.ts';
@@ -92,6 +92,7 @@ r.get('/health', async (_q, s) => {
   s.json(pub.publicHealth({
     date: today(), mongo: mongoOk, gemma: llm.reachable, mastra: llm.reachable && llm.nativeTools, forecast: lastForecast, tiger: tiger.live,
     serpapi: serpLive(), backboard: backboardLive(), elevenlabs: voice.ok, temporal: !!t, sentry: !!Sentry.getClient(),
+    model: llm.reachable ? llmModel() : undefined, render: !!process.env.RENDER,
   }));
 });
 
@@ -243,5 +244,17 @@ if (import.meta.main) {
   } catch (e: any) { log.error({ err: e.message }, 'MongoDB unavailable at boot; check MONGODB_URI'); }
   const port = Number(process.env.PORT || 3000);
   const server = app.listen(port, () => log.info(`Nivara on http://localhost:${port}`));
+  // No Temporal worker (the free Render host): make the morning brief inside the app once a day from 08:00 shop time.
+  const morning = async () => {
+    if (await getTemporal()) return; // the Temporal schedule owns it
+    const hour = +new Date().toLocaleString('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: TZ }), day = today();
+    const last = (await col.meta.findOne({ _id: 'morningBrief' }).catch(() => null))?.value;
+    if (!morningDue(hour, last, day)) return;
+    const claimed = await col.meta.updateOne({ _id: 'morningBrief', value: { $ne: day } }, { $set: { value: day } }, { upsert: true }).then(r => r.modifiedCount + r.upsertedCount > 0, () => false);
+    if (!claimed) return; // another instance or tick took it
+    await traced('workflow.dailyBriefWorkflow', {}, () => runDirect('dailyBriefWorkflow')).then(() => log.info({ day }, 'morning brief made in-app'), (e: any) => log.warn({ err: e.message }, 'in-app morning brief failed'));
+  };
+  setTimeout(() => morning().catch(() => {}), 20_000);
+  setInterval(() => morning().catch(() => {}), 10 * 60_000).unref();
   process.once('SIGTERM', () => server.close(() => Sentry.close(2000).finally(() => process.exit(0))));
 }

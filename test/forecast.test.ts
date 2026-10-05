@@ -56,3 +56,11 @@ test('health: precomputed TabPFN is live with model + timestamp; moving average 
   assert.deepEqual(tabpfnHealth({ method: 'fallback-moving-average', fallbackReason: 'FORECAST_MODE=fallback' }), { status: 'fallback', detail: 'last forecast: fallback-moving-average (FORECAST_MODE=fallback)' });
   assert.deepEqual(tabpfnHealth(null), { status: 'fallback', detail: 'no forecast yet' });
 });
+
+test('morningDue: once a day, from 08:00 shop time', async () => {
+  const { morningDue } = await import('../src/logic.ts');
+  assert.equal(morningDue(7, undefined, '2026-10-05'), false);
+  assert.equal(morningDue(8, undefined, '2026-10-05'), true);
+  assert.equal(morningDue(14, '2026-10-04', '2026-10-05'), true);
+  assert.equal(morningDue(14, '2026-10-05', '2026-10-05'), false);
+});
