@@ -243,7 +243,7 @@ export async function elevenStatus() {
   }
   return { ok: elevenCheck.ok, detail: elevenCheck.detail };
 }
-const AUDIO_EXT: Record<string, string> = { 'audio/mp4': 'mp4', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/mpeg': 'mp3', 'audio/ogg': 'ogg', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/webm': 'webm' };
+const AUDIO_EXT: Record<string, string> = { 'audio/mp4': 'mp4', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/mpeg': 'mp3', 'audio/ogg': 'ogg', 'audio/opus': 'ogg', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/webm': 'webm' };
 export const audioFilename = (mime: string) => `audio.${AUDIO_EXT[mime.split(';')[0].trim().toLowerCase()] ?? 'webm'}`;
 export async function elevenSTT(audio: Buffer, mime: string): Promise<string> {
   return span('voice.stt', 'elevenlabs scribe', { bytes: audio.length, mime }, async () => {
